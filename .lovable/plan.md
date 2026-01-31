@@ -1,119 +1,172 @@
 
-# Portail Multi-Entreprises - Plan de développement (mis à jour)
+# Plan de modification du modèle de données
 
-## Vue d'ensemble
-Application de gestion documentaire multi-entreprises avec authentification par magic link, permettant aux utilisateurs de naviguer entre leurs différentes entreprises et accéder à diverses sections métier.
+## Contexte
+Actuellement, les permissions sont stockées au niveau de chaque association utilisateur-entreprise (`user_companies.permissions`), et chaque entreprise a un propriétaire (`companies.owner_id`).
 
----
+Le nouveau modèle simplifie cela :
+- Les **permissions deviennent des options globales de l'entreprise** (stockées dans `companies`)
+- La table `user_companies` devient une **simple table de liaison** sans permissions individuelles
+- Il n'y a **plus de notion de propriétaire** d'entreprise
 
-## Phase 1 : Fondations et authentification ✅ TERMINÉE
+## Changements a effectuer
 
-### Base de données ✅
-- Table `companies` pour stocker les entreprises
-- Table `users` pour les utilisateurs (nom, email, préférences)
-- Table `user_companies` pour lier utilisateurs et entreprises avec leurs permissions par section (entreprise, contrats, juridique, comptabilité, finance)
-- Table `user_roles` pour la gestion des rôles (préparation de la future interface admin)
+### 1. Migration de la base de donnees
 
-### Authentification par Magic Link ✅
-- Page de connexion avec champ email uniquement
-- Intégration Resend pour l'envoi des emails avec template personnalisé
-- Page de confirmation générique (même message que l'email existe ou non)
-- Configuration des tokens : access token 30 min, refresh token 14 jours
+**Modifications sur la table `companies` :**
+- Supprimer la colonne `owner_id`
+- Ajouter une colonne `permissions` (JSONB) avec la structure :
+  ```json
+  {
+    "entreprise": true,
+    "contrats": true,
+    "juridique": true,
+    "comptabilite": true,
+    "finance": true
+  }
+  ```
 
-### Gestion des sessions ✅
-- **Supabase Auth natif** : utilisation directe de `@supabase/supabase-js` sans librairie additionnelle
-- Tokens JWT gérés automatiquement par Supabase (access/refresh)
-- `onAuthStateChange` pour la synchronisation de l'état d'authentification
-- Stockage automatique en localStorage avec refresh transparent
-- Support multi-sessions sur plusieurs appareils (géré nativement par Supabase)
+**Modifications sur la table `user_companies` :**
+- Supprimer la colonne `permissions`
+- Supprimer la colonne `invited_by` (plus de notion de proprietaire qui invite)
 
----
+**Suppression des fonctions obsoletes :**
+- `is_company_owner()` - plus de proprietaire
+- `get_user_company_permissions()` - permissions maintenant au niveau company
+- `has_permission()` - a remplacer par une nouvelle version
 
-## Phase 2 : Interface utilisateur et navigation ✅ TERMINÉE
+**Nouvelle fonction :**
+- `get_company_permissions(target_company_id)` - retourne les permissions de l'entreprise
 
-### Menu / Sidebar ✅
-- **Desktop** : Sidebar fixe de 280px sur la gauche
-- **Mobile** : Barre discrète en haut avec icône menu, sidebar slide-in sur 3/4 de l'écran, overlay sombre pour fermer
+### 2. Mise a jour des politiques RLS
 
-### Contenu du menu ✅
-1. **Sélecteur multi-entreprises** (header) - Dropdown type Notion pour basculer entre entreprises
-2. **Sections principales** (affichées selon permissions) :
-   - Entreprise
-   - Mes contrats et factures
-   - Juridique
-   - Comptabilité
-   - Finance
-3. **Sélecteur Compte** (footer) avec dropdown :
-   - Paramètres du compte
-   - Pages légales
-   - Version du site
-   - Page d'aide
-   - Déconnexion
+**Sur `companies` :**
+- Supprimer les policies liees a `owner_id`
+- Permettre aux membres de voir leur entreprise (inchange)
+- Permettre aux membres de mettre a jour leur entreprise (tous les membres peuvent modifier)
+- Permettre la creation d'entreprise (l'utilisateur doit etre le premier membre)
+- Permettre la suppression (par exemple si plus aucun membre)
 
-### Thème visuel ✅
-- Design professionnel et sobre avec couleurs neutres
-- Support du mode clair et mode sombre avec toggle dans les paramètres
+**Sur `user_companies` :**
+- Simplifier les policies d'insertion/suppression sans notion de proprietaire
+- Les membres peuvent voir leurs associations
+- Les membres peuvent ajouter/retirer d'autres utilisateurs
 
----
+### 3. Mise a jour du code frontend
 
-## Phase 3 : Pages de contenu ✅ TERMINÉE
+**`src/contexts/CompanyContext.tsx` :**
+- Modifier l'interface `Company` : supprimer `owner_id`, ajouter `permissions`
+- Modifier l'interface `UserCompany` : supprimer `permissions`
+- Mettre a jour `hasPermission()` pour lire depuis `currentCompany.company.permissions`
+- Adapter la requete `fetchCompanies()` pour recuperer les permissions depuis `companies`
 
-### Pages placeholder pour chaque section ✅
-- Entreprise : page avec titre et message d'attente de contenu
-- Contrats et factures : idem
-- Juridique : idem
-- Comptabilité : idem
-- Finance : idem
+**`src/integrations/supabase/types.ts` :**
+- Ce fichier est auto-genere, il sera mis a jour automatiquement apres la migration
 
-### Pages légales (avec contenu placeholder) ✅
-- Conditions Générales d'Utilisation
-- Politique de confidentialité
-- Mentions légales
+### 4. Donnees de test
 
-### Pages utilitaires ✅
-- Paramètres du compte
-- Page d'aide
-- Page 404
+Apres la migration, creer :
+- Une entreprise "Ma Societe Test" avec toutes les permissions activees
+- L'association avec l'utilisateur connecte
 
 ---
 
-## Fonctionnalités clés incluses
+## Details techniques
 
-✅ Authentification magic link sécurisée via Resend  
-✅ Gestion des sessions avec Supabase Auth natif (standard)  
-✅ Permissions par section stockées dans le token  
-✅ Changement d'entreprise fluide (type Notion)  
-✅ Menu responsive desktop/mobile  
-✅ Mode clair et sombre  
-✅ Pages légales prêtes à compléter  
-✅ Architecture préparée pour l'admin (à ajouter plus tard)
+### SQL de migration
 
----
+```text
+-- Supprimer l'index obsolete
+DROP INDEX IF EXISTS idx_companies_owner_id;
 
-## Technologies utilisées
-- **Frontend** : React + TypeScript + Tailwind CSS
-- **Backend** : Lovable Cloud avec Supabase
-- **Sessions** : Supabase Auth (`@supabase/supabase-js`)
-- **Emails** : Resend avec templates React Email
-- **UI** : Shadcn/ui avec composant Sidebar
+-- Ajouter permissions a companies
+ALTER TABLE public.companies 
+ADD COLUMN permissions JSONB NOT NULL DEFAULT '{
+  "entreprise": true,
+  "contrats": true,
+  "juridique": true,
+  "comptabilite": true,
+  "finance": true
+}'::jsonb;
 
----
+-- Supprimer owner_id de companies
+ALTER TABLE public.companies DROP COLUMN owner_id;
 
-## Configuration requise
+-- Supprimer permissions et invited_by de user_companies
+ALTER TABLE public.user_companies DROP COLUMN permissions;
+ALTER TABLE public.user_companies DROP COLUMN invited_by;
 
-### Secrets configurés ✅
-- `RESEND_API_KEY` - Clé API Resend pour l'envoi des emails
-- `SEND_EMAIL_HOOK_SECRET` - Secret pour le webhook d'envoi d'email
+-- Supprimer les anciennes fonctions
+DROP FUNCTION IF EXISTS public.is_company_owner(UUID);
+DROP FUNCTION IF EXISTS public.get_user_company_permissions(UUID);
+DROP FUNCTION IF EXISTS public.has_permission(UUID, TEXT);
 
-### À configurer manuellement
-1. **Domaine Resend** : Remplacer `noreply@YOUR-VERIFIED-DOMAIN.com` dans `supabase/functions/send-magic-link/index.ts` par votre domaine vérifié sur Resend
-2. **Webhook Auth** : Configurer le webhook d'authentification dans le dashboard Supabase pour appeler l'edge function `send-magic-link`
+-- Nouvelle fonction pour recuperer les permissions de l'entreprise
+CREATE OR REPLACE FUNCTION public.get_company_permissions(target_company_id UUID)
+RETURNS JSONB
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT COALESCE(
+    (SELECT permissions FROM public.companies 
+     WHERE id = target_company_id),
+    '{}'::jsonb
+  );
+$$;
 
----
+-- Nouvelle fonction has_permission
+CREATE OR REPLACE FUNCTION public.has_permission(target_company_id UUID, section_name TEXT)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT COALESCE(
+    (SELECT (permissions->>section_name)::boolean 
+     FROM public.companies 
+     WHERE id = target_company_id),
+    false
+  ) AND public.is_member_of_company(target_company_id);
+$$;
+```
 
-## Prochaines étapes suggérées
+### Nouvelles politiques RLS
 
-1. Configurer le webhook d'authentification Supabase
-2. Vérifier le domaine sur Resend
-3. Créer des données de test (entreprises, utilisateurs)
-4. Implémenter l'interface d'administration (future phase)
+```text
+-- Supprimer les anciennes policies sur companies
+DROP POLICY IF EXISTS "Users can create companies" ON public.companies;
+DROP POLICY IF EXISTS "Owners can update their companies" ON public.companies;
+DROP POLICY IF EXISTS "Owners can delete their companies" ON public.companies;
+
+-- Nouvelles policies pour companies
+CREATE POLICY "Members can update their company"
+  ON public.companies FOR UPDATE
+  USING (public.is_member_of_company(id));
+
+CREATE POLICY "Anyone can create a company"
+  ON public.companies FOR INSERT
+  WITH CHECK (true);
+
+-- Supprimer les anciennes policies sur user_companies
+DROP POLICY IF EXISTS "Company owners can invite users" ON public.user_companies;
+DROP POLICY IF EXISTS "Company owners can remove users" ON public.user_companies;
+
+-- Nouvelles policies pour user_companies
+CREATE POLICY "Members can add users to their company"
+  ON public.user_companies FOR INSERT
+  WITH CHECK (public.is_member_of_company(company_id));
+
+CREATE POLICY "Members can remove users from their company"
+  ON public.user_companies FOR DELETE
+  USING (public.is_member_of_company(company_id));
+```
+
+### Modifications du contexte React
+
+Le `CompanyContext.tsx` sera modifie pour :
+1. Lire `permissions` depuis `company.permissions` au lieu de `userCompany.permissions`
+2. Supprimer `owner_id` de l'interface `Company`
+3. Simplifier l'interface `UserCompany` (plus de permissions)
