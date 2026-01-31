@@ -19,56 +19,42 @@ export type Database = {
           created_at: string
           id: string
           name: string
-          owner_id: string
+          permissions: Json
           updated_at: string
         }
         Insert: {
           created_at?: string
           id?: string
           name: string
-          owner_id: string
+          permissions?: Json
           updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
           name?: string
-          owner_id?: string
+          permissions?: Json
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "companies_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       user_companies: {
         Row: {
           company_id: string
           created_at: string
           id: string
-          invited_by: string | null
-          permissions: Json
           user_id: string
         }
         Insert: {
           company_id: string
           created_at?: string
           id?: string
-          invited_by?: string | null
-          permissions?: Json
           user_id: string
         }
         Update: {
           company_id?: string
           created_at?: string
           id?: string
-          invited_by?: string | null
-          permissions?: Json
           user_id?: string
         }
         Relationships: [
@@ -77,13 +63,6 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_companies_invited_by_fkey"
-            columns: ["invited_by"]
-            isOneToOne: false
-            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
@@ -166,16 +145,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_user_company_permissions: {
+      get_company_permissions: {
         Args: { target_company_id: string }
         Returns: Json
       }
       has_permission: {
         Args: { section_name: string; target_company_id: string }
-        Returns: boolean
-      }
-      is_company_owner: {
-        Args: { target_company_id: string }
         Returns: boolean
       }
       is_member_of_company: {
