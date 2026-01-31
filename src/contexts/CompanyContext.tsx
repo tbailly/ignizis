@@ -2,22 +2,23 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
 
+interface CompanyPermissions {
+  entreprise: boolean;
+  contrats: boolean;
+  juridique: boolean;
+  comptabilite: boolean;
+  finance: boolean;
+}
+
 interface Company {
   id: string;
   name: string;
-  owner_id: string;
+  permissions: CompanyPermissions;
 }
 
 interface UserCompany {
   id: string;
   company_id: string;
-  permissions: {
-    entreprise: boolean;
-    contrats: boolean;
-    juridique: boolean;
-    comptabilite: boolean;
-    finance: boolean;
-  };
   company: Company;
 }
 
@@ -26,7 +27,7 @@ interface CompanyContextType {
   currentCompany: UserCompany | null;
   setCurrentCompany: (company: UserCompany) => void;
   loading: boolean;
-  hasPermission: (section: keyof UserCompany['permissions']) => boolean;
+  hasPermission: (section: keyof CompanyPermissions) => boolean;
 }
 
 const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
@@ -58,11 +59,10 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         .select(`
           id,
           company_id,
-          permissions,
           company:companies (
             id,
             name,
-            owner_id
+            permissions
           )
         `);
 
@@ -74,7 +74,6 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       const userCompanies = (data || []).map((item: any) => ({
         id: item.id,
         company_id: item.company_id,
-        permissions: item.permissions,
         company: item.company,
       }));
 
@@ -101,9 +100,9 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(CURRENT_COMPANY_KEY, company.company_id);
   };
 
-  const hasPermission = (section: keyof UserCompany['permissions']): boolean => {
-    if (!currentCompany) return false;
-    return currentCompany.permissions[section] === true;
+  const hasPermission = (section: keyof CompanyPermissions): boolean => {
+    if (!currentCompany?.company?.permissions) return false;
+    return currentCompany.company.permissions[section] === true;
   };
 
   return (
