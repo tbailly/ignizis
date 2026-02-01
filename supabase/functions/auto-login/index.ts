@@ -67,15 +67,10 @@ Deno.serve(async (req) => {
 
     console.log(`Magic link generated for: ${email}`)
 
-    // Extract token from the link
-    const url = new URL(linkData.properties.action_link)
-    const token = url.searchParams.get('token')
-    const type = url.searchParams.get('type')
-
+    // Return the email_otp (6-digit code) for verifyOtp with type 'email'
     return new Response(
       JSON.stringify({ 
-        token,
-        type,
+        otp: linkData.properties.email_otp,
         email: user.email 
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
