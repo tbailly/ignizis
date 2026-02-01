@@ -19,6 +19,9 @@ const emailSchema = z.object({
 
 type EmailFormData = z.infer<typeof emailSchema>;
 
+// Check if auto-confirm mode is enabled (for development/testing)
+const isAutoConfirmEnabled = import.meta.env.VITE_AUTOCONFIRM !== 'false';
+
 export default function Auth() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
@@ -39,9 +42,58 @@ export default function Auth() {
     }
   }, [user, authLoading, navigate]);
 
+  const handleAutoLogin = async (email: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('auto-login', {
+        body: { email },
+      });
+
+      if (error) {
+        console.error('Auto-login function error:', error);
+        return false;
+      }
+
+      if (data.error) {
+        if (data.code === 'USER_NOT_FOUND') {
+          toast.error('Utilisateur non trouvé');
+        } else {
+          console.error('Auto-login error:', data.error);
+        }
+        return false;
+      }
+
+      // Use the token to verify OTP
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        email,
+        token: data.token,
+        type: 'magiclink',
+      });
+
+      if (verifyError) {
+        console.error('OTP verification error:', verifyError);
+        return false;
+      }
+
+      toast.success('Connexion réussie !');
+      return true;
+    } catch (error) {
+      console.error('Auto-login error:', error);
+      return false;
+    }
+  };
+
   const onSubmit = async (data: EmailFormData) => {
     try {
       setLoading(true);
+
+      // If auto-confirm is enabled, try instant login
+      if (isAutoConfirmEnabled) {
+        const success = await handleAutoLogin(data.email);
+        if (success) {
+          return; // Successfully logged in
+        }
+        // If auto-login fails (user not found, etc.), fall back to magic link
+      }
       
       const redirectUrl = `${window.location.origin}/`;
       
@@ -84,7 +136,9 @@ export default function Auth() {
           <CardDescription>
             {emailSent
               ? 'Vérifiez votre boîte de réception'
-              : 'Entrez votre email pour recevoir un lien de connexion'}
+              : isAutoConfirmEnabled
+                ? 'Entrez votre email pour vous connecter instantanément'
+                : 'Entrez votre email pour recevoir un lien de connexion'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -127,7 +181,7 @@ export default function Auth() {
                 />
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Envoyer le lien de connexion
+                  {isAutoConfirmEnabled ? 'Se connecter' : 'Envoyer le lien de connexion'}
                 </Button>
               </form>
             </Form>
