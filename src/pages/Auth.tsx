@@ -62,11 +62,11 @@ export default function Auth() {
         return false;
       }
 
-      // Use the token to verify OTP
+      // Use the OTP code to verify
       const { error: verifyError } = await supabase.auth.verifyOtp({
         email,
-        token: data.token,
-        type: 'magiclink',
+        token: data.otp,
+        type: 'email',
       });
 
       if (verifyError) {
