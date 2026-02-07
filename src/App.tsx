@@ -1,9 +1,11 @@
 import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
+
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Outlet, useParams, useNavigate, useLocation } from "react-router-dom";
+
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CompanyProvider, useCompany } from "@/contexts/CompanyContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -27,6 +29,8 @@ import Confidentialite from "./pages/legal/Confidentialite";
 import CGU from "./pages/legal/CGU";
 import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminCompanies from "./pages/admin/AdminCompanies";
+import AdminUsers from "./pages/admin/AdminUsers";
 
 const queryClient = new QueryClient();
 
@@ -119,7 +123,11 @@ const App = () => (
                   <Route path="/terms" element={<CGU />} />
 
                   {/* Admin routes */}
-                  <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+                  <Route path="/admin" element={<AdminRoute><Outlet /></AdminRoute>}>
+                    <Route index element={<AdminDashboard />} />
+                    <Route path="companies" element={<AdminCompanies />} />
+                    <Route path="users" element={<AdminUsers />} />
+                  </Route>
                 </Route>
 
                 {/* 404 */}

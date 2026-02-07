@@ -1,4 +1,4 @@
-import { Building2, FileText, Scale, Calculator, TrendingUp, ChevronDown, Settings, FileQuestion, LogOut, Info, ChevronsUpDown, Shield } from 'lucide-react';
+import { Building2, FileText, Scale, Calculator, TrendingUp, ChevronDown, Settings, FileQuestion, LogOut, Info, ChevronsUpDown, Shield, Users } from 'lucide-react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
@@ -136,17 +136,42 @@ export function AppSidebar() {
         {/* Admin Navigation */}
         {isAdmin && (
           <SidebarGroup>
+            <SidebarGroupLabel>{t('sidebar.admin')}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
-                    isActive={location.pathname.startsWith('/admin')}
+                    isActive={location.pathname === '/admin'}
                     tooltip={t('sidebar.admin')}
                   >
                     <NavLink to="/admin" onClick={closeMobileSidebar}>
                       <Shield className="h-4 w-4" />
                       <span>{t('sidebar.admin')}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/admin/companies'}
+                    tooltip={t('sidebar.adminCompanies')}
+                  >
+                    <NavLink to="/admin/companies" onClick={closeMobileSidebar}>
+                      <Building2 className="h-4 w-4" />
+                      <span>{t('sidebar.adminCompanies')}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/admin/users'}
+                    tooltip={t('sidebar.adminUsers')}
+                  >
+                    <NavLink to="/admin/users" onClick={closeMobileSidebar}>
+                      <Users className="h-4 w-4" />
+                      <span>{t('sidebar.adminUsers')}</span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

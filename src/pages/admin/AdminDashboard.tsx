@@ -1,8 +1,27 @@
-import { Shield } from 'lucide-react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Shield, Building2, Users } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/useTranslation';
 
 export default function AdminDashboard() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+
+  const cards = [
+    {
+      title: t('admin.companiesCard'),
+      description: t('admin.companiesCardDesc'),
+      icon: Building2,
+      path: '/admin/companies',
+    },
+    {
+      title: t('admin.usersCard'),
+      description: t('admin.usersCardDesc'),
+      icon: Users,
+      path: '/admin/users',
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -16,12 +35,26 @@ export default function AdminDashboard() {
         </p>
       </div>
 
-      <div className="rounded-lg border bg-card p-8 text-center">
-        <Shield className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-        <h2 className="text-xl font-semibold mb-2">{t('admin.dashboard')}</h2>
-        <p className="text-muted-foreground">
-          {t('admin.placeholder')}
-        </p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {cards.map((card) => (
+          <Card
+            key={card.path}
+            className="cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => navigate(card.path)}
+          >
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">
+                  <card.icon className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">{card.title}</CardTitle>
+                  <CardDescription>{card.description}</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+        ))}
       </div>
     </div>
   );
