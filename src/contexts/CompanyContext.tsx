@@ -8,6 +8,9 @@ interface Company {
   id: string;
   name: string;
   slug: string;
+  address: string | null;
+  company_number: string | null;
+  country: string | null;
   perm_legal: boolean;
   perm_accounting: boolean;
   perm_finance: boolean;
@@ -64,6 +67,9 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
             id,
             name,
             slug,
+            address,
+            company_number,
+            country,
             perm_legal,
             perm_accounting,
             perm_finance
