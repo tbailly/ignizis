@@ -1,141 +1,263 @@
 
-# Role Administrateur Global
+# Gestion des Entreprises et Utilisateurs -- Espace Admin
 
 ## Vue d'ensemble
 
-Ajouter un role "admin" global (non lie a une entreprise) via la table `user_roles` existante. Les utilisateurs avec ce role auront acces aux pages `/admin`. Les utilisateurs normaux ne verront rien de different.
+Construire deux sections dans l'espace admin (`/admin`) : une pour gerer les entreprises et une pour gerer les utilisateurs (non-admin). Chaque section inclut un tableau avec recherche, creation/edition via formulaire, et suppression avec confirmation.
 
-## Etat actuel de `user_roles`
+---
 
-La table existe deja avec la bonne structure :
-- `user_id` (uuid, not null)
-- `company_id` (uuid, **nullable** -- parfait pour un role global)
-- `role` (text)
-- RLS : une seule policy `false` sur ALL -- tout est bloque
+## 1. Base de donnees
 
-Elle est vide et inutilisee. On va l'adapter plutot que la recreer.
-
-## Ce qui change
-
-### 1. Base de donnees
-
-**a) Creer une fonction `is_admin`** (security definer)
+### a) Ajouter la colonne `status` a `companies`
 
 ```sql
-CREATE OR REPLACE FUNCTION public.is_admin(_user_id uuid)
-RETURNS boolean
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.user_roles
-    WHERE user_id = _user_id
-      AND role = 'admin'
-      AND company_id IS NULL
-  );
-$$;
+ALTER TABLE public.companies 
+  ADD COLUMN status text NOT NULL DEFAULT 'active';
 ```
 
-Cette fonction verifie si un utilisateur a le role `admin` global (sans `company_id`). Etant `SECURITY DEFINER`, elle contourne le RLS et peut etre appelee depuis d'autres policies ou depuis le frontend via un appel RPC.
+Valeurs acceptees : `active` ou `inactive`.
 
-**b) Mettre a jour les policies RLS de `user_roles`**
+### b) Ajouter les policies RLS admin
 
-Supprimer la policy actuelle (`false` sur ALL) et la remplacer par :
-- **SELECT** : un utilisateur peut voir ses propres roles (`user_id = auth.uid()`)
-- **INSERT / UPDATE / DELETE** : restreint aux admins uniquement (via `is_admin(auth.uid())`)
+Toutes les policies existantes sont PERMISSIVE -- donc il suffit d'en ajouter de nouvelles pour les admins (logique OR entre policies permissives).
 
-**c) Ajouter un index** sur `(user_id, role)` pour la performance de `is_admin`.
+**Table `companies`** :
+- SELECT : `is_admin(auth.uid())` -- l'admin voit toutes les entreprises
+- UPDATE : `is_admin(auth.uid())`
+- DELETE : `is_admin(auth.uid())`
 
-### 2. AuthContext -- exposer `isAdmin`
+**Table `users`** :
+- SELECT : `is_admin(auth.uid())` -- l'admin voit tous les utilisateurs
 
-Modifier `AuthContext.tsx` pour :
-- Ajouter un booleen `isAdmin` au contexte
-- Apres le fetch du profil, appeler `supabase.rpc('is_admin', { _user_id: userId })` pour determiner le statut admin
-- Exposer `isAdmin` dans le contexte pour que toute l'app puisse le lire
+**Table `user_companies`** :
+- SELECT : `is_admin(auth.uid())` -- l'admin voit toutes les associations
+- INSERT : `is_admin(auth.uid())`
+- DELETE : `is_admin(auth.uid())`
 
-### 3. Routes `/admin`
+### c) Cascades existantes
 
-Dans `App.tsx` :
-- Ajouter un groupe de routes `/admin` protege par un composant `AdminRoute`
-- Route initiale : `/admin` affichant un dashboard admin placeholder
+Toutes les FK utilisent deja `ON DELETE CASCADE` :
+- `user_companies.company_id` -> `companies.id` (cascade)
+- `user_companies.user_id` -> `users.id` (cascade)
+- `user_roles.user_id` -> `users.id` (cascade)
+- `users.id` -> `auth.users.id` (cascade)
 
-```text
-/admin          --> AdminDashboard (admin-only)
-/admin/...      --> futures pages admin
-```
+Supprimer une entreprise supprime automatiquement les associations `user_companies`. Supprimer un utilisateur via `auth.admin.deleteUser()` cascade vers `users`, `user_companies`, et `user_roles`.
 
-### 4. Composant `AdminRoute`
+---
 
-Creer `src/components/AdminRoute.tsx` :
-- Lit `isAdmin` depuis `useAuth()`
-- Si `isAdmin` est `false`, redirige vers `/` (ou affiche un 403)
-- Si `true`, affiche les enfants
+## 2. Edge function : `admin-users`
 
-### 5. Page Admin placeholder
+Une fonction backend pour les operations qui necessitent le service role key (creation/suppression d'utilisateurs auth).
 
-Creer `src/pages/admin/AdminDashboard.tsx` avec un contenu minimal :
-- Titre "Administration"
-- Message indiquant que c'est la zone admin
-- Utilisera le meme `MainLayout` (sidebar) pour l'instant
+### Actions
 
-### 6. Lien Admin dans la sidebar
+**`create`** : Cree un utilisateur dans `auth.users` avec `email_confirm: true` (compte actif immediatement, aucun email envoye). Le trigger `handle_new_user` cree automatiquement le profil dans `public.users`. Le frontend gere ensuite l'association aux entreprises via `user_companies`.
 
-Dans `AppSidebar.tsx` :
-- Ajouter conditionnellement un lien "Administration" (avec une icone `Shield`) dans la navigation, visible uniquement si `isAdmin` est `true`
-- Ce lien pointe vers `/admin`
-
-### 7. Traductions (i18n)
-
-Ajouter dans `en.json` :
-```json
-"admin": {
-  "title": "Administration",
-  "dashboard": "Admin Dashboard",
-  "description": "Platform administration and management."
-},
-"sidebar": {
-  ...
-  "admin": "Administration"
-}
-```
-
-## Fichiers concernes
-
-- **Migration SQL** : fonction `is_admin`, mise a jour des policies RLS de `user_roles`, index
-- **`src/contexts/AuthContext.tsx`** : ajouter `isAdmin` au contexte + appel RPC
-- **`src/components/AdminRoute.tsx`** (nouveau) : garde de route admin
-- **`src/pages/admin/AdminDashboard.tsx`** (nouveau) : page admin placeholder
-- **`src/App.tsx`** : ajouter les routes `/admin`
-- **`src/components/layout/AppSidebar.tsx`** : lien conditionnel "Administration"
-- **`src/i18n/locales/en.json`** : cles de traduction admin
-
-## Details techniques
-
-### Pourquoi garder `user_roles` ?
-
-La table a deja :
-- `company_id` nullable : un role avec `company_id IS NULL` est un role global -- exactement ce qu'il faut pour "admin"
-- `role` en `text` : flexible, on peut ajouter d'autres roles plus tard sans migration d'enum
-- Des foreign keys vers `users` et `companies`
-
-Il suffit de corriger le RLS (actuellement tout bloque) et d'ajouter la fonction `is_admin`.
+**`delete`** : Appelle `auth.admin.deleteUser(userId)`. La cascade FK supprime automatiquement le profil, les associations entreprises, et les roles.
 
 ### Securite
 
-- Le statut admin est **toujours verifie cote serveur** via la fonction `is_admin` (security definer)
-- Le frontend lit `isAdmin` pour l'affichage conditionnel (sidebar, routes), mais la vraie protection est au niveau RLS
-- Les futures tables admin auront des policies du type `is_admin(auth.uid())`
-- Aucun stockage du role dans le profil utilisateur ou dans le localStorage
+- Authentification requise (JWT verifie en code)
+- Verification que l'appelant est admin via `is_admin` RPC
+- Validation des inputs (email valide, UUID valide)
 
-### Attribution du role admin
+---
 
-Pour le moment, l'attribution se fait manuellement via une insertion directe dans `user_roles` :
+## 3. Routing
 
-```sql
-INSERT INTO user_roles (user_id, role)
-VALUES ('uuid-de-l-utilisateur', 'admin');
+Nouvelles routes sous `/admin`, toutes protegees par `AdminRoute` :
+
+```text
+/admin                    --> AdminDashboard (mis a jour avec navigation)
+/admin/companies          --> Liste des entreprises
+/admin/companies/new      --> Formulaire creation entreprise
+/admin/companies/:id/edit --> Formulaire edition entreprise
+/admin/users              --> Liste des utilisateurs
+/admin/users/new          --> Formulaire creation utilisateur
+/admin/users/:id/edit     --> Formulaire edition utilisateur
 ```
 
-Un admin existant pourra aussi le faire via l'app une fois les pages admin construites.
+Dans `App.tsx`, les routes admin deviennent un groupe avec `Outlet` :
+
+```text
+<Route path="/admin" element={<AdminRoute><Outlet /></AdminRoute>}>
+  <Route index element={<AdminDashboard />} />
+  <Route path="companies" element={<AdminCompanies />} />
+  <Route path="companies/new" element={<AdminCompanyForm />} />
+  <Route path="companies/:id/edit" element={<AdminCompanyForm />} />
+  <Route path="users" element={<AdminUsers />} />
+  <Route path="users/new" element={<AdminUserForm />} />
+  <Route path="users/:id/edit" element={<AdminUserForm />} />
+</Route>
+```
+
+---
+
+## 4. Pages admin
+
+### AdminDashboard (mise a jour)
+
+Remplace le placeholder actuel par deux cartes cliquables :
+- **Entreprises** : lien vers `/admin/companies`
+- **Utilisateurs** : lien vers `/admin/users`
+
+### AdminCompanies -- Liste des entreprises
+
+- Tableau avec colonnes : Nom, Utilisateurs associes, Statut (badge), Actions
+- Barre de recherche filtrant par nom d'entreprise
+- Bouton "Creer une entreprise" en haut a droite
+- Pagination (10 entreprises par page)
+- Donnees : query `companies` + join `user_companies` -> `users` pour les noms
+
+### AdminCompanyForm -- Creation/Edition
+
+- Champ **Nom** (obligatoire, 100 caracteres max)
+- Champ **Slug** (auto-genere en kebab-case depuis le nom, modifiable)
+- **Statut** (switch Actif/Inactif, Actif par defaut)
+- **Permissions** (3 switches) : Juridique, Comptabilite, Finance
+- Boutons "Enregistrer" et "Annuler"
+- En creation : INSERT dans `companies`
+- En edition : UPDATE de `companies` par ID
+
+### Suppression d'entreprise
+
+- Modale `AlertDialog` demandant de saisir le slug pour confirmer
+- Le bouton "Supprimer definitivement" n'est actif que si le slug saisi correspond
+- DELETE sur `companies` (cascade nettoie `user_companies`)
+
+### AdminUsers -- Liste des utilisateurs
+
+- Tableau avec colonnes : Email, Entreprises associees, Actions
+- Filtre par email ou nom via barre de recherche
+- Bouton "Creer un utilisateur" en haut a droite
+- Seuls les utilisateurs non-admin sont affiches (filtrage via `user_roles`)
+- Donnees : query `users` + join `user_companies` -> `companies`
+
+### AdminUserForm -- Creation/Edition
+
+- Champ **Email** (obligatoire, unique)
+- **Entreprises associees** : combobox multi-selection (basee sur `cmdk` deja installe)
+- En creation : appel edge function `admin-users` action `create`, puis INSERT `user_companies`
+- En edition : diff des entreprises pour INSERT/DELETE dans `user_companies`
+- Boutons "Enregistrer" et "Annuler"
+
+### Suppression d'utilisateur
+
+- Modale `AlertDialog` avec bouton "Supprimer definitivement"
+- Appel edge function `admin-users` action `delete` (invalidation des sessions + cascade)
+
+---
+
+## 5. Sidebar
+
+Mise a jour de la section admin dans `AppSidebar.tsx` :
+- Quand l'utilisateur est sur `/admin/*`, afficher des sous-liens : "Entreprises" et "Utilisateurs"
+- Utiliser un `Collapsible` ou simplement des sous-items dans le groupe admin
+
+---
+
+## 6. Traductions (en.json)
+
+Ajout des cles pour toute la section admin :
+
+```json
+"admin": {
+  "title": "Administration",
+  "description": "Platform administration and management.",
+  "companiesCard": "Companies",
+  "companiesCardDesc": "Manage companies and their settings",
+  "usersCard": "Users",
+  "usersCardDesc": "Manage users and their access",
+  "companies": {
+    "title": "Companies",
+    "create": "Create a company",
+    "edit": "Edit company",
+    "searchPlaceholder": "Search by company name...",
+    "name": "Company name",
+    "slug": "Slug",
+    "status": "Status",
+    "active": "Active",
+    "inactive": "Inactive",
+    "permissions": "Enabled options",
+    "legal": "Legal",
+    "accounting": "Accounting",
+    "finance": "Finance",
+    "users": "Associated users",
+    "actions": "Actions",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "deleteConfirmTitle": "Delete company",
+    "deleteConfirmDesc": "This action is irreversible. Type the company slug to confirm:",
+    "deleteConfirmButton": "Delete permanently",
+    "deleteSuccess": "Company deleted",
+    "saveSuccess": "Company saved",
+    "noCompanies": "No companies found"
+  },
+  "users": {
+    "title": "Users",
+    "create": "Create a user",
+    "edit": "Edit user",
+    "searchPlaceholder": "Search by email or name...",
+    "email": "Email",
+    "companies": "Associated companies",
+    "companiesPlaceholder": "Select companies...",
+    "actions": "Actions",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "deleteConfirmTitle": "Delete user",
+    "deleteConfirmDesc": "This action is irreversible. The user will be permanently deleted and all active sessions invalidated.",
+    "deleteConfirmButton": "Delete permanently",
+    "deleteSuccess": "User deleted",
+    "saveSuccess": "User saved",
+    "noUsers": "No users found"
+  }
+}
+```
+
+---
+
+## 7. Fichiers concernes
+
+| Fichier | Action |
+|---------|--------|
+| Migration SQL | Colonne `status`, policies RLS admin |
+| `supabase/functions/admin-users/index.ts` | Nouveau -- creation/suppression users auth |
+| `supabase/config.toml` | Ajouter config `admin-users` (verify_jwt = false) |
+| `src/pages/admin/AdminDashboard.tsx` | Mise a jour -- navigation cards |
+| `src/pages/admin/AdminCompanies.tsx` | Nouveau -- liste entreprises |
+| `src/pages/admin/AdminCompanyForm.tsx` | Nouveau -- formulaire entreprise |
+| `src/pages/admin/AdminUsers.tsx` | Nouveau -- liste utilisateurs |
+| `src/pages/admin/AdminUserForm.tsx` | Nouveau -- formulaire utilisateur |
+| `src/App.tsx` | Mise a jour -- nouvelles routes admin |
+| `src/components/layout/AppSidebar.tsx` | Mise a jour -- sous-navigation admin |
+| `src/i18n/locales/en.json` | Mise a jour -- cles traduction admin |
+
+---
+
+## 8. Details techniques
+
+### Generation du slug
+
+Fonction utilitaire `toKebabCase(name: string)` : supprime les accents, remplace les espaces et caracteres speciaux par des tirets, met en minuscules, supprime les tirets en debut/fin.
+
+### Filtrage des utilisateurs non-admin
+
+1. Charger tous les `users`
+2. Charger les `user_roles` ou `role = 'admin' AND company_id IS NULL`
+3. Exclure cote client les users dont l'ID apparait dans les roles admin
+
+### Combobox multi-selection
+
+Construite avec le composant `Command` (base sur `cmdk` deja installe) enveloppe dans un `Popover`. Affiche les entreprises selectionnees sous forme de badges avec bouton de suppression.
+
+### Securite de l'edge function
+
+L'edge function `admin-users` :
+1. Extrait le JWT du header Authorization
+2. Recupere l'utilisateur via `supabase.auth.getUser()`
+3. Verifie le statut admin via `is_admin` RPC avec le service role client
+4. Rejette avec 403 si non-admin
