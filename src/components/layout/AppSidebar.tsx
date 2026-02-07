@@ -23,14 +23,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-
-const menuItems = [
-  { title: 'Entreprise', url: '/entreprise', icon: Building2, permission: 'entreprise' as const },
-  { title: 'Mes contrats et factures', url: '/contrats', icon: FileText, permission: 'contrats' as const },
-  { title: 'Juridique', url: '/juridique', icon: Scale, permission: 'juridique' as const },
-  { title: 'Comptabilité', url: '/comptabilite', icon: Calculator, permission: 'comptabilite' as const },
-  { title: 'Finance', url: '/finance', icon: TrendingUp, permission: 'finance' as const },
-];
+import { useTranslation } from '@/i18n/useTranslation';
 
 export function AppSidebar() {
   const location = useLocation();
@@ -38,6 +31,15 @@ export function AppSidebar() {
   const { companies, currentCompany, setCurrentCompany, hasPermission } = useCompany();
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
+  const { t } = useTranslation();
+
+  const menuItems = [
+    { title: t('sidebar.company'), url: '/entreprise', icon: Building2, permission: 'entreprise' as const },
+    { title: t('sidebar.contracts'), url: '/contrats', icon: FileText, permission: 'contrats' as const },
+    { title: t('sidebar.legal'), url: '/juridique', icon: Scale, permission: 'juridique' as const },
+    { title: t('sidebar.accounting'), url: '/comptabilite', icon: Calculator, permission: 'comptabilite' as const },
+    { title: t('sidebar.finance'), url: '/finance', icon: TrendingUp, permission: 'finance' as const },
+  ];
 
   const visibleMenuItems = menuItems.filter(item => hasPermission(item.permission));
 
@@ -58,7 +60,7 @@ export function AppSidebar() {
                 <>
                   <div className="flex-1 text-left">
                     <p className="text-sm font-medium truncate">
-                      {currentCompany?.company.name || 'Sélectionner'}
+                      {currentCompany?.company.name || t('common.select')}
                     </p>
                   </div>
                   <ChevronsUpDown className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -89,11 +91,11 @@ export function AppSidebar() {
       {/* Main Navigation */}
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel>{t('sidebar.navigation')}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {visibleMenuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton
                     asChild
                     isActive={location.pathname === item.url}
@@ -126,7 +128,7 @@ export function AppSidebar() {
                 <>
                   <div className="flex-1 text-left min-w-0">
                     <p className="text-sm font-medium truncate">
-                      {profile?.name || 'Utilisateur'}
+                      {profile?.name || t('common.user')}
                     </p>
                     <p className="text-xs text-muted-foreground truncate">
                       {profile?.email}
@@ -141,37 +143,37 @@ export function AppSidebar() {
             <DropdownMenuItem asChild>
               <NavLink to="/parametres" className="flex items-center gap-2">
                 <Settings className="h-4 w-4" />
-                Paramètres du compte
+                {t('sidebar.settings')}
               </NavLink>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <NavLink to="/mentions-legales" className="flex items-center gap-2">
                 <Scale className="h-4 w-4" />
-                Mentions légales
+                {t('sidebar.legalNotice')}
               </NavLink>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <NavLink to="/confidentialite" className="flex items-center gap-2">
                 <FileQuestion className="h-4 w-4" />
-                Politique de confidentialité
+                {t('sidebar.privacyPolicy')}
               </NavLink>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <NavLink to="/cgu" className="flex items-center gap-2">
                 <FileText className="h-4 w-4" />
-                CGU
+                {t('sidebar.terms')}
               </NavLink>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <NavLink to="/aide" className="flex items-center gap-2">
                 <Info className="h-4 w-4" />
-                Aide
+                {t('sidebar.help')}
               </NavLink>
             </DropdownMenuItem>
             <DropdownMenuItem className="text-xs text-muted-foreground" disabled>
-              Version 1.0.0
+              {t('common.version')}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
@@ -179,7 +181,7 @@ export function AppSidebar() {
               className="text-destructive focus:text-destructive"
             >
               <LogOut className="h-4 w-4 mr-2" />
-              Déconnexion
+              {t('common.logout')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
