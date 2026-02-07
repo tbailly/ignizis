@@ -38,7 +38,14 @@
     "legalNotice": "Legal notice",
     "privacyPolicy": "Privacy policy",
     "terms": "Terms of use",
-    "help": "Help"
+    "help": "Help",
+    "admin": "Administration"
+  },
+  "admin": {
+    "title": "Administration",
+    "dashboard": "Admin Dashboard",
+    "description": "Platform administration and management.",
+    "placeholder": "Admin features will appear here."
   },
   "dashboard": {
     "welcome": "Welcome",

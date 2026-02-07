@@ -9,6 +9,7 @@ import { CompanyProvider, useCompany } from "@/contexts/CompanyContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { I18nProvider } from "@/i18n/I18nContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AdminRoute } from "@/components/AdminRoute";
 import { MainLayout } from "@/components/layout/MainLayout";
 
 // Pages
@@ -25,6 +26,7 @@ import MentionsLegales from "./pages/legal/MentionsLegales";
 import Confidentialite from "./pages/legal/Confidentialite";
 import CGU from "./pages/legal/CGU";
 import NotFound from "./pages/NotFound";
+import AdminDashboard from "./pages/admin/AdminDashboard";
 
 const queryClient = new QueryClient();
 
@@ -115,6 +117,9 @@ const App = () => (
                   <Route path="/legal-notice" element={<MentionsLegales />} />
                   <Route path="/privacy" element={<Confidentialite />} />
                   <Route path="/terms" element={<CGU />} />
+
+                  {/* Admin routes */}
+                  <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
                 </Route>
 
                 {/* 404 */}
