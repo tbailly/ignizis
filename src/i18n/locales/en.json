@@ -1,6 +1,7 @@
 {
   "common": {
     "loading": "Loading...",
+    "switchingCompany": "Switching company…",
     "save": "Save",
     "saving": "Saving...",
     "cancel": "Cancel",
