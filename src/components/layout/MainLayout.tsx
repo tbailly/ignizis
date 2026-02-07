@@ -13,7 +13,8 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <SidebarProvider defaultOpen={!isMobile}>
-      <div className="min-h-screen flex w-full">
+      <div className="min-h-screen flex w-full relative">
+        <CompanyTransition />
         <AppSidebar />
         <SidebarInset className="flex-1">
           {/* Mobile Header */}
@@ -22,9 +23,8 @@ export function MainLayout({ children }: MainLayoutProps) {
             <span className="font-semibold">Portail Entreprises</span>
           </header>
           
-          {/* Main Content with transition overlay */}
-          <main className="relative flex-1 p-6">
-            <CompanyTransition />
+          {/* Main Content */}
+          <main className="flex-1 p-6">
             {children}
           </main>
         </SidebarInset>
