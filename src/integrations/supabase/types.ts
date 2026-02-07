@@ -59,6 +59,44 @@ export type Database = {
         }
         Relationships: []
       }
+      company_officers: {
+        Row: {
+          company_id: string
+          created_at: string
+          date_of_birth: string | null
+          first_name: string
+          id: string
+          last_name: string
+          position: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          date_of_birth?: string | null
+          first_name: string
+          id?: string
+          last_name: string
+          position: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          date_of_birth?: string | null
+          first_name?: string
+          id?: string
+          last_name?: string
+          position?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_officers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_companies: {
         Row: {
           company_id: string
