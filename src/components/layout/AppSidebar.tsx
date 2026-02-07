@@ -1,4 +1,4 @@
-import { Building2, FileText, Scale, Calculator, TrendingUp, ChevronDown, Settings, FileQuestion, LogOut, Info, ChevronsUpDown } from 'lucide-react';
+import { Building2, FileText, Scale, Calculator, TrendingUp, ChevronDown, Settings, FileQuestion, LogOut, Info, ChevronsUpDown, Shield } from 'lucide-react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
@@ -28,7 +28,7 @@ import { useTranslation } from '@/i18n/useTranslation';
 export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { profile, signOut } = useAuth();
+  const { profile, isAdmin, signOut } = useAuth();
   const { companies, currentCompany, setCurrentCompany, hasPermission, companyPath } = useCompany();
   const { state, isMobile, setOpenMobile } = useSidebar();
   const collapsed = state === 'collapsed';
@@ -132,6 +132,28 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Admin Navigation */}
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname.startsWith('/admin')}
+                    tooltip={t('sidebar.admin')}
+                  >
+                    <NavLink to="/admin" onClick={closeMobileSidebar}>
+                      <Shield className="h-4 w-4" />
+                      <span>{t('sidebar.admin')}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       {/* User Account Footer */}

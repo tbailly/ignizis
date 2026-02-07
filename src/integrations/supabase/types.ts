@@ -156,6 +156,7 @@ export type Database = {
         Args: { section_name: string; target_company_id: string }
         Returns: boolean
       }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_member_of_company: {
         Args: { target_company_id: string }
         Returns: boolean
