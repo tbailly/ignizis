@@ -12,12 +12,9 @@ import { toast } from 'sonner';
 import { Loader2, Mail } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect } from 'react';
+import { useTranslation } from '@/i18n/useTranslation';
 
-const emailSchema = z.object({
-  email: z.string().email('Adresse email invalide'),
-});
-
-type EmailFormData = z.infer<typeof emailSchema>;
+type EmailFormData = { email: string };
 
 // Check if auto-confirm mode is enabled (for development/testing)
 const isAutoConfirmEnabled = import.meta.env.VITE_AUTOCONFIRM !== 'false';
@@ -27,6 +24,11 @@ export default function Auth() {
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const { t } = useTranslation();
+
+  const emailSchema = z.object({
+    email: z.string().email(t('auth.emailInvalid')),
+  });
 
   const form = useForm<EmailFormData>({
     resolver: zodResolver(emailSchema),
@@ -55,7 +57,7 @@ export default function Auth() {
 
       if (data.error) {
         if (data.code === 'USER_NOT_FOUND') {
-          toast.error('Utilisateur non trouvé');
+          toast.error(t('auth.userNotFound'));
         } else {
           console.error('Auto-login error:', data.error);
         }
@@ -74,7 +76,7 @@ export default function Auth() {
         return false;
       }
 
-      toast.success('Connexion réussie !');
+      toast.success(t('auth.loginSuccess'));
       return true;
     } catch (error) {
       console.error('Auto-login error:', error);
@@ -90,9 +92,8 @@ export default function Auth() {
       if (isAutoConfirmEnabled) {
         const success = await handleAutoLogin(data.email);
         if (success) {
-          return; // Successfully logged in
+          return;
         }
-        // If auto-login fails (user not found, etc.), fall back to magic link
       }
       
       const redirectUrl = `${window.location.origin}/`;
@@ -105,16 +106,14 @@ export default function Auth() {
       });
 
       if (error) {
-        // Don't reveal if user exists or not
         console.error('Auth error:', error);
       }
 
-      // Always show success message (security: don't reveal if email exists)
       setEmailSent(true);
-      toast.success('Email envoyé !');
+      toast.success(t('auth.emailSent'));
     } catch (error) {
       console.error('Unexpected error:', error);
-      toast.error('Une erreur est survenue. Veuillez réessayer.');
+      toast.error(t('auth.unexpectedError'));
     } finally {
       setLoading(false);
     }
@@ -132,13 +131,13 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Connexion</CardTitle>
+          <CardTitle className="text-2xl">{t('auth.title')}</CardTitle>
           <CardDescription>
             {emailSent
-              ? 'Vérifiez votre boîte de réception'
+              ? t('auth.checkInbox')
               : isAutoConfirmEnabled
-                ? 'Entrez votre email pour vous connecter instantanément'
-                : 'Entrez votre email pour recevoir un lien de connexion'}
+                ? t('auth.description')
+                : t('auth.descriptionMagicLink')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -148,14 +147,14 @@ export default function Auth() {
                 <Mail className="h-8 w-8 text-primary" />
               </div>
               <p className="text-muted-foreground">
-                Si un compte existe avec cette adresse email, vous recevrez un lien de connexion dans quelques instants.
+                {t('auth.emailSentMessage')}
               </p>
               <Button
                 variant="outline"
                 onClick={() => setEmailSent(false)}
                 className="mt-4"
               >
-                Essayer une autre adresse
+                {t('auth.tryAnotherEmail')}
               </Button>
             </div>
           ) : (
@@ -166,11 +165,11 @@ export default function Auth() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>{t('auth.emailLabel')}</FormLabel>
                       <FormControl>
                         <Input
                           type="email"
-                          placeholder="votre@email.com"
+                          placeholder={t('auth.emailPlaceholder')}
                           autoComplete="email"
                           {...field}
                         />
@@ -181,7 +180,7 @@ export default function Auth() {
                 />
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {isAutoConfirmEnabled ? 'Se connecter' : 'Envoyer le lien de connexion'}
+                  {isAutoConfirmEnabled ? t('auth.submit') : t('auth.submitMagicLink')}
                 </Button>
               </form>
             </Form>

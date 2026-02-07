@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CompanyProvider } from "@/contexts/CompanyContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { I18nProvider } from "@/i18n/I18nContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { MainLayout } from "@/components/layout/MainLayout";
 
@@ -41,6 +42,7 @@ const App = () => (
     <BrowserRouter>
       <AuthProvider>
         <ThemeProvider>
+          <I18nProvider>
           <TooltipProvider>
             <Toaster />
             <Sonner />
@@ -65,6 +67,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </TooltipProvider>
+          </I18nProvider>
         </ThemeProvider>
       </AuthProvider>
     </BrowserRouter>

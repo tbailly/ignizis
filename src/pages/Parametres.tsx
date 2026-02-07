@@ -9,10 +9,12 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useTranslation } from '@/i18n/useTranslation';
 
 export default function Parametres() {
   const { profile, user } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { t } = useTranslation();
   const [name, setName] = useState(profile?.name || '');
   const [saving, setSaving] = useState(false);
 
@@ -27,27 +29,27 @@ export default function Parametres() {
         .eq('id', user.id);
 
       if (error) throw error;
-      toast.success('Nom mis à jour');
+      toast.success(t('settings.nameUpdated'));
     } catch (error) {
       console.error('Error updating name:', error);
-      toast.error('Erreur lors de la mise à jour');
+      toast.error(t('settings.updateError'));
     } finally {
       setSaving(false);
     }
   };
 
   const themeOptions = [
-    { value: 'light' as const, label: 'Clair', icon: Sun },
-    { value: 'dark' as const, label: 'Sombre', icon: Moon },
-    { value: 'system' as const, label: 'Système', icon: Monitor },
+    { value: 'light' as const, label: t('settings.themeLight'), icon: Sun },
+    { value: 'dark' as const, label: t('settings.themeDark'), icon: Moon },
+    { value: 'system' as const, label: t('settings.themeSystem'), icon: Monitor },
   ];
 
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Paramètres du compte</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t('settings.title')}</h1>
         <p className="text-muted-foreground">
-          Gérez vos préférences et informations personnelles.
+          {t('settings.subtitle')}
         </p>
       </div>
 
@@ -55,15 +57,15 @@ export default function Parametres() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
-            Profil
+            {t('settings.profile')}
           </CardTitle>
           <CardDescription>
-            Vos informations personnelles
+            {t('settings.personalInfo')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t('settings.email')}</Label>
             <Input
               id="email"
               type="email"
@@ -73,16 +75,16 @@ export default function Parametres() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="name">Nom</Label>
+            <Label htmlFor="name">{t('settings.name')}</Label>
             <div className="flex gap-2">
               <Input
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Votre nom"
+                placeholder={t('settings.namePlaceholder')}
               />
               <Button onClick={handleSaveName} disabled={saving}>
-                {saving ? 'Enregistrement...' : 'Enregistrer'}
+                {saving ? t('common.saving') : t('common.save')}
               </Button>
             </div>
           </div>
@@ -91,9 +93,9 @@ export default function Parametres() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Apparence</CardTitle>
+          <CardTitle>{t('settings.appearance')}</CardTitle>
           <CardDescription>
-            Personnalisez l'apparence de l'application
+            {t('settings.appearanceDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent>

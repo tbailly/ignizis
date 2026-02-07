@@ -1,13 +1,15 @@
 import { TrendingUp } from 'lucide-react';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useTranslation } from '@/i18n/useTranslation';
 
 export default function Finance() {
   const { currentCompany } = useCompany();
+  const { t } = useTranslation();
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Finance</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t('finance.title')}</h1>
         <p className="text-muted-foreground">
           {currentCompany?.company.name}
         </p>
@@ -16,10 +18,10 @@ export default function Finance() {
       <div className="flex flex-col items-center justify-center min-h-[400px] border-2 border-dashed rounded-lg bg-muted/20">
         <TrendingUp className="h-16 w-16 text-muted-foreground mb-4" />
         <h2 className="text-xl font-semibold text-muted-foreground">
-          Section Finance
+          {t('finance.sectionTitle')}
         </h2>
         <p className="text-muted-foreground text-center max-w-md mt-2">
-          Cette section contiendra les informations et documents financiers.
+          {t('finance.sectionDescription')}
         </p>
       </div>
     </div>
