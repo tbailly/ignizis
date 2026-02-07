@@ -171,6 +171,8 @@
   },
   "company": {
     "title": "Company",
+    "details": "Company details",
+    "copied": "Copied to clipboard",
     "sectionTitle": "Company section",
     "sectionDescription": "This section will contain company information and documents."
   },
