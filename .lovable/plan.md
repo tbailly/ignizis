@@ -1,172 +1,144 @@
 
-# Plan de modification du modèle de données
 
-## Contexte
-Actuellement, les permissions sont stockées au niveau de chaque association utilisateur-entreprise (`user_companies.permissions`), et chaque entreprise a un propriétaire (`companies.owner_id`).
+# Internationalization (i18n) - Simple Key/Value Translation System
 
-Le nouveau modèle simplifie cela :
-- Les **permissions deviennent des options globales de l'entreprise** (stockées dans `companies`)
-- La table `user_companies` devient une **simple table de liaison** sans permissions individuelles
-- Il n'y a **plus de notion de propriétaire** d'entreprise
+## Overview
 
-## Changements a effectuer
+Set up a lightweight translation system using local JSON files -- no external library needed. All text content will be centralized in translation files organized by language, making it easy to switch languages or add new ones without touching component code.
 
-### 1. Migration de la base de donnees
+## Approach: Custom i18n with JSON files + React Context
 
-**Modifications sur la table `companies` :**
-- Supprimer la colonne `owner_id`
-- Ajouter une colonne `permissions` (JSONB) avec la structure :
-  ```json
-  {
-    "entreprise": true,
-    "contrats": true,
-    "juridique": true,
-    "comptabilite": true,
-    "finance": true
+Rather than adding a heavy library like `react-i18next`, we'll build a minimal system that fits the project's scale:
+
+- One JSON file per language (e.g., `en.json`, `fr.json`)
+- A React context + hook (`useTranslation`) to access translations anywhere
+- A helper function `t("key.path")` that returns the translated string
+- Language preference stored in localStorage (default: English)
+
+This keeps things simple, with zero dependencies, and is easy to extend later if needed.
+
+## File Structure
+
+```text
+src/
+  i18n/
+    locales/
+      en.json          -- English translations (default)
+      fr.json          -- French translations (for later)
+    i18n.ts            -- Core logic: load locale, lookup keys
+    I18nContext.tsx     -- React context + provider
+    useTranslation.ts  -- Hook returning the t() function
+```
+
+## How Translation Files Will Look
+
+Each JSON file uses nested keys organized by page/section:
+
+```json
+{
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "logout": "Log out",
+    "version": "Version 1.0.0"
+  },
+  "auth": {
+    "title": "Sign in",
+    "description": "Enter your email to sign in instantly",
+    "descriptionMagicLink": "Enter your email to receive a sign-in link",
+    "emailLabel": "Email",
+    "emailPlaceholder": "your@email.com",
+    "emailInvalid": "Invalid email address",
+    "submit": "Sign in",
+    "submitMagicLink": "Send sign-in link",
+    "checkInbox": "Check your inbox",
+    "emailSentMessage": "If an account exists with this email, you will receive a sign-in link shortly.",
+    "tryAnotherEmail": "Try another address",
+    "loginSuccess": "Successfully signed in!",
+    "userNotFound": "User not found",
+    "unexpectedError": "An error occurred. Please try again."
+  },
+  "sidebar": {
+    "navigation": "Navigation",
+    "company": "Company",
+    "contracts": "My contracts and invoices",
+    "legal": "Legal",
+    "accounting": "Accounting",
+    "finance": "Finance",
+    "settings": "Account settings",
+    "legalNotice": "Legal notice",
+    "privacyPolicy": "Privacy policy",
+    "terms": "Terms of use",
+    "help": "Help"
+  },
+  "dashboard": {
+    "welcome": "Welcome",
+    "noCompany": "You are not associated with any company yet.",
+    "noCompanyTitle": "No company",
+    "noCompanyDescription": "Contact an administrator to be added to a company.",
+    "accessSections": "Access the different sections of your company",
+    "noAccess": "No accessible section",
+    "noAccessDescription": "You don't have permissions to access sections of this company. Contact an administrator to change your access."
+  },
+  "settings": {
+    "title": "Account settings",
+    "subtitle": "Manage your preferences and personal information.",
+    "profile": "Profile",
+    "personalInfo": "Your personal information",
+    "email": "Email",
+    "name": "Name",
+    "namePlaceholder": "Your name",
+    "nameUpdated": "Name updated",
+    "updateError": "Error updating",
+    "appearance": "Appearance",
+    "appearanceDescription": "Customize the application appearance",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System"
   }
-  ```
-
-**Modifications sur la table `user_companies` :**
-- Supprimer la colonne `permissions`
-- Supprimer la colonne `invited_by` (plus de notion de proprietaire qui invite)
-
-**Suppression des fonctions obsoletes :**
-- `is_company_owner()` - plus de proprietaire
-- `get_user_company_permissions()` - permissions maintenant au niveau company
-- `has_permission()` - a remplacer par une nouvelle version
-
-**Nouvelle fonction :**
-- `get_company_permissions(target_company_id)` - retourne les permissions de l'entreprise
-
-### 2. Mise a jour des politiques RLS
-
-**Sur `companies` :**
-- Supprimer les policies liees a `owner_id`
-- Permettre aux membres de voir leur entreprise (inchange)
-- Permettre aux membres de mettre a jour leur entreprise (tous les membres peuvent modifier)
-- Permettre la creation d'entreprise (l'utilisateur doit etre le premier membre)
-- Permettre la suppression (par exemple si plus aucun membre)
-
-**Sur `user_companies` :**
-- Simplifier les policies d'insertion/suppression sans notion de proprietaire
-- Les membres peuvent voir leurs associations
-- Les membres peuvent ajouter/retirer d'autres utilisateurs
-
-### 3. Mise a jour du code frontend
-
-**`src/contexts/CompanyContext.tsx` :**
-- Modifier l'interface `Company` : supprimer `owner_id`, ajouter `permissions`
-- Modifier l'interface `UserCompany` : supprimer `permissions`
-- Mettre a jour `hasPermission()` pour lire depuis `currentCompany.company.permissions`
-- Adapter la requete `fetchCompanies()` pour recuperer les permissions depuis `companies`
-
-**`src/integrations/supabase/types.ts` :**
-- Ce fichier est auto-genere, il sera mis a jour automatiquement apres la migration
-
-### 4. Donnees de test
-
-Apres la migration, creer :
-- Une entreprise "Ma Societe Test" avec toutes les permissions activees
-- L'association avec l'utilisateur connecte
-
----
-
-## Details techniques
-
-### SQL de migration
-
-```text
--- Supprimer l'index obsolete
-DROP INDEX IF EXISTS idx_companies_owner_id;
-
--- Ajouter permissions a companies
-ALTER TABLE public.companies 
-ADD COLUMN permissions JSONB NOT NULL DEFAULT '{
-  "entreprise": true,
-  "contrats": true,
-  "juridique": true,
-  "comptabilite": true,
-  "finance": true
-}'::jsonb;
-
--- Supprimer owner_id de companies
-ALTER TABLE public.companies DROP COLUMN owner_id;
-
--- Supprimer permissions et invited_by de user_companies
-ALTER TABLE public.user_companies DROP COLUMN permissions;
-ALTER TABLE public.user_companies DROP COLUMN invited_by;
-
--- Supprimer les anciennes fonctions
-DROP FUNCTION IF EXISTS public.is_company_owner(UUID);
-DROP FUNCTION IF EXISTS public.get_user_company_permissions(UUID);
-DROP FUNCTION IF EXISTS public.has_permission(UUID, TEXT);
-
--- Nouvelle fonction pour recuperer les permissions de l'entreprise
-CREATE OR REPLACE FUNCTION public.get_company_permissions(target_company_id UUID)
-RETURNS JSONB
-LANGUAGE sql
-SECURITY DEFINER
-SET search_path = public
-STABLE
-AS $$
-  SELECT COALESCE(
-    (SELECT permissions FROM public.companies 
-     WHERE id = target_company_id),
-    '{}'::jsonb
-  );
-$$;
-
--- Nouvelle fonction has_permission
-CREATE OR REPLACE FUNCTION public.has_permission(target_company_id UUID, section_name TEXT)
-RETURNS BOOLEAN
-LANGUAGE sql
-SECURITY DEFINER
-SET search_path = public
-STABLE
-AS $$
-  SELECT COALESCE(
-    (SELECT (permissions->>section_name)::boolean 
-     FROM public.companies 
-     WHERE id = target_company_id),
-    false
-  ) AND public.is_member_of_company(target_company_id);
-$$;
+}
 ```
 
-### Nouvelles politiques RLS
+(Plus keys for Help, Legal Notice, Privacy Policy, Terms pages, and placeholder pages like Company, Contracts, etc.)
 
-```text
--- Supprimer les anciennes policies sur companies
-DROP POLICY IF EXISTS "Users can create companies" ON public.companies;
-DROP POLICY IF EXISTS "Owners can update their companies" ON public.companies;
-DROP POLICY IF EXISTS "Owners can delete their companies" ON public.companies;
+## Usage in Components
 
--- Nouvelles policies pour companies
-CREATE POLICY "Members can update their company"
-  ON public.companies FOR UPDATE
-  USING (public.is_member_of_company(id));
-
-CREATE POLICY "Anyone can create a company"
-  ON public.companies FOR INSERT
-  WITH CHECK (true);
-
--- Supprimer les anciennes policies sur user_companies
-DROP POLICY IF EXISTS "Company owners can invite users" ON public.user_companies;
-DROP POLICY IF EXISTS "Company owners can remove users" ON public.user_companies;
-
--- Nouvelles policies pour user_companies
-CREATE POLICY "Members can add users to their company"
-  ON public.user_companies FOR INSERT
-  WITH CHECK (public.is_member_of_company(company_id));
-
-CREATE POLICY "Members can remove users from their company"
-  ON public.user_companies FOR DELETE
-  USING (public.is_member_of_company(company_id));
+Before (hardcoded French):
+```tsx
+<h1>Connexion</h1>
+<p>Entrez votre email pour recevoir un lien de connexion</p>
 ```
 
-### Modifications du contexte React
+After (using translation keys):
+```tsx
+const { t } = useTranslation();
+<h1>{t("auth.title")}</h1>
+<p>{t("auth.descriptionMagicLink")}</p>
+```
 
-Le `CompanyContext.tsx` sera modifie pour :
-1. Lire `permissions` depuis `company.permissions` au lieu de `userCompany.permissions`
-2. Supprimer `owner_id` de l'interface `Company`
-3. Simplifier l'interface `UserCompany` (plus de permissions)
+## Implementation Steps
+
+1. **Create the i18n infrastructure** (`i18n.ts`, `I18nContext.tsx`, `useTranslation.ts`)
+2. **Create `en.json`** with all text currently in the app, translated to English
+3. **Wrap the app** with `I18nProvider` in `App.tsx`
+4. **Update all pages and components** to use `t()` instead of hardcoded strings:
+   - `Auth.tsx` -- login form labels, messages, toasts
+   - `AppSidebar.tsx` -- menu items, dropdown labels
+   - `Dashboard.tsx` -- titles, descriptions, empty states
+   - `Parametres.tsx` -- settings labels, theme names, toasts
+   - `Entreprise.tsx`, `Contrats.tsx`, `Juridique.tsx`, `Comptabilite.tsx`, `Finance.tsx` -- page titles and placeholder text
+   - `Aide.tsx` -- FAQ content, contact section
+   - `MentionsLegales.tsx`, `Confidentialite.tsx`, `CGU.tsx` -- legal page content
+   - `NotFound.tsx` -- 404 text
+   - Zod validation messages in `Auth.tsx`
+
+## Technical Details
+
+- **Key lookup**: dot-notation path resolution on nested JSON objects (e.g., `t("auth.title")` resolves `translations.auth.title`)
+- **Fallback**: if a key is missing, the key itself is returned (makes it obvious what needs translating)
+- **Language storage**: `localStorage` key `app_language`, defaults to `"en"`
+- **No URL-based routing**: language is a user preference, not a URL segment
+- **Type safety**: a TypeScript type can be generated from the JSON structure for autocomplete (optional, can be added later)
+
