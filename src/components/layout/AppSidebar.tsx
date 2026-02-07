@@ -1,5 +1,5 @@
 import { Building2, FileText, Scale, Calculator, TrendingUp, ChevronDown, Settings, FileQuestion, LogOut, Info, ChevronsUpDown } from 'lucide-react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
 import {
@@ -27,8 +27,9 @@ import { useTranslation } from '@/i18n/useTranslation';
 
 export function AppSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { profile, signOut } = useAuth();
-  const { companies, currentCompany, setCurrentCompany, hasPermission } = useCompany();
+  const { companies, currentCompany, setCurrentCompany, hasPermission, companyPath } = useCompany();
   const { state, isMobile, setOpenMobile } = useSidebar();
   const collapsed = state === 'collapsed';
   const { t } = useTranslation();
@@ -37,12 +38,25 @@ export function AppSidebar() {
     if (isMobile) setOpenMobile(false);
   };
 
+  const handleCompanySwitch = (uc: typeof companies[number]) => {
+    setCurrentCompany(uc);
+    // If on a company-scoped page, navigate to same sub-page under new slug
+    const currentSlug = currentCompany?.company?.slug;
+    if (currentSlug && location.pathname.startsWith(`/${currentSlug}`)) {
+      const subPath = location.pathname.slice(`/${currentSlug}`.length) || '';
+      navigate(`/${uc.company.slug}${subPath}`);
+    } else {
+      navigate(`/${uc.company.slug}`);
+    }
+    closeMobileSidebar();
+  };
+
   const menuItems = [
-    { title: t('sidebar.company'), url: '/entreprise', icon: Building2, permission: 'entreprise' as const },
-    { title: t('sidebar.contracts'), url: '/contrats', icon: FileText, permission: 'contrats' as const },
-    { title: t('sidebar.legal'), url: '/juridique', icon: Scale, permission: 'juridique' as const },
-    { title: t('sidebar.accounting'), url: '/comptabilite', icon: Calculator, permission: 'comptabilite' as const },
-    { title: t('sidebar.finance'), url: '/finance', icon: TrendingUp, permission: 'finance' as const },
+    { title: t('sidebar.company'), path: '/entreprise', icon: Building2, permission: 'entreprise' as const },
+    { title: t('sidebar.contracts'), path: '/contrats', icon: FileText, permission: 'contrats' as const },
+    { title: t('sidebar.legal'), path: '/juridique', icon: Scale, permission: 'juridique' as const },
+    { title: t('sidebar.accounting'), path: '/comptabilite', icon: Calculator, permission: 'comptabilite' as const },
+    { title: t('sidebar.finance'), path: '/finance', icon: TrendingUp, permission: 'finance' as const },
   ];
 
   const visibleMenuItems = menuItems.filter(item => hasPermission(item.permission));
@@ -76,7 +90,7 @@ export function AppSidebar() {
             {companies.map((uc) => (
               <DropdownMenuItem
                 key={uc.company_id}
-                onClick={() => setCurrentCompany(uc)}
+                onClick={() => handleCompanySwitch(uc)}
                 className={cn(
                   "flex items-center gap-2",
                   currentCompany?.company_id === uc.company_id && "bg-accent"
@@ -98,20 +112,23 @@ export function AppSidebar() {
           <SidebarGroupLabel>{t('sidebar.navigation')}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {visibleMenuItems.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location.pathname === item.url}
-                    tooltip={item.title}
-                  >
-                    <NavLink to={item.url} onClick={closeMobileSidebar}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {visibleMenuItems.map((item) => {
+                const fullPath = companyPath(item.path);
+                return (
+                  <SidebarMenuItem key={item.path}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === fullPath}
+                      tooltip={item.title}
+                    >
+                      <NavLink to={fullPath} onClick={closeMobileSidebar}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
 
@@ -13,6 +13,7 @@ interface CompanyPermissions {
 interface Company {
   id: string;
   name: string;
+  slug: string;
   permissions: CompanyPermissions;
 }
 
@@ -28,6 +29,7 @@ interface CompanyContextType {
   setCurrentCompany: (company: UserCompany) => void;
   loading: boolean;
   hasPermission: (section: keyof CompanyPermissions) => boolean;
+  companyPath: (path: string) => string;
 }
 
 const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
@@ -62,6 +64,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
           company:companies (
             id,
             name,
+            slug,
             permissions
           )
         `);
@@ -95,15 +98,20 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const setCurrentCompany = (company: UserCompany) => {
+  const setCurrentCompany = useCallback((company: UserCompany) => {
     setCurrentCompanyState(company);
     localStorage.setItem(CURRENT_COMPANY_KEY, company.company_id);
-  };
+  }, []);
 
-  const hasPermission = (section: keyof CompanyPermissions): boolean => {
+  const hasPermission = useCallback((section: keyof CompanyPermissions): boolean => {
     if (!currentCompany?.company?.permissions) return false;
     return currentCompany.company.permissions[section] === true;
-  };
+  }, [currentCompany]);
+
+  const companyPath = useCallback((path: string): string => {
+    if (!currentCompany?.company?.slug) return path;
+    return `/${currentCompany.company.slug}${path}`;
+  }, [currentCompany]);
 
   return (
     <CompanyContext.Provider value={{ 
@@ -111,7 +119,8 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       currentCompany, 
       setCurrentCompany, 
       loading,
-      hasPermission 
+      hasPermission,
+      companyPath,
     }}>
       {children}
     </CompanyContext.Provider>

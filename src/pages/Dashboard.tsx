@@ -5,15 +5,15 @@ import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/ca
 import { useTranslation } from '@/i18n/useTranslation';
 
 export default function Dashboard() {
-  const { currentCompany, hasPermission } = useCompany();
+  const { currentCompany, hasPermission, companyPath } = useCompany();
   const { t } = useTranslation();
 
   const sections = [
-    { title: t('dashboard.sectionCompany'), url: '/entreprise', icon: Building2, permission: 'entreprise' as const, description: t('dashboard.sectionCompanyDesc') },
-    { title: t('dashboard.sectionContracts'), url: '/contrats', icon: FileText, permission: 'contrats' as const, description: t('dashboard.sectionContractsDesc') },
-    { title: t('dashboard.sectionLegal'), url: '/juridique', icon: Scale, permission: 'juridique' as const, description: t('dashboard.sectionLegalDesc') },
-    { title: t('dashboard.sectionAccounting'), url: '/comptabilite', icon: Calculator, permission: 'comptabilite' as const, description: t('dashboard.sectionAccountingDesc') },
-    { title: t('dashboard.sectionFinance'), url: '/finance', icon: TrendingUp, permission: 'finance' as const, description: t('dashboard.sectionFinanceDesc') },
+    { title: t('dashboard.sectionCompany'), path: '/entreprise', icon: Building2, permission: 'entreprise' as const, description: t('dashboard.sectionCompanyDesc') },
+    { title: t('dashboard.sectionContracts'), path: '/contrats', icon: FileText, permission: 'contrats' as const, description: t('dashboard.sectionContractsDesc') },
+    { title: t('dashboard.sectionLegal'), path: '/juridique', icon: Scale, permission: 'juridique' as const, description: t('dashboard.sectionLegalDesc') },
+    { title: t('dashboard.sectionAccounting'), path: '/comptabilite', icon: Calculator, permission: 'comptabilite' as const, description: t('dashboard.sectionAccountingDesc') },
+    { title: t('dashboard.sectionFinance'), path: '/finance', icon: TrendingUp, permission: 'finance' as const, description: t('dashboard.sectionFinanceDesc') },
   ];
 
   const visibleSections = sections.filter(s => hasPermission(s.permission));
@@ -55,7 +55,7 @@ export default function Dashboard() {
       {visibleSections.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {visibleSections.map((section) => (
-            <NavLink key={section.url} to={section.url}>
+            <NavLink key={section.path} to={companyPath(section.path)}>
               <Card className="h-full transition-colors hover:bg-muted/50">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
