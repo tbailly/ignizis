@@ -6,7 +6,7 @@
     "saving": "Saving...",
     "cancel": "Cancel",
     "logout": "Log out",
-    "version": "Version 1.0.0",
+    "version": "Version 1.1.0",
     "select": "Select",
     "user": "User"
   },
@@ -89,15 +89,7 @@
       "deleteConfirmButton": "Delete permanently",
       "deleteSuccess": "Company deleted",
       "saveSuccess": "Company saved",
-      "noCompanies": "No companies found",
-      "officers": "Corporate officers",
-      "officerLastName": "Last name",
-      "officerFirstName": "First name",
-      "officerDob": "Date of birth",
-      "officerPosition": "Position",
-      "addOfficer": "Add officer",
-      "removeOfficer": "Remove",
-      "noOfficers": "No corporate officers added"
+      "noCompanies": "No companies found"
     },
     "users": {
       "title": "Users",
@@ -171,8 +163,6 @@
   },
   "company": {
     "title": "Company",
-    "details": "Company details",
-    "copied": "Copied to clipboard",
     "sectionTitle": "Company section",
     "sectionDescription": "This section will contain company information and documents."
   },
