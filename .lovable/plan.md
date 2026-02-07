@@ -1,213 +1,156 @@
 
 
-# Gestion des Entreprises et Utilisateurs -- Espace Admin (avec modales)
+# Remplacement du champ JSONB `permissions` par des colonnes booleennes + nouveaux champs entreprise
 
-## Vue d'ensemble
+## Resume
 
-Construire deux sections dans l'espace admin (`/admin`) : une pour gerer les entreprises et une pour gerer les utilisateurs (non-admin). Les formulaires de creation et d'edition utilisent des **modales (Dialog)** au lieu de pages separees, pour une meilleure experience mobile.
+Supprimer le champ JSONB `permissions` de la table `companies` et le remplacer par 3 colonnes booleennes (`perm_legal`, `perm_accounting`, `perm_finance`). Ajouter egalement 3 nouvelles colonnes d'information : `company_number`, `address`, `country`. Mettre a jour toutes les fonctions SQL, le contexte React, la sidebar, le dashboard et le formulaire admin en consequence.
 
 ---
 
-## 1. Base de donnees
+## 1. Migration SQL
 
-### a) Ajouter la colonne `status` a `companies`
+### Nouvelles colonnes
 
 ```sql
-ALTER TABLE public.companies 
-  ADD COLUMN status text NOT NULL DEFAULT 'active';
+-- Colonnes informatives
+ALTER TABLE public.companies ADD COLUMN company_number TEXT UNIQUE;
+ALTER TABLE public.companies ADD COLUMN address TEXT;
+ALTER TABLE public.companies ADD COLUMN country TEXT; -- Code ISO alpha-2
+
+-- Colonnes booleennes de permissions (remplacent le JSONB)
+ALTER TABLE public.companies ADD COLUMN perm_legal BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE public.companies ADD COLUMN perm_accounting BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE public.companies ADD COLUMN perm_finance BOOLEAN NOT NULL DEFAULT true;
 ```
 
-Valeurs acceptees : `active` ou `inactive`.
+### Migration des donnees existantes
 
-### b) Ajouter les policies RLS admin
+Les 2 entreprises existantes ont des permissions en francais dans le JSONB. On migre les valeurs :
 
-Toutes les policies existantes sont PERMISSIVE -- il suffit d'en ajouter de nouvelles pour les admins (logique OR entre policies permissives).
-
-**Table `companies`** :
-- SELECT : `is_admin(auth.uid())`
-- UPDATE : `is_admin(auth.uid())`
-- DELETE : `is_admin(auth.uid())`
-
-**Table `users`** :
-- SELECT : `is_admin(auth.uid())`
-
-**Table `user_companies`** :
-- SELECT : `is_admin(auth.uid())`
-- INSERT : `is_admin(auth.uid())`
-- DELETE : `is_admin(auth.uid())`
-
----
-
-## 2. Edge function : `admin-users`
-
-Fonction backend pour les operations necessitant le service role key.
-
-### Actions
-
-- **`create`** : Cree un utilisateur dans `auth.users` avec `email_confirm: true` (compte actif, aucun email envoye). Le trigger `handle_new_user` cree automatiquement le profil dans `public.users`. Le frontend gere ensuite l'association aux entreprises via `user_companies`.
-- **`delete`** : Appelle `auth.admin.deleteUser(userId)`. La cascade FK supprime le profil, les associations, et les roles.
-
-### Securite
-
-- Authentification requise (JWT verifie en code)
-- Verification admin via `is_admin` RPC avec le service role client
-- Validation des inputs (email valide, UUID valide)
-
----
-
-## 3. Routing (simplifie)
-
-Plus besoin de routes `/new` et `/:id/edit` puisque les formulaires sont des modales ouvertes depuis les pages de liste.
-
-Nouvelles routes sous `/admin` :
-
-```text
-/admin             --> AdminDashboard (avec navigation cards)
-/admin/companies   --> Liste des entreprises (modale pour creer/editer)
-/admin/users       --> Liste des utilisateurs (modale pour creer/editer)
+```sql
+UPDATE public.companies
+SET perm_legal = COALESCE((permissions->>'juridique')::boolean, true),
+    perm_accounting = COALESCE((permissions->>'comptabilite')::boolean, true),
+    perm_finance = COALESCE((permissions->>'finance')::boolean, true);
 ```
 
-Dans `App.tsx`, le bloc admin devient :
+### Suppression de la colonne JSONB
 
-```text
-<Route path="/admin" element={<AdminRoute><Outlet /></AdminRoute>}>
-  <Route index element={<AdminDashboard />} />
-  <Route path="companies" element={<AdminCompanies />} />
-  <Route path="users" element={<AdminUsers />} />
-</Route>
+```sql
+ALTER TABLE public.companies DROP COLUMN permissions;
+```
+
+### Mise a jour des fonctions SQL
+
+**`get_company_permissions`** : supprimee (plus de JSONB a retourner).
+
+**`has_permission`** : reecrite pour lire les colonnes booleennes directement :
+
+```sql
+CREATE OR REPLACE FUNCTION public.has_permission(target_company_id UUID, section_name TEXT)
+RETURNS BOOLEAN
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT CASE section_name
+    WHEN 'legal' THEN COALESCE((SELECT perm_legal FROM public.companies WHERE id = target_company_id), false)
+    WHEN 'accounting' THEN COALESCE((SELECT perm_accounting FROM public.companies WHERE id = target_company_id), false)
+    WHEN 'finance' THEN COALESCE((SELECT perm_finance FROM public.companies WHERE id = target_company_id), false)
+    WHEN 'entreprise' THEN true
+    WHEN 'contrats' THEN true
+    ELSE false
+  END
+  AND public.is_member_of_company(target_company_id);
+$$;
 ```
 
 ---
 
-## 4. Pages et composants admin
+## 2. Fichiers frontend a modifier
 
-### AdminDashboard (mise a jour)
+### `src/contexts/CompanyContext.tsx`
 
-Remplace le placeholder actuel par deux cartes cliquables :
-- **Entreprises** : lien vers `/admin/companies`
-- **Utilisateurs** : lien vers `/admin/users`
+- Supprimer l'interface `CompanyPermissions` basee sur le JSONB
+- Mettre a jour l'interface `Company` pour avoir les 3 booleens directement (`perm_legal`, `perm_accounting`, `perm_finance`)
+- Modifier le `select()` pour recuperer les nouvelles colonnes au lieu de `permissions`
+- Reecrire `hasPermission` pour lire les colonnes booleennes :
+  - `'entreprise'` et `'contrats'` retournent toujours `true` (sections toujours visibles)
+  - `'legal'` lit `perm_legal`, `'accounting'` lit `perm_accounting`, `'finance'` lit `perm_finance`
 
-### AdminCompanies -- Liste des entreprises
+### `src/components/layout/AppSidebar.tsx`
 
-- Tableau avec colonnes : Nom, Utilisateurs associes, Statut (badge), Actions
-- Barre de recherche filtrant par nom
-- Bouton "Creer une entreprise" en haut a droite (ouvre la modale)
-- Bouton "Editer" dans chaque ligne (ouvre la modale pre-remplie)
-- Pagination (10 par page)
+- Renommer les cles de permission dans `menuItems` :
+  - `'juridique'` devient `'legal'`
+  - `'comptabilite'` devient `'accounting'`
 
-### CompanyFormDialog -- Modale creation/edition
+### `src/pages/Dashboard.tsx`
 
-Composant `Dialog` (de `@radix-ui/react-dialog`) contenant le formulaire :
-- Champ **Nom** (obligatoire, 100 caracteres max)
-- Champ **Slug** (auto-genere en kebab-case, modifiable)
-- **Statut** (switch Actif/Inactif)
-- **Options activees** (3 switches) : Juridique, Comptabilite, Finance
-- Boutons "Enregistrer" et "Annuler"
-- En creation : INSERT dans `companies`
-- En edition : UPDATE de `companies` par ID, champs pre-remplis
+- Memes renommages dans le tableau `sections` :
+  - `'juridique'` devient `'legal'`
+  - `'comptabilite'` devient `'accounting'`
 
-Le composant recoit une prop `company` optionnelle : si presente, mode edition ; sinon, mode creation. L'ouverture/fermeture est controllee via un state `open` dans la page parente `AdminCompanies`.
+### `src/components/admin/CompanyFormDialog.tsx`
 
-### DeleteCompanyDialog -- Modale de suppression
+- Supprimer l'ancienne interface `CompanyData` avec `permissions: Record<string, boolean>`
+- Mettre a jour `CompanyData` avec les nouveaux champs : `company_number`, `address`, `country`, `perm_legal`, `perm_accounting`, `perm_finance`
+- Renommer les states internes (`permJuridique` -> `permLegal`, `permComptabilite` -> `permAccounting`)
+- Ajouter les nouveaux champs au formulaire :
+  - **Company number** : `Input` texte standard
+  - **Address** : `Textarea` (multiline)
+  - **Country** : `Select` avec les options : France (FR), UAE (AE), Hong Kong (HK), Switzerland (CH), Belgium (BE), United States (US)
+- Modifier les appels `insert()` / `update()` pour envoyer les colonnes individuelles au lieu du JSONB `permissions`
 
-Composant `AlertDialog` avec :
-- Champ de saisie du slug pour confirmer
-- Bouton "Supprimer definitivement" actif uniquement si le slug saisi correspond
-- DELETE sur `companies` (cascade nettoie `user_companies`)
+### `src/pages/admin/AdminCompanies.tsx`
 
-### AdminUsers -- Liste des utilisateurs
+- Mettre a jour l'interface `CompanyWithUsers` : supprimer `permissions`, ajouter `company_number`, `address`, `country`, `perm_legal`, `perm_accounting`, `perm_finance`
+- Mettre a jour le `select()` dans la query pour inclure les nouvelles colonnes
 
-- Tableau avec colonnes : Email, Entreprises associees, Actions
-- Barre de recherche par email ou nom
-- Bouton "Creer un utilisateur" (ouvre la modale)
-- Seuls les utilisateurs non-admin affiches
+### `src/i18n/locales/en.json`
 
-### UserFormDialog -- Modale creation/edition
-
-Composant `Dialog` contenant le formulaire :
-- Champ **Email** (obligatoire, unique) -- en lecture seule en edition
-- **Entreprises associees** : combobox multi-selection (basee sur `cmdk`)
-- En creation : appel edge function `admin-users` action `create`, puis INSERT `user_companies`
-- En edition : diff des entreprises pour INSERT/DELETE dans `user_companies`
-
-### DeleteUserDialog -- Modale de suppression
-
-Composant `AlertDialog` avec :
-- Message de confirmation
-- Bouton "Supprimer definitivement"
-- Appel edge function `admin-users` action `delete`
+Ajouter les cles :
+- `admin.companies.companyNumber` : "Company number"
+- `admin.companies.address` : "Address"
+- `admin.companies.addressPlaceholder` : "Enter company address..."
+- `admin.companies.country` : "Country"
+- `admin.companies.countryPlaceholder` : "Select a country"
+- `admin.companies.countries.FR` : "France"
+- `admin.companies.countries.AE` : "UAE"
+- `admin.companies.countries.HK` : "Hong Kong"
+- `admin.companies.countries.CH` : "Switzerland"
+- `admin.companies.countries.BE` : "Belgium"
+- `admin.companies.countries.US` : "United States"
 
 ---
 
-## 5. Sidebar
-
-Mise a jour de la section admin dans `AppSidebar.tsx` :
-- Ajouter des sous-liens "Entreprises" et "Utilisateurs" visibles quand on est sur `/admin/*`
-
----
-
-## 6. Traductions (en.json)
-
-Ajout des cles admin identiques au plan original (companies, users, etc.).
-
----
-
-## 7. Fichiers concernes
+## 3. Liste complete des fichiers modifies
 
 | Fichier | Action |
 |---------|--------|
-| Migration SQL | Colonne `status`, policies RLS admin |
-| `supabase/functions/admin-users/index.ts` | Nouveau -- creation/suppression users auth |
-| `src/pages/admin/AdminDashboard.tsx` | Mise a jour -- navigation cards |
-| `src/pages/admin/AdminCompanies.tsx` | Nouveau -- liste entreprises + gestion modales |
-| `src/pages/admin/AdminUsers.tsx` | Nouveau -- liste utilisateurs + gestion modales |
-| `src/components/admin/CompanyFormDialog.tsx` | Nouveau -- modale formulaire entreprise |
-| `src/components/admin/DeleteCompanyDialog.tsx` | Nouveau -- modale suppression entreprise |
-| `src/components/admin/UserFormDialog.tsx` | Nouveau -- modale formulaire utilisateur |
-| `src/components/admin/DeleteUserDialog.tsx` | Nouveau -- modale suppression utilisateur |
-| `src/components/admin/MultiCompanySelect.tsx` | Nouveau -- combobox multi-selection |
-| `src/lib/utils.ts` | Mise a jour -- ajout `toKebabCase()` |
-| `src/App.tsx` | Mise a jour -- routes admin simplifiees |
-| `src/components/layout/AppSidebar.tsx` | Mise a jour -- sous-navigation admin |
-| `src/i18n/locales/en.json` | Mise a jour -- cles traduction admin |
+| Migration SQL | Ajouter colonnes, migrer donnees, supprimer `permissions`, reecrire fonctions |
+| `src/contexts/CompanyContext.tsx` | Supprimer `CompanyPermissions`, utiliser colonnes booleennes |
+| `src/components/layout/AppSidebar.tsx` | Renommer cles de permission (`legal`, `accounting`) |
+| `src/pages/Dashboard.tsx` | Renommer cles de permission (`legal`, `accounting`) |
+| `src/components/admin/CompanyFormDialog.tsx` | Nouveaux champs + colonnes booleennes au lieu de JSONB |
+| `src/pages/admin/AdminCompanies.tsx` | Mettre a jour interface et select query |
+| `src/i18n/locales/en.json` | Ajouter cles de traduction |
 
 ---
 
-## 8. Details techniques
+## 4. Ordre des champs dans la modale entreprise
 
-### Generation du slug
+1. Company name (existant)
+2. Slug (existant)
+3. Company number (nouveau)
+4. Address (nouveau, Textarea)
+5. Country (nouveau, Select)
+6. Status (existant)
+7. Enabled options : Legal, Accounting, Finance (renommes)
 
-Fonction utilitaire `toKebabCase(name: string)` dans `src/lib/utils.ts` : supprime les accents via `normalize('NFD')`, remplace les espaces et caracteres speciaux par des tirets, met en minuscules, supprime les tirets en debut/fin.
+---
 
-### Architecture des modales
+## 5. Notes techniques
 
-Chaque page de liste (`AdminCompanies`, `AdminUsers`) gere localement l'etat d'ouverture des modales :
-
-```text
-const [formOpen, setFormOpen] = useState(false);
-const [editingItem, setEditingItem] = useState<Company | null>(null);
-const [deletingItem, setDeletingItem] = useState<Company | null>(null);
-```
-
-- Clic "Creer" : `setEditingItem(null)` + `setFormOpen(true)`
-- Clic "Editer" : `setEditingItem(company)` + `setFormOpen(true)`
-- Clic "Supprimer" : `setDeletingItem(company)`
-- Fermeture modale : reset des states + rafraichissement des donnees via `queryClient.invalidateQueries()`
-
-### Filtrage des utilisateurs non-admin
-
-1. Charger tous les `users`
-2. Charger les `user_roles` ou `role = 'admin' AND company_id IS NULL`
-3. Exclure cote client les users dont l'ID apparait dans les roles admin
-
-### Combobox multi-selection (`MultiCompanySelect`)
-
-Construite avec `Command` (base sur `cmdk`) enveloppee dans un `Popover`. Affiche les entreprises selectionnees sous forme de badges avec bouton de suppression.
-
-### Securite de l'edge function `admin-users`
-
-1. Extrait le JWT du header Authorization
-2. Recupere l'utilisateur via `supabase.auth.getUser()`
-3. Verifie le statut admin via `is_admin` RPC avec le service role client
-4. Rejette avec 403 si non-admin
+- `company_number` a une contrainte `UNIQUE` nullable : PostgreSQL autorise plusieurs `NULL` avec une contrainte UNIQUE, donc seules les valeurs non-null doivent etre uniques.
+- Les sections `entreprise` et `contrats` restent toujours visibles (pas de toggle), donc `hasPermission` retourne `true` pour ces deux valeurs.
+- La fonction SQL `get_company_permissions` est supprimee car inutile sans JSONB. La fonction `has_permission` est conservee et reecrite pour lire les colonnes booleennes directement.
 
