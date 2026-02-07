@@ -1,107 +1,141 @@
 
-# Company Transition Loading Screen
+# Role Administrateur Global
 
-## Overview
+## Vue d'ensemble
 
-When switching from one company to another, a full-screen loading overlay will appear over the main content area, giving a clear visual signal that the user is "changing universe." This transition will be slightly deliberate (minimum duration) so it feels intentional, and later can mask real API calls behind it.
+Ajouter un role "admin" global (non lie a une entreprise) via la table `user_roles` existante. Les utilisateurs avec ce role auront acces aux pages `/admin`. Les utilisateurs normaux ne verront rien de different.
 
-## What the User Will See
+## Etat actuel de `user_roles`
 
-1. User clicks on a different company in the sidebar dropdown
-2. The main content area fades out and is replaced by a centered loading animation showing the new company's initial + name
-3. After a short delay (~600ms minimum), the content fades back in with the new company's dashboard
-4. The sidebar remains visible and stable throughout -- only the content area transitions
+La table existe deja avec la bonne structure :
+- `user_id` (uuid, not null)
+- `company_id` (uuid, **nullable** -- parfait pour un role global)
+- `role` (text)
+- RLS : une seule policy `false` sur ALL -- tout est bloque
 
-## Visual Design
+Elle est vide et inutilisee. On va l'adapter plutot que la recreer.
 
-The loading screen will feature:
-- A subtle fade-in animation over the content area
-- The new company's initial letter in a large circle (matching the sidebar style)
-- The company name below it
-- A smooth progress bar or spinner underneath
-- A fade-out transition when loading completes
+## Ce qui change
 
-## Implementation
+### 1. Base de donnees
 
-### 1. Add a `switching` state to CompanyContext
+**a) Creer une fonction `is_admin`** (security definer)
 
-Add a new boolean `switching` to the context that is set to `true` when `setCurrentCompany` is called with a different company, and back to `false` after a minimum delay (e.g., 600ms). This gives components a way to react to the transition.
-
-**Changes to `CompanyContext.tsx`:**
-- Add `switching: boolean` to `CompanyContextType`
-- In `setCurrentCompany`, when the company actually changes:
-  - Set `switching = true`
-  - Update the current company
-  - After a `setTimeout` of ~600ms, set `switching = false`
-- Expose `switching` in the context value
-
-### 2. Create a `CompanyTransition` component
-
-A new component `src/components/CompanyTransition.tsx` that renders a loading overlay when `switching` is `true`.
-
-**What it shows:**
-- Full-size overlay covering the main content area (not the sidebar)
-- Animated fade-in/out using CSS transitions or Tailwind `animate-` classes
-- Company initial in a large circle (primary color)
-- Company name text
-- A subtle loading indicator (e.g., a pulsing dot or the Progress component)
-
-### 3. Integrate into MainLayout
-
-In `MainLayout.tsx`, wrap the `{children}` area with the transition component:
-- When `switching` is `true`, show the `CompanyTransition` overlay instead of (or on top of) the children
-- When `switching` is `false`, show the normal content with a fade-in
-
-### 4. Add i18n key
-
-Add a `"common.loading"` or `"common.switchingCompany"` translation key for the loading text (the key already exists as `"common.loading": "Loading..."`; we can add a more specific one like `"Switching company..."`).
-
-### 5. CSS animations
-
-Add Tailwind keyframes/animations in `index.css` or use existing `tailwindcss-animate` utilities:
-- `animate-in` / `animate-out` fade effects
-- A subtle scale effect for the company initial
-
-## Files to Create/Modify
-
-- **Create `src/components/CompanyTransition.tsx`** -- the loading overlay component
-- **Edit `src/contexts/CompanyContext.tsx`** -- add `switching` state with minimum delay timer
-- **Edit `src/components/layout/MainLayout.tsx`** -- integrate the transition overlay in the content area
-- **Edit `src/i18n/locales/en.json`** -- add `"common.switchingCompany"` translation key
-- **Edit `tailwind.config.ts`** (if needed) -- add custom animation keyframes
-
-## Technical Details
-
-### CompanyContext changes
-
-```typescript
-const [switching, setSwitching] = useState(false);
-
-const setCurrentCompany = useCallback((company: UserCompany) => {
-  if (company.company_id === currentCompanyRef.current?.company_id) return;
-  setSwitching(true);
-  setCurrentCompanyState(company);
-  localStorage.setItem(CURRENT_COMPANY_KEY, company.company_id);
-  setTimeout(() => setSwitching(false), 600);
-}, []);
+```sql
+CREATE OR REPLACE FUNCTION public.is_admin(_user_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.user_roles
+    WHERE user_id = _user_id
+      AND role = 'admin'
+      AND company_id IS NULL
+  );
+$$;
 ```
 
-A ref is used to avoid stale closures in the comparison.
+Cette fonction verifie si un utilisateur a le role `admin` global (sans `company_id`). Etant `SECURITY DEFINER`, elle contourne le RLS et peut etre appelee depuis d'autres policies ou depuis le frontend via un appel RPC.
 
-### CompanyTransition component structure
+**b) Mettre a jour les policies RLS de `user_roles`**
 
+Supprimer la policy actuelle (`false` sur ALL) et la remplacer par :
+- **SELECT** : un utilisateur peut voir ses propres roles (`user_id = auth.uid()`)
+- **INSERT / UPDATE / DELETE** : restreint aux admins uniquement (via `is_admin(auth.uid())`)
+
+**c) Ajouter un index** sur `(user_id, role)` pour la performance de `is_admin`.
+
+### 2. AuthContext -- exposer `isAdmin`
+
+Modifier `AuthContext.tsx` pour :
+- Ajouter un booleen `isAdmin` au contexte
+- Apres le fetch du profil, appeler `supabase.rpc('is_admin', { _user_id: userId })` pour determiner le statut admin
+- Exposer `isAdmin` dans le contexte pour que toute l'app puisse le lire
+
+### 3. Routes `/admin`
+
+Dans `App.tsx` :
+- Ajouter un groupe de routes `/admin` protege par un composant `AdminRoute`
+- Route initiale : `/admin` affichant un dashboard admin placeholder
+
+```text
+/admin          --> AdminDashboard (admin-only)
+/admin/...      --> futures pages admin
 ```
-+----------------------------------+
-|                                  |
-|         [ A ]  (large circle)    |
-|     "Acme Corporation"           |
-|     ------progress------         |
-|                                  |
-+----------------------------------+
+
+### 4. Composant `AdminRoute`
+
+Creer `src/components/AdminRoute.tsx` :
+- Lit `isAdmin` depuis `useAuth()`
+- Si `isAdmin` est `false`, redirige vers `/` (ou affiche un 403)
+- Si `true`, affiche les enfants
+
+### 5. Page Admin placeholder
+
+Creer `src/pages/admin/AdminDashboard.tsx` avec un contenu minimal :
+- Titre "Administration"
+- Message indiquant que c'est la zone admin
+- Utilisera le meme `MainLayout` (sidebar) pour l'instant
+
+### 6. Lien Admin dans la sidebar
+
+Dans `AppSidebar.tsx` :
+- Ajouter conditionnellement un lien "Administration" (avec une icone `Shield`) dans la navigation, visible uniquement si `isAdmin` est `true`
+- Ce lien pointe vers `/admin`
+
+### 7. Traductions (i18n)
+
+Ajouter dans `en.json` :
+```json
+"admin": {
+  "title": "Administration",
+  "dashboard": "Admin Dashboard",
+  "description": "Platform administration and management."
+},
+"sidebar": {
+  ...
+  "admin": "Administration"
+}
 ```
 
-The component reads `switching` and `currentCompany` from context. It uses `AnimatePresence`-style logic (CSS-based, no extra library) to fade in when `switching` becomes true and fade out when it becomes false.
+## Fichiers concernes
 
-### MainLayout integration
+- **Migration SQL** : fonction `is_admin`, mise a jour des policies RLS de `user_roles`, index
+- **`src/contexts/AuthContext.tsx`** : ajouter `isAdmin` au contexte + appel RPC
+- **`src/components/AdminRoute.tsx`** (nouveau) : garde de route admin
+- **`src/pages/admin/AdminDashboard.tsx`** (nouveau) : page admin placeholder
+- **`src/App.tsx`** : ajouter les routes `/admin`
+- **`src/components/layout/AppSidebar.tsx`** : lien conditionnel "Administration"
+- **`src/i18n/locales/en.json`** : cles de traduction admin
 
-The transition overlay is positioned absolutely within the content area, so the sidebar is never affected. When `switching` is true, the overlay appears on top of `{children}`. When false, it fades out and children are interactive again.
+## Details techniques
+
+### Pourquoi garder `user_roles` ?
+
+La table a deja :
+- `company_id` nullable : un role avec `company_id IS NULL` est un role global -- exactement ce qu'il faut pour "admin"
+- `role` en `text` : flexible, on peut ajouter d'autres roles plus tard sans migration d'enum
+- Des foreign keys vers `users` et `companies`
+
+Il suffit de corriger le RLS (actuellement tout bloque) et d'ajouter la fonction `is_admin`.
+
+### Securite
+
+- Le statut admin est **toujours verifie cote serveur** via la fonction `is_admin` (security definer)
+- Le frontend lit `isAdmin` pour l'affichage conditionnel (sidebar, routes), mais la vraie protection est au niveau RLS
+- Les futures tables admin auront des policies du type `is_admin(auth.uid())`
+- Aucun stockage du role dans le profil utilisateur ou dans le localStorage
+
+### Attribution du role admin
+
+Pour le moment, l'attribution se fait manuellement via une insertion directe dans `user_roles` :
+
+```sql
+INSERT INTO user_roles (user_id, role)
+VALUES ('uuid-de-l-utilisateur', 'admin');
+```
+
+Un admin existant pourra aussi le faire via l'app une fois les pages admin construites.
