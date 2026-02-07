@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
 
@@ -28,6 +28,7 @@ interface CompanyContextType {
   currentCompany: UserCompany | null;
   setCurrentCompany: (company: UserCompany) => void;
   loading: boolean;
+  switching: boolean;
   hasPermission: (section: keyof CompanyPermissions) => boolean;
   companyPath: (path: string) => string;
 }
@@ -41,6 +42,8 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   const [companies, setCompanies] = useState<UserCompany[]>([]);
   const [currentCompany, setCurrentCompanyState] = useState<UserCompany | null>(null);
   const [loading, setLoading] = useState(true);
+  const [switching, setSwitching] = useState(false);
+  const currentCompanyRef = useRef<UserCompany | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -98,9 +101,17 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Keep ref in sync
+  useEffect(() => {
+    currentCompanyRef.current = currentCompany;
+  }, [currentCompany]);
+
   const setCurrentCompany = useCallback((company: UserCompany) => {
+    if (company.company_id === currentCompanyRef.current?.company_id) return;
+    setSwitching(true);
     setCurrentCompanyState(company);
     localStorage.setItem(CURRENT_COMPANY_KEY, company.company_id);
+    setTimeout(() => setSwitching(false), 800);
   }, []);
 
   const hasPermission = useCallback((section: keyof CompanyPermissions): boolean => {
@@ -119,6 +130,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       currentCompany, 
       setCurrentCompany, 
       loading,
+      switching,
       hasPermission,
       companyPath,
     }}>

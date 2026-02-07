@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { CompanyTransition } from '@/components/CompanyTransition';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -21,8 +22,9 @@ export function MainLayout({ children }: MainLayoutProps) {
             <span className="font-semibold">Portail Entreprises</span>
           </header>
           
-          {/* Main Content */}
-          <main className="flex-1 p-6">
+          {/* Main Content with transition overlay */}
+          <main className="relative flex-1 p-6">
+            <CompanyTransition />
             {children}
           </main>
         </SidebarInset>
