@@ -10,13 +10,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 
 interface CompanyData {
   id: string;
   name: string;
   slug: string;
   status: string;
-  permissions: Record<string, boolean>;
+  company_number: string | null;
+  address: string | null;
+  country: string | null;
+  perm_legal: boolean;
+  perm_accounting: boolean;
+  perm_finance: boolean;
 }
 
 interface CompanyFormDialogProps {
@@ -26,6 +35,15 @@ interface CompanyFormDialogProps {
   onSuccess: () => void;
 }
 
+const COUNTRY_OPTIONS = [
+  { code: 'FR', label: 'admin.companies.countries.FR' },
+  { code: 'AE', label: 'admin.companies.countries.AE' },
+  { code: 'HK', label: 'admin.companies.countries.HK' },
+  { code: 'CH', label: 'admin.companies.countries.CH' },
+  { code: 'BE', label: 'admin.companies.countries.BE' },
+  { code: 'US', label: 'admin.companies.countries.US' },
+];
+
 export function CompanyFormDialog({ open, company, onClose, onSuccess }: CompanyFormDialogProps) {
   const { t } = useTranslation();
   const isEditing = !!company;
@@ -33,9 +51,12 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
-  const [status, setStatus] = useState(true); // true = active
-  const [permJuridique, setPermJuridique] = useState(true);
-  const [permComptabilite, setPermComptabilite] = useState(true);
+  const [status, setStatus] = useState(true);
+  const [companyNumber, setCompanyNumber] = useState('');
+  const [address, setAddress] = useState('');
+  const [country, setCountry] = useState('');
+  const [permLegal, setPermLegal] = useState(true);
+  const [permAccounting, setPermAccounting] = useState(true);
   const [permFinance, setPermFinance] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -46,16 +67,22 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
         setSlug(company.slug);
         setSlugManuallyEdited(true);
         setStatus(company.status === 'active');
-        setPermJuridique(company.permissions?.juridique !== false);
-        setPermComptabilite(company.permissions?.comptabilite !== false);
-        setPermFinance(company.permissions?.finance !== false);
+        setCompanyNumber(company.company_number || '');
+        setAddress(company.address || '');
+        setCountry(company.country || '');
+        setPermLegal(company.perm_legal !== false);
+        setPermAccounting(company.perm_accounting !== false);
+        setPermFinance(company.perm_finance !== false);
       } else {
         setName('');
         setSlug('');
         setSlugManuallyEdited(false);
         setStatus(true);
-        setPermJuridique(true);
-        setPermComptabilite(true);
+        setCompanyNumber('');
+        setAddress('');
+        setCountry('');
+        setPermLegal(true);
+        setPermAccounting(true);
         setPermFinance(true);
       }
     }
@@ -78,36 +105,28 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
     setSaving(true);
 
     try {
-      const permissions = {
-        entreprise: true,
-        contrats: true,
-        juridique: permJuridique,
-        comptabilite: permComptabilite,
-        finance: permFinance,
+      const payload = {
+        name: name.trim(),
+        slug: slug.trim(),
+        status: status ? 'active' : 'inactive',
+        company_number: companyNumber.trim() || null,
+        address: address.trim() || null,
+        country: country || null,
+        perm_legal: permLegal,
+        perm_accounting: permAccounting,
+        perm_finance: permFinance,
       };
 
       if (isEditing) {
         const { error } = await supabase
           .from('companies')
-          .update({
-            name: name.trim(),
-            slug: slug.trim(),
-            status: status ? 'active' : 'inactive',
-            permissions,
-          })
+          .update(payload)
           .eq('id', company.id);
-
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('companies')
-          .insert({
-            name: name.trim(),
-            slug: slug.trim(),
-            status: status ? 'active' : 'inactive',
-            permissions,
-          });
-
+          .insert(payload);
         if (error) throw error;
       }
 
@@ -123,7 +142,7 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? t('admin.companies.edit') : t('admin.companies.create')}
@@ -134,6 +153,7 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
         </DialogHeader>
 
         <div className="space-y-4 py-2">
+          {/* Company name */}
           <div className="space-y-2">
             <Label htmlFor="company-name">{t('admin.companies.name')}</Label>
             <Input
@@ -145,6 +165,7 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
             />
           </div>
 
+          {/* Slug */}
           <div className="space-y-2">
             <Label htmlFor="company-slug">{t('admin.companies.slug')}</Label>
             <Input
@@ -155,6 +176,47 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
             />
           </div>
 
+          {/* Company number */}
+          <div className="space-y-2">
+            <Label htmlFor="company-number">{t('admin.companies.companyNumber')}</Label>
+            <Input
+              id="company-number"
+              value={companyNumber}
+              onChange={(e) => setCompanyNumber(e.target.value)}
+              placeholder={t('admin.companies.companyNumber')}
+            />
+          </div>
+
+          {/* Address */}
+          <div className="space-y-2">
+            <Label htmlFor="company-address">{t('admin.companies.address')}</Label>
+            <Textarea
+              id="company-address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder={t('admin.companies.addressPlaceholder')}
+              rows={3}
+            />
+          </div>
+
+          {/* Country */}
+          <div className="space-y-2">
+            <Label htmlFor="company-country">{t('admin.companies.country')}</Label>
+            <Select value={country} onValueChange={setCountry}>
+              <SelectTrigger id="company-country">
+                <SelectValue placeholder={t('admin.companies.countryPlaceholder')} />
+              </SelectTrigger>
+              <SelectContent>
+                {COUNTRY_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.code} value={opt.code}>
+                    {t(opt.label)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Status */}
           <div className="flex items-center justify-between">
             <Label htmlFor="company-status">{t('admin.companies.status')}</Label>
             <div className="flex items-center gap-2">
@@ -169,17 +231,18 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
             </div>
           </div>
 
+          {/* Permissions */}
           <div className="space-y-3">
             <Label>{t('admin.companies.permissions')}</Label>
 
             <div className="flex items-center justify-between">
               <span className="text-sm">{t('admin.companies.legal')}</span>
-              <Switch checked={permJuridique} onCheckedChange={setPermJuridique} />
+              <Switch checked={permLegal} onCheckedChange={setPermLegal} />
             </div>
 
             <div className="flex items-center justify-between">
               <span className="text-sm">{t('admin.companies.accounting')}</span>
-              <Switch checked={permComptabilite} onCheckedChange={setPermComptabilite} />
+              <Switch checked={permAccounting} onCheckedChange={setPermAccounting} />
             </div>
 
             <div className="flex items-center justify-between">

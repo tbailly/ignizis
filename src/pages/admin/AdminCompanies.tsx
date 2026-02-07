@@ -17,7 +17,12 @@ interface CompanyWithUsers {
   name: string;
   slug: string;
   status: string;
-  permissions: Record<string, boolean>;
+  company_number: string | null;
+  address: string | null;
+  country: string | null;
+  perm_legal: boolean;
+  perm_accounting: boolean;
+  perm_finance: boolean;
   users: { id: string; email: string; name: string | null }[];
 }
 
@@ -36,7 +41,7 @@ export default function AdminCompanies() {
     queryFn: async () => {
       const { data: companiesData, error: companiesError } = await supabase
         .from('companies')
-        .select('id, name, slug, status, permissions')
+        .select('id, name, slug, status, company_number, address, country, perm_legal, perm_accounting, perm_finance')
         .order('name');
 
       if (companiesError) throw companiesError;

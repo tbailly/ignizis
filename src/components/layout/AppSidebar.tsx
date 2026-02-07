@@ -54,8 +54,8 @@ export function AppSidebar() {
   const menuItems = [
     { title: t('sidebar.company'), path: '/company', icon: Building2, permission: 'entreprise' as const },
     { title: t('sidebar.contracts'), path: '/contracts', icon: FileText, permission: 'contrats' as const },
-    { title: t('sidebar.legal'), path: '/legal', icon: Scale, permission: 'juridique' as const },
-    { title: t('sidebar.accounting'), path: '/accounting', icon: Calculator, permission: 'comptabilite' as const },
+    { title: t('sidebar.legal'), path: '/legal', icon: Scale, permission: 'legal' as const },
+    { title: t('sidebar.accounting'), path: '/accounting', icon: Calculator, permission: 'accounting' as const },
     { title: t('sidebar.finance'), path: '/finance', icon: TrendingUp, permission: 'finance' as const },
   ];
 

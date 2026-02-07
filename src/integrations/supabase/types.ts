@@ -16,28 +16,43 @@ export type Database = {
     Tables: {
       companies: {
         Row: {
+          address: string | null
+          company_number: string | null
+          country: string | null
           created_at: string
           id: string
           name: string
-          permissions: Json
+          perm_accounting: boolean
+          perm_finance: boolean
+          perm_legal: boolean
           slug: string
           status: string
           updated_at: string
         }
         Insert: {
+          address?: string | null
+          company_number?: string | null
+          country?: string | null
           created_at?: string
           id?: string
           name: string
-          permissions?: Json
+          perm_accounting?: boolean
+          perm_finance?: boolean
+          perm_legal?: boolean
           slug: string
           status?: string
           updated_at?: string
         }
         Update: {
+          address?: string | null
+          company_number?: string | null
+          country?: string | null
           created_at?: string
           id?: string
           name?: string
-          permissions?: Json
+          perm_accounting?: boolean
+          perm_finance?: boolean
+          perm_legal?: boolean
           slug?: string
           status?: string
           updated_at?: string
@@ -151,10 +166,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_company_permissions: {
-        Args: { target_company_id: string }
-        Returns: Json
-      }
       has_permission: {
         Args: { section_name: string; target_company_id: string }
         Returns: boolean
