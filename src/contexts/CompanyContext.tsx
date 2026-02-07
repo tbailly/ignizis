@@ -2,19 +2,15 @@ import { createContext, useContext, useEffect, useState, useCallback, useRef, Re
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
 
-interface CompanyPermissions {
-  entreprise: boolean;
-  contrats: boolean;
-  juridique: boolean;
-  comptabilite: boolean;
-  finance: boolean;
-}
+type PermissionKey = 'entreprise' | 'contrats' | 'legal' | 'accounting' | 'finance';
 
 interface Company {
   id: string;
   name: string;
   slug: string;
-  permissions: CompanyPermissions;
+  perm_legal: boolean;
+  perm_accounting: boolean;
+  perm_finance: boolean;
 }
 
 interface UserCompany {
@@ -29,7 +25,7 @@ interface CompanyContextType {
   setCurrentCompany: (company: UserCompany) => void;
   loading: boolean;
   switching: boolean;
-  hasPermission: (section: keyof CompanyPermissions) => boolean;
+  hasPermission: (section: PermissionKey) => boolean;
   companyPath: (path: string) => string;
 }
 
@@ -68,7 +64,9 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
             id,
             name,
             slug,
-            permissions
+            perm_legal,
+            perm_accounting,
+            perm_finance
           )
         `);
 
@@ -114,9 +112,21 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     setTimeout(() => setSwitching(false), 800);
   }, []);
 
-  const hasPermission = useCallback((section: keyof CompanyPermissions): boolean => {
-    if (!currentCompany?.company?.permissions) return false;
-    return currentCompany.company.permissions[section] === true;
+  const hasPermission = useCallback((section: PermissionKey): boolean => {
+    if (!currentCompany?.company) return false;
+    switch (section) {
+      case 'entreprise':
+      case 'contrats':
+        return true;
+      case 'legal':
+        return currentCompany.company.perm_legal === true;
+      case 'accounting':
+        return currentCompany.company.perm_accounting === true;
+      case 'finance':
+        return currentCompany.company.perm_finance === true;
+      default:
+        return false;
+    }
   }, [currentCompany]);
 
   const companyPath = useCallback((path: string): string => {
