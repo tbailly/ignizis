@@ -1,156 +1,139 @@
 
 
-# Remplacement du champ JSONB `permissions` par des colonnes booleennes + nouveaux champs entreprise
+# Ajout des mandataires sociaux aux entreprises (avec saisie date au clavier)
 
 ## Resume
 
-Supprimer le champ JSONB `permissions` de la table `companies` et le remplacer par 3 colonnes booleennes (`perm_legal`, `perm_accounting`, `perm_finance`). Ajouter egalement 3 nouvelles colonnes d'information : `company_number`, `address`, `country`. Mettre a jour toutes les fonctions SQL, le contexte React, la sidebar, le dashboard et le formulaire admin en consequence.
+Creer une table `company_officers` pour stocker les mandataires sociaux, chacun lie a une seule entreprise. L'ajout, la modification et la suppression se font directement dans la modale de creation/edition d'entreprise. Le champ date de naissance utilise une saisie clavier avec masque automatique "DD/MM/YYYY" (les `/` s'inserent automatiquement).
 
 ---
 
-## 1. Migration SQL
+## 1. Base de donnees
 
-### Nouvelles colonnes
+### Nouvelle table `company_officers`
 
-```sql
--- Colonnes informatives
-ALTER TABLE public.companies ADD COLUMN company_number TEXT UNIQUE;
-ALTER TABLE public.companies ADD COLUMN address TEXT;
-ALTER TABLE public.companies ADD COLUMN country TEXT; -- Code ISO alpha-2
+Colonnes :
+- `id` : UUID, cle primaire, auto-generee
+- `company_id` : UUID, FK vers `companies(id)` avec `ON DELETE CASCADE`
+- `last_name` : TEXT, obligatoire
+- `first_name` : TEXT, obligatoire
+- `date_of_birth` : DATE, nullable
+- `position` : TEXT, obligatoire
+- `created_at` : TIMESTAMPTZ, defaut `now()`
 
--- Colonnes booleennes de permissions (remplacent le JSONB)
-ALTER TABLE public.companies ADD COLUMN perm_legal BOOLEAN NOT NULL DEFAULT true;
-ALTER TABLE public.companies ADD COLUMN perm_accounting BOOLEAN NOT NULL DEFAULT true;
-ALTER TABLE public.companies ADD COLUMN perm_finance BOOLEAN NOT NULL DEFAULT true;
-```
+### Policies RLS
 
-### Migration des donnees existantes
-
-Les 2 entreprises existantes ont des permissions en francais dans le JSONB. On migre les valeurs :
-
-```sql
-UPDATE public.companies
-SET perm_legal = COALESCE((permissions->>'juridique')::boolean, true),
-    perm_accounting = COALESCE((permissions->>'comptabilite')::boolean, true),
-    perm_finance = COALESCE((permissions->>'finance')::boolean, true);
-```
-
-### Suppression de la colonne JSONB
-
-```sql
-ALTER TABLE public.companies DROP COLUMN permissions;
-```
-
-### Mise a jour des fonctions SQL
-
-**`get_company_permissions`** : supprimee (plus de JSONB a retourner).
-
-**`has_permission`** : reecrite pour lire les colonnes booleennes directement :
-
-```sql
-CREATE OR REPLACE FUNCTION public.has_permission(target_company_id UUID, section_name TEXT)
-RETURNS BOOLEAN
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
-AS $$
-  SELECT CASE section_name
-    WHEN 'legal' THEN COALESCE((SELECT perm_legal FROM public.companies WHERE id = target_company_id), false)
-    WHEN 'accounting' THEN COALESCE((SELECT perm_accounting FROM public.companies WHERE id = target_company_id), false)
-    WHEN 'finance' THEN COALESCE((SELECT perm_finance FROM public.companies WHERE id = target_company_id), false)
-    WHEN 'entreprise' THEN true
-    WHEN 'contrats' THEN true
-    ELSE false
-  END
-  AND public.is_member_of_company(target_company_id);
-$$;
-```
+- Admins : acces complet (SELECT, INSERT, UPDATE, DELETE)
+- Membres d'une entreprise : lecture seule sur les mandataires de leur entreprise
 
 ---
 
-## 2. Fichiers frontend a modifier
+## 2. Composant DateMaskInput
 
-### `src/contexts/CompanyContext.tsx`
-
-- Supprimer l'interface `CompanyPermissions` basee sur le JSONB
-- Mettre a jour l'interface `Company` pour avoir les 3 booleens directement (`perm_legal`, `perm_accounting`, `perm_finance`)
-- Modifier le `select()` pour recuperer les nouvelles colonnes au lieu de `permissions`
-- Reecrire `hasPermission` pour lire les colonnes booleennes :
-  - `'entreprise'` et `'contrats'` retournent toujours `true` (sections toujours visibles)
-  - `'legal'` lit `perm_legal`, `'accounting'` lit `perm_accounting`, `'finance'` lit `perm_finance`
-
-### `src/components/layout/AppSidebar.tsx`
-
-- Renommer les cles de permission dans `menuItems` :
-  - `'juridique'` devient `'legal'`
-  - `'comptabilite'` devient `'accounting'`
-
-### `src/pages/Dashboard.tsx`
-
-- Memes renommages dans le tableau `sections` :
-  - `'juridique'` devient `'legal'`
-  - `'comptabilite'` devient `'accounting'`
-
-### `src/components/admin/CompanyFormDialog.tsx`
-
-- Supprimer l'ancienne interface `CompanyData` avec `permissions: Record<string, boolean>`
-- Mettre a jour `CompanyData` avec les nouveaux champs : `company_number`, `address`, `country`, `perm_legal`, `perm_accounting`, `perm_finance`
-- Renommer les states internes (`permJuridique` -> `permLegal`, `permComptabilite` -> `permAccounting`)
-- Ajouter les nouveaux champs au formulaire :
-  - **Company number** : `Input` texte standard
-  - **Address** : `Textarea` (multiline)
-  - **Country** : `Select` avec les options : France (FR), UAE (AE), Hong Kong (HK), Switzerland (CH), Belgium (BE), United States (US)
-- Modifier les appels `insert()` / `update()` pour envoyer les colonnes individuelles au lieu du JSONB `permissions`
-
-### `src/pages/admin/AdminCompanies.tsx`
-
-- Mettre a jour l'interface `CompanyWithUsers` : supprimer `permissions`, ajouter `company_number`, `address`, `country`, `perm_legal`, `perm_accounting`, `perm_finance`
-- Mettre a jour le `select()` dans la query pour inclure les nouvelles colonnes
-
-### `src/i18n/locales/en.json`
-
-Ajouter les cles :
-- `admin.companies.companyNumber` : "Company number"
-- `admin.companies.address` : "Address"
-- `admin.companies.addressPlaceholder` : "Enter company address..."
-- `admin.companies.country` : "Country"
-- `admin.companies.countryPlaceholder` : "Select a country"
-- `admin.companies.countries.FR` : "France"
-- `admin.companies.countries.AE` : "UAE"
-- `admin.companies.countries.HK` : "Hong Kong"
-- `admin.companies.countries.CH` : "Switzerland"
-- `admin.companies.countries.BE` : "Belgium"
-- `admin.companies.countries.US` : "United States"
+Un nouveau composant `src/components/ui/date-mask-input.tsx` qui :
+- Utilise un `<Input>` standard avec `placeholder="DD/MM/YYYY"`
+- Intercepte la frappe clavier pour inserer automatiquement les `/` apres le jour (position 2) et le mois (position 5)
+- N'accepte que les chiffres (filtre les autres caracteres)
+- Gere le backspace correctement (supprime le `/` automatiquement si on efface juste apres)
+- Limite la saisie a 10 caracteres maximum (DD/MM/YYYY)
+- Expose une `value` au format affichage "DD/MM/YYYY" et appelle `onChange` avec cette meme valeur
+- La conversion vers le format ISO "YYYY-MM-DD" (pour la base de donnees) se fait dans le composant parent (`CompanyFormDialog`)
 
 ---
 
-## 3. Liste complete des fichiers modifies
+## 3. Interface dans CompanyFormDialog
+
+### Section "Corporate officers"
+
+Ajoutee apres la section "Permissions", elle contient :
+- La liste des mandataires sous forme de cartes compactes, chacune avec :
+  - Champs inline : Nom, Prenom, Date de naissance (avec masque DD/MM/YYYY), Position
+  - Bouton supprimer (icone corbeille)
+- Bouton "+ Add officer" en bas
+- Message "No corporate officers added" quand la liste est vide
+
+### Gestion du state local
+
+```text
+interface Officer {
+  id: string;          // UUID reel ou "temp-xxx" pour les nouveaux
+  last_name: string;
+  first_name: string;
+  date_of_birth: string | null;  // format affichage "DD/MM/YYYY"
+  position: string;
+}
+```
+
+- En mode creation : le state `officers` demarre vide
+- En mode edition : les mandataires sont charges depuis la base a l'ouverture de la modale, et la date est convertie de "YYYY-MM-DD" vers "DD/MM/YYYY" pour l'affichage
+
+### Logique de sauvegarde
+
+Apres la sauvegarde de l'entreprise :
+1. Charger les officers existants en base pour cette entreprise
+2. Pour chaque officer dans le state local :
+   - Si `id` commence par `temp-` : INSERT (date convertie de "DD/MM/YYYY" vers "YYYY-MM-DD")
+   - Sinon : UPDATE
+3. Pour chaque officer en base non present dans le state local : DELETE
+
+### Largeur de la modale
+
+Passe de `sm:max-w-md` a `sm:max-w-lg` pour accommoder les champs des mandataires.
+
+---
+
+## 4. Fichiers modifies
 
 | Fichier | Action |
 |---------|--------|
-| Migration SQL | Ajouter colonnes, migrer donnees, supprimer `permissions`, reecrire fonctions |
-| `src/contexts/CompanyContext.tsx` | Supprimer `CompanyPermissions`, utiliser colonnes booleennes |
-| `src/components/layout/AppSidebar.tsx` | Renommer cles de permission (`legal`, `accounting`) |
-| `src/pages/Dashboard.tsx` | Renommer cles de permission (`legal`, `accounting`) |
-| `src/components/admin/CompanyFormDialog.tsx` | Nouveaux champs + colonnes booleennes au lieu de JSONB |
-| `src/pages/admin/AdminCompanies.tsx` | Mettre a jour interface et select query |
-| `src/i18n/locales/en.json` | Ajouter cles de traduction |
+| Migration SQL | Creer table `company_officers` + RLS |
+| `src/components/ui/date-mask-input.tsx` | Nouveau -- composant Input avec masque DD/MM/YYYY |
+| `src/components/admin/CompanyFormDialog.tsx` | Modifier -- ajouter section mandataires, logique de sync, elargir modale |
+| `src/i18n/locales/en.json` | Modifier -- ajouter cles de traduction |
 
 ---
 
-## 4. Ordre des champs dans la modale entreprise
+## 5. Traductions a ajouter
 
-1. Company name (existant)
-2. Slug (existant)
-3. Company number (nouveau)
-4. Address (nouveau, Textarea)
-5. Country (nouveau, Select)
-6. Status (existant)
-7. Enabled options : Legal, Accounting, Finance (renommes)
+```text
+admin.companies.officers          -> "Corporate officers"
+admin.companies.officerLastName   -> "Last name"
+admin.companies.officerFirstName  -> "First name"
+admin.companies.officerDob        -> "Date of birth"
+admin.companies.officerPosition   -> "Position"
+admin.companies.addOfficer        -> "Add officer"
+admin.companies.removeOfficer     -> "Remove"
+admin.companies.noOfficers        -> "No corporate officers added"
+```
 
 ---
 
-## 5. Notes techniques
+## 6. Details techniques
 
-- `company_number` a une contrainte `UNIQUE` nullable : PostgreSQL autorise plusieurs `NULL` avec une contrainte UNIQUE, donc seules les valeurs non-null doivent etre uniques.
-- Les sections `entreprise` et `contrats` restent toujours visibles (pas de toggle), donc `hasPermission` retourne `true` pour ces deux valeurs.
-- La fonction SQL `get_company_permissions` est supprimee car inutile sans JSONB. La fonction `has_permission` est conservee et reecrite pour lire les colonnes booleennes directement.
+### Masque de saisie de date
+
+Le composant `DateMaskInput` fonctionne ainsi :
+- L'utilisateur tape des chiffres uniquement
+- Apres 2 chiffres (jour), un `/` est ajoute automatiquement
+- Apres 5 caracteres (jour + `/` + mois), un second `/` est ajoute
+- Le backspace supprime le `/` automatiquement si le curseur est juste apres
+- Format final affiche : `DD/MM/YYYY` (10 caracteres max)
+- Pas de dependance externe, tout est gere via `onChange` sur un `<Input>` standard
+
+### Conversion de date
+
+- Affichage -> Base : `"15/03/1980"` devient `"1980-03-15"` (ISO)
+- Base -> Affichage : `"1980-03-15"` devient `"15/03/1980"`
+- Si la date est incomplete (moins de 10 caracteres) ou invalide, elle est enregistree comme `null` en base
+
+### Synchronisation des mandataires
+
+```text
+1. Sauvegarder l'entreprise (insert ou update) -> recuperer company_id
+2. Charger les officers existants en base pour cette company_id
+3. Pour chaque officer dans le state local :
+   - Si id commence par "temp-" : INSERT (sans l'id temp)
+   - Sinon : UPDATE
+4. Pour chaque officer en base non present dans le state local : DELETE
+```
 
