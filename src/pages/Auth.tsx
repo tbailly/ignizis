@@ -16,9 +16,6 @@ import { useTranslation } from '@/i18n/useTranslation';
 
 type EmailFormData = { email: string };
 
-// Check if auto-confirm mode is enabled (for development/testing)
-const isAutoConfirmEnabled = import.meta.env.VITE_AUTOCONFIRM !== 'false';
-
 export default function Auth() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
@@ -44,71 +41,38 @@ export default function Auth() {
     }
   }, [user, authLoading, navigate]);
 
-  const handleAutoLogin = async (email: string): Promise<boolean> => {
-    try {
-      const { data, error } = await supabase.functions.invoke('auto-login', {
-        body: { email },
-      });
-
-      if (error) {
-        console.error('Auto-login function error:', error);
-        return false;
-      }
-
-      if (data.error) {
-        if (data.code === 'USER_NOT_FOUND') {
-          toast.error(t('auth.userNotFound'));
-        } else {
-          console.error('Auto-login error:', data.error);
-        }
-        return false;
-      }
-
-      // Use the OTP code to verify
-      const { error: verifyError } = await supabase.auth.verifyOtp({
-        email,
-        token: data.otp,
-        type: 'email',
-      });
-
-      if (verifyError) {
-        console.error('OTP verification error:', verifyError);
-        return false;
-      }
-
-      toast.success(t('auth.loginSuccess'));
-      return true;
-    } catch (error) {
-      console.error('Auto-login error:', error);
-      return false;
-    }
-  };
-
   const onSubmit = async (data: EmailFormData) => {
     try {
       setLoading(true);
 
-      // If auto-confirm is enabled, try instant login
-      if (isAutoConfirmEnabled) {
-        const success = await handleAutoLogin(data.email);
-        if (success) {
-          return;
-        }
-      }
-      
-      const redirectUrl = `${window.location.origin}/`;
-      
-      const { error } = await supabase.auth.signInWithOtp({
-        email: data.email,
-        options: {
-          emailRedirectTo: redirectUrl,
-        },
+      // Check if user exists (server-side, silent)
+      const { data: checkData, error: checkError } = await supabase.functions.invoke('check-user-exists', {
+        body: { email: data.email },
       });
 
-      if (error) {
-        console.error('Auth error:', error);
+      if (checkError) {
+        console.error('Check user error:', checkError);
       }
 
+      // Only send magic link if user exists
+      if (checkData?.exists) {
+        const redirectUrl = `${window.location.origin}/`;
+
+        const { error } = await supabase.auth.signInWithOtp({
+          email: data.email,
+          options: {
+            emailRedirectTo: redirectUrl,
+          },
+        });
+
+        if (error) {
+          console.error('Auth error:', error);
+        }
+      } else {
+        console.log(`Login attempt for non-existent email: ${data.email}`);
+      }
+
+      // Always show the same "check your inbox" screen
       setEmailSent(true);
       toast.success(t('auth.emailSent'));
     } catch (error) {
@@ -135,9 +99,7 @@ export default function Auth() {
           <CardDescription>
             {emailSent
               ? t('auth.checkInbox')
-              : isAutoConfirmEnabled
-                ? t('auth.description')
-                : t('auth.descriptionMagicLink')}
+              : t('auth.descriptionMagicLink')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -180,7 +142,7 @@ export default function Auth() {
                 />
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {isAutoConfirmEnabled ? t('auth.submit') : t('auth.submitMagicLink')}
+                  {t('auth.submitMagicLink')}
                 </Button>
               </form>
             </Form>
