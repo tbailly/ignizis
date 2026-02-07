@@ -102,19 +102,19 @@ const App = () => (
                   {/* Company-scoped routes */}
                   <Route path="/:companySlug" element={<CompanySlugSync />}>
                     <Route index element={<Dashboard />} />
-                    <Route path="entreprise" element={<Entreprise />} />
-                    <Route path="contrats" element={<Contrats />} />
-                    <Route path="juridique" element={<Juridique />} />
-                    <Route path="comptabilite" element={<Comptabilite />} />
+                    <Route path="company" element={<Entreprise />} />
+                    <Route path="contracts" element={<Contrats />} />
+                    <Route path="legal" element={<Juridique />} />
+                    <Route path="accounting" element={<Comptabilite />} />
                     <Route path="finance" element={<Finance />} />
                   </Route>
 
                   {/* User-scoped routes (no slug) */}
-                  <Route path="/parametres" element={<Parametres />} />
-                  <Route path="/aide" element={<Aide />} />
-                  <Route path="/mentions-legales" element={<MentionsLegales />} />
-                  <Route path="/confidentialite" element={<Confidentialite />} />
-                  <Route path="/cgu" element={<CGU />} />
+                  <Route path="/settings" element={<Parametres />} />
+                  <Route path="/help" element={<Aide />} />
+                  <Route path="/legal-notice" element={<MentionsLegales />} />
+                  <Route path="/privacy" element={<Confidentialite />} />
+                  <Route path="/terms" element={<CGU />} />
                 </Route>
 
                 {/* 404 */}

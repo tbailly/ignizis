@@ -9,10 +9,10 @@ export default function Dashboard() {
   const { t } = useTranslation();
 
   const sections = [
-    { title: t('dashboard.sectionCompany'), path: '/entreprise', icon: Building2, permission: 'entreprise' as const, description: t('dashboard.sectionCompanyDesc') },
-    { title: t('dashboard.sectionContracts'), path: '/contrats', icon: FileText, permission: 'contrats' as const, description: t('dashboard.sectionContractsDesc') },
-    { title: t('dashboard.sectionLegal'), path: '/juridique', icon: Scale, permission: 'juridique' as const, description: t('dashboard.sectionLegalDesc') },
-    { title: t('dashboard.sectionAccounting'), path: '/comptabilite', icon: Calculator, permission: 'comptabilite' as const, description: t('dashboard.sectionAccountingDesc') },
+    { title: t('dashboard.sectionCompany'), path: '/company', icon: Building2, permission: 'entreprise' as const, description: t('dashboard.sectionCompanyDesc') },
+    { title: t('dashboard.sectionContracts'), path: '/contracts', icon: FileText, permission: 'contrats' as const, description: t('dashboard.sectionContractsDesc') },
+    { title: t('dashboard.sectionLegal'), path: '/legal', icon: Scale, permission: 'juridique' as const, description: t('dashboard.sectionLegalDesc') },
+    { title: t('dashboard.sectionAccounting'), path: '/accounting', icon: Calculator, permission: 'comptabilite' as const, description: t('dashboard.sectionAccountingDesc') },
     { title: t('dashboard.sectionFinance'), path: '/finance', icon: TrendingUp, permission: 'finance' as const, description: t('dashboard.sectionFinanceDesc') },
   ];
 
