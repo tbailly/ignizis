@@ -1,9 +1,10 @@
 
-# Gestion des Entreprises et Utilisateurs -- Espace Admin
+
+# Gestion des Entreprises et Utilisateurs -- Espace Admin (avec modales)
 
 ## Vue d'ensemble
 
-Construire deux sections dans l'espace admin (`/admin`) : une pour gerer les entreprises et une pour gerer les utilisateurs (non-admin). Chaque section inclut un tableau avec recherche, creation/edition via formulaire, et suppression avec confirmation.
+Construire deux sections dans l'espace admin (`/admin`) : une pour gerer les entreprises et une pour gerer les utilisateurs (non-admin). Les formulaires de creation et d'edition utilisent des **modales (Dialog)** au lieu de pages separees, pour une meilleure experience mobile.
 
 ---
 
@@ -20,82 +21,65 @@ Valeurs acceptees : `active` ou `inactive`.
 
 ### b) Ajouter les policies RLS admin
 
-Toutes les policies existantes sont PERMISSIVE -- donc il suffit d'en ajouter de nouvelles pour les admins (logique OR entre policies permissives).
+Toutes les policies existantes sont PERMISSIVE -- il suffit d'en ajouter de nouvelles pour les admins (logique OR entre policies permissives).
 
 **Table `companies`** :
-- SELECT : `is_admin(auth.uid())` -- l'admin voit toutes les entreprises
+- SELECT : `is_admin(auth.uid())`
 - UPDATE : `is_admin(auth.uid())`
 - DELETE : `is_admin(auth.uid())`
 
 **Table `users`** :
-- SELECT : `is_admin(auth.uid())` -- l'admin voit tous les utilisateurs
+- SELECT : `is_admin(auth.uid())`
 
 **Table `user_companies`** :
-- SELECT : `is_admin(auth.uid())` -- l'admin voit toutes les associations
+- SELECT : `is_admin(auth.uid())`
 - INSERT : `is_admin(auth.uid())`
 - DELETE : `is_admin(auth.uid())`
-
-### c) Cascades existantes
-
-Toutes les FK utilisent deja `ON DELETE CASCADE` :
-- `user_companies.company_id` -> `companies.id` (cascade)
-- `user_companies.user_id` -> `users.id` (cascade)
-- `user_roles.user_id` -> `users.id` (cascade)
-- `users.id` -> `auth.users.id` (cascade)
-
-Supprimer une entreprise supprime automatiquement les associations `user_companies`. Supprimer un utilisateur via `auth.admin.deleteUser()` cascade vers `users`, `user_companies`, et `user_roles`.
 
 ---
 
 ## 2. Edge function : `admin-users`
 
-Une fonction backend pour les operations qui necessitent le service role key (creation/suppression d'utilisateurs auth).
+Fonction backend pour les operations necessitant le service role key.
 
 ### Actions
 
-**`create`** : Cree un utilisateur dans `auth.users` avec `email_confirm: true` (compte actif immediatement, aucun email envoye). Le trigger `handle_new_user` cree automatiquement le profil dans `public.users`. Le frontend gere ensuite l'association aux entreprises via `user_companies`.
-
-**`delete`** : Appelle `auth.admin.deleteUser(userId)`. La cascade FK supprime automatiquement le profil, les associations entreprises, et les roles.
+- **`create`** : Cree un utilisateur dans `auth.users` avec `email_confirm: true` (compte actif, aucun email envoye). Le trigger `handle_new_user` cree automatiquement le profil dans `public.users`. Le frontend gere ensuite l'association aux entreprises via `user_companies`.
+- **`delete`** : Appelle `auth.admin.deleteUser(userId)`. La cascade FK supprime le profil, les associations, et les roles.
 
 ### Securite
 
 - Authentification requise (JWT verifie en code)
-- Verification que l'appelant est admin via `is_admin` RPC
+- Verification admin via `is_admin` RPC avec le service role client
 - Validation des inputs (email valide, UUID valide)
 
 ---
 
-## 3. Routing
+## 3. Routing (simplifie)
 
-Nouvelles routes sous `/admin`, toutes protegees par `AdminRoute` :
+Plus besoin de routes `/new` et `/:id/edit` puisque les formulaires sont des modales ouvertes depuis les pages de liste.
+
+Nouvelles routes sous `/admin` :
 
 ```text
-/admin                    --> AdminDashboard (mis a jour avec navigation)
-/admin/companies          --> Liste des entreprises
-/admin/companies/new      --> Formulaire creation entreprise
-/admin/companies/:id/edit --> Formulaire edition entreprise
-/admin/users              --> Liste des utilisateurs
-/admin/users/new          --> Formulaire creation utilisateur
-/admin/users/:id/edit     --> Formulaire edition utilisateur
+/admin             --> AdminDashboard (avec navigation cards)
+/admin/companies   --> Liste des entreprises (modale pour creer/editer)
+/admin/users       --> Liste des utilisateurs (modale pour creer/editer)
 ```
 
-Dans `App.tsx`, les routes admin deviennent un groupe avec `Outlet` :
+Dans `App.tsx`, le bloc admin devient :
 
 ```text
 <Route path="/admin" element={<AdminRoute><Outlet /></AdminRoute>}>
   <Route index element={<AdminDashboard />} />
   <Route path="companies" element={<AdminCompanies />} />
-  <Route path="companies/new" element={<AdminCompanyForm />} />
-  <Route path="companies/:id/edit" element={<AdminCompanyForm />} />
   <Route path="users" element={<AdminUsers />} />
-  <Route path="users/new" element={<AdminUserForm />} />
-  <Route path="users/:id/edit" element={<AdminUserForm />} />
 </Route>
 ```
 
 ---
 
-## 4. Pages admin
+## 4. Pages et composants admin
 
 ### AdminDashboard (mise a jour)
 
@@ -106,117 +90,65 @@ Remplace le placeholder actuel par deux cartes cliquables :
 ### AdminCompanies -- Liste des entreprises
 
 - Tableau avec colonnes : Nom, Utilisateurs associes, Statut (badge), Actions
-- Barre de recherche filtrant par nom d'entreprise
-- Bouton "Creer une entreprise" en haut a droite
-- Pagination (10 entreprises par page)
-- Donnees : query `companies` + join `user_companies` -> `users` pour les noms
+- Barre de recherche filtrant par nom
+- Bouton "Creer une entreprise" en haut a droite (ouvre la modale)
+- Bouton "Editer" dans chaque ligne (ouvre la modale pre-remplie)
+- Pagination (10 par page)
 
-### AdminCompanyForm -- Creation/Edition
+### CompanyFormDialog -- Modale creation/edition
 
+Composant `Dialog` (de `@radix-ui/react-dialog`) contenant le formulaire :
 - Champ **Nom** (obligatoire, 100 caracteres max)
-- Champ **Slug** (auto-genere en kebab-case depuis le nom, modifiable)
-- **Statut** (switch Actif/Inactif, Actif par defaut)
-- **Permissions** (3 switches) : Juridique, Comptabilite, Finance
+- Champ **Slug** (auto-genere en kebab-case, modifiable)
+- **Statut** (switch Actif/Inactif)
+- **Options activees** (3 switches) : Juridique, Comptabilite, Finance
 - Boutons "Enregistrer" et "Annuler"
 - En creation : INSERT dans `companies`
-- En edition : UPDATE de `companies` par ID
+- En edition : UPDATE de `companies` par ID, champs pre-remplis
 
-### Suppression d'entreprise
+Le composant recoit une prop `company` optionnelle : si presente, mode edition ; sinon, mode creation. L'ouverture/fermeture est controllee via un state `open` dans la page parente `AdminCompanies`.
 
-- Modale `AlertDialog` demandant de saisir le slug pour confirmer
-- Le bouton "Supprimer definitivement" n'est actif que si le slug saisi correspond
+### DeleteCompanyDialog -- Modale de suppression
+
+Composant `AlertDialog` avec :
+- Champ de saisie du slug pour confirmer
+- Bouton "Supprimer definitivement" actif uniquement si le slug saisi correspond
 - DELETE sur `companies` (cascade nettoie `user_companies`)
 
 ### AdminUsers -- Liste des utilisateurs
 
 - Tableau avec colonnes : Email, Entreprises associees, Actions
-- Filtre par email ou nom via barre de recherche
-- Bouton "Creer un utilisateur" en haut a droite
-- Seuls les utilisateurs non-admin sont affiches (filtrage via `user_roles`)
-- Donnees : query `users` + join `user_companies` -> `companies`
+- Barre de recherche par email ou nom
+- Bouton "Creer un utilisateur" (ouvre la modale)
+- Seuls les utilisateurs non-admin affiches
 
-### AdminUserForm -- Creation/Edition
+### UserFormDialog -- Modale creation/edition
 
-- Champ **Email** (obligatoire, unique)
-- **Entreprises associees** : combobox multi-selection (basee sur `cmdk` deja installe)
+Composant `Dialog` contenant le formulaire :
+- Champ **Email** (obligatoire, unique) -- en lecture seule en edition
+- **Entreprises associees** : combobox multi-selection (basee sur `cmdk`)
 - En creation : appel edge function `admin-users` action `create`, puis INSERT `user_companies`
 - En edition : diff des entreprises pour INSERT/DELETE dans `user_companies`
-- Boutons "Enregistrer" et "Annuler"
 
-### Suppression d'utilisateur
+### DeleteUserDialog -- Modale de suppression
 
-- Modale `AlertDialog` avec bouton "Supprimer definitivement"
-- Appel edge function `admin-users` action `delete` (invalidation des sessions + cascade)
+Composant `AlertDialog` avec :
+- Message de confirmation
+- Bouton "Supprimer definitivement"
+- Appel edge function `admin-users` action `delete`
 
 ---
 
 ## 5. Sidebar
 
 Mise a jour de la section admin dans `AppSidebar.tsx` :
-- Quand l'utilisateur est sur `/admin/*`, afficher des sous-liens : "Entreprises" et "Utilisateurs"
-- Utiliser un `Collapsible` ou simplement des sous-items dans le groupe admin
+- Ajouter des sous-liens "Entreprises" et "Utilisateurs" visibles quand on est sur `/admin/*`
 
 ---
 
 ## 6. Traductions (en.json)
 
-Ajout des cles pour toute la section admin :
-
-```json
-"admin": {
-  "title": "Administration",
-  "description": "Platform administration and management.",
-  "companiesCard": "Companies",
-  "companiesCardDesc": "Manage companies and their settings",
-  "usersCard": "Users",
-  "usersCardDesc": "Manage users and their access",
-  "companies": {
-    "title": "Companies",
-    "create": "Create a company",
-    "edit": "Edit company",
-    "searchPlaceholder": "Search by company name...",
-    "name": "Company name",
-    "slug": "Slug",
-    "status": "Status",
-    "active": "Active",
-    "inactive": "Inactive",
-    "permissions": "Enabled options",
-    "legal": "Legal",
-    "accounting": "Accounting",
-    "finance": "Finance",
-    "users": "Associated users",
-    "actions": "Actions",
-    "save": "Save",
-    "cancel": "Cancel",
-    "delete": "Delete",
-    "deleteConfirmTitle": "Delete company",
-    "deleteConfirmDesc": "This action is irreversible. Type the company slug to confirm:",
-    "deleteConfirmButton": "Delete permanently",
-    "deleteSuccess": "Company deleted",
-    "saveSuccess": "Company saved",
-    "noCompanies": "No companies found"
-  },
-  "users": {
-    "title": "Users",
-    "create": "Create a user",
-    "edit": "Edit user",
-    "searchPlaceholder": "Search by email or name...",
-    "email": "Email",
-    "companies": "Associated companies",
-    "companiesPlaceholder": "Select companies...",
-    "actions": "Actions",
-    "save": "Save",
-    "cancel": "Cancel",
-    "delete": "Delete",
-    "deleteConfirmTitle": "Delete user",
-    "deleteConfirmDesc": "This action is irreversible. The user will be permanently deleted and all active sessions invalidated.",
-    "deleteConfirmButton": "Delete permanently",
-    "deleteSuccess": "User deleted",
-    "saveSuccess": "User saved",
-    "noUsers": "No users found"
-  }
-}
-```
+Ajout des cles admin identiques au plan original (companies, users, etc.).
 
 ---
 
@@ -226,13 +158,16 @@ Ajout des cles pour toute la section admin :
 |---------|--------|
 | Migration SQL | Colonne `status`, policies RLS admin |
 | `supabase/functions/admin-users/index.ts` | Nouveau -- creation/suppression users auth |
-| `supabase/config.toml` | Ajouter config `admin-users` (verify_jwt = false) |
 | `src/pages/admin/AdminDashboard.tsx` | Mise a jour -- navigation cards |
-| `src/pages/admin/AdminCompanies.tsx` | Nouveau -- liste entreprises |
-| `src/pages/admin/AdminCompanyForm.tsx` | Nouveau -- formulaire entreprise |
-| `src/pages/admin/AdminUsers.tsx` | Nouveau -- liste utilisateurs |
-| `src/pages/admin/AdminUserForm.tsx` | Nouveau -- formulaire utilisateur |
-| `src/App.tsx` | Mise a jour -- nouvelles routes admin |
+| `src/pages/admin/AdminCompanies.tsx` | Nouveau -- liste entreprises + gestion modales |
+| `src/pages/admin/AdminUsers.tsx` | Nouveau -- liste utilisateurs + gestion modales |
+| `src/components/admin/CompanyFormDialog.tsx` | Nouveau -- modale formulaire entreprise |
+| `src/components/admin/DeleteCompanyDialog.tsx` | Nouveau -- modale suppression entreprise |
+| `src/components/admin/UserFormDialog.tsx` | Nouveau -- modale formulaire utilisateur |
+| `src/components/admin/DeleteUserDialog.tsx` | Nouveau -- modale suppression utilisateur |
+| `src/components/admin/MultiCompanySelect.tsx` | Nouveau -- combobox multi-selection |
+| `src/lib/utils.ts` | Mise a jour -- ajout `toKebabCase()` |
+| `src/App.tsx` | Mise a jour -- routes admin simplifiees |
 | `src/components/layout/AppSidebar.tsx` | Mise a jour -- sous-navigation admin |
 | `src/i18n/locales/en.json` | Mise a jour -- cles traduction admin |
 
@@ -242,7 +177,22 @@ Ajout des cles pour toute la section admin :
 
 ### Generation du slug
 
-Fonction utilitaire `toKebabCase(name: string)` : supprime les accents, remplace les espaces et caracteres speciaux par des tirets, met en minuscules, supprime les tirets en debut/fin.
+Fonction utilitaire `toKebabCase(name: string)` dans `src/lib/utils.ts` : supprime les accents via `normalize('NFD')`, remplace les espaces et caracteres speciaux par des tirets, met en minuscules, supprime les tirets en debut/fin.
+
+### Architecture des modales
+
+Chaque page de liste (`AdminCompanies`, `AdminUsers`) gere localement l'etat d'ouverture des modales :
+
+```text
+const [formOpen, setFormOpen] = useState(false);
+const [editingItem, setEditingItem] = useState<Company | null>(null);
+const [deletingItem, setDeletingItem] = useState<Company | null>(null);
+```
+
+- Clic "Creer" : `setEditingItem(null)` + `setFormOpen(true)`
+- Clic "Editer" : `setEditingItem(company)` + `setFormOpen(true)`
+- Clic "Supprimer" : `setDeletingItem(company)`
+- Fermeture modale : reset des states + rafraichissement des donnees via `queryClient.invalidateQueries()`
 
 ### Filtrage des utilisateurs non-admin
 
@@ -250,14 +200,14 @@ Fonction utilitaire `toKebabCase(name: string)` : supprime les accents, remplace
 2. Charger les `user_roles` ou `role = 'admin' AND company_id IS NULL`
 3. Exclure cote client les users dont l'ID apparait dans les roles admin
 
-### Combobox multi-selection
+### Combobox multi-selection (`MultiCompanySelect`)
 
-Construite avec le composant `Command` (base sur `cmdk` deja installe) enveloppe dans un `Popover`. Affiche les entreprises selectionnees sous forme de badges avec bouton de suppression.
+Construite avec `Command` (base sur `cmdk`) enveloppee dans un `Popover`. Affiche les entreprises selectionnees sous forme de badges avec bouton de suppression.
 
-### Securite de l'edge function
+### Securite de l'edge function `admin-users`
 
-L'edge function `admin-users` :
 1. Extrait le JWT du header Authorization
 2. Recupere l'utilisateur via `supabase.auth.getUser()`
 3. Verifie le statut admin via `is_admin` RPC avec le service role client
 4. Rejette avec 403 si non-admin
+
