@@ -29,9 +29,13 @@ export function AppSidebar() {
   const location = useLocation();
   const { profile, signOut } = useAuth();
   const { companies, currentCompany, setCurrentCompany, hasPermission } = useCompany();
-  const { state } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
   const collapsed = state === 'collapsed';
   const { t } = useTranslation();
+
+  const closeMobileSidebar = () => {
+    if (isMobile) setOpenMobile(false);
+  };
 
   const menuItems = [
     { title: t('sidebar.company'), url: '/entreprise', icon: Building2, permission: 'entreprise' as const },
@@ -101,7 +105,7 @@ export function AppSidebar() {
                     isActive={location.pathname === item.url}
                     tooltip={item.title}
                   >
-                    <NavLink to={item.url}>
+                    <NavLink to={item.url} onClick={closeMobileSidebar}>
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
                     </NavLink>
@@ -141,33 +145,33 @@ export function AppSidebar() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
             <DropdownMenuItem asChild>
-              <NavLink to="/parametres" className="flex items-center gap-2">
+              <NavLink to="/parametres" className="flex items-center gap-2" onClick={closeMobileSidebar}>
                 <Settings className="h-4 w-4" />
                 {t('sidebar.settings')}
               </NavLink>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <NavLink to="/mentions-legales" className="flex items-center gap-2">
+              <NavLink to="/mentions-legales" className="flex items-center gap-2" onClick={closeMobileSidebar}>
                 <Scale className="h-4 w-4" />
                 {t('sidebar.legalNotice')}
               </NavLink>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <NavLink to="/confidentialite" className="flex items-center gap-2">
+              <NavLink to="/confidentialite" className="flex items-center gap-2" onClick={closeMobileSidebar}>
                 <FileQuestion className="h-4 w-4" />
                 {t('sidebar.privacyPolicy')}
               </NavLink>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <NavLink to="/cgu" className="flex items-center gap-2">
+              <NavLink to="/cgu" className="flex items-center gap-2" onClick={closeMobileSidebar}>
                 <FileText className="h-4 w-4" />
                 {t('sidebar.terms')}
               </NavLink>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <NavLink to="/aide" className="flex items-center gap-2">
+              <NavLink to="/aide" className="flex items-center gap-2" onClick={closeMobileSidebar}>
                 <Info className="h-4 w-4" />
                 {t('sidebar.help')}
               </NavLink>
