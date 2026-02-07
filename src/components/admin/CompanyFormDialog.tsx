@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import { OfficerSection, type Officer } from '@/components/admin/OfficerSection';
 
 interface CompanyData {
   id: string;
@@ -44,6 +45,22 @@ const COUNTRY_OPTIONS = [
   { code: 'US', label: 'admin.companies.countries.US' },
 ];
 
+// Date helpers
+function isoToDisplay(iso: string | null): string {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function displayToIso(display: string): string | null {
+  if (!display || display.length !== 10) return null;
+  const [d, m, y] = display.split('/');
+  if (!d || !m || !y || y.length !== 4) return null;
+  const date = new Date(`${y}-${m}-${d}`);
+  if (isNaN(date.getTime())) return null;
+  return `${y}-${m}-${d}`;
+}
+
 export function CompanyFormDialog({ open, company, onClose, onSuccess }: CompanyFormDialogProps) {
   const { t } = useTranslation();
   const isEditing = !!company;
@@ -58,6 +75,7 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
   const [permLegal, setPermLegal] = useState(true);
   const [permAccounting, setPermAccounting] = useState(true);
   const [permFinance, setPermFinance] = useState(true);
+  const [officers, setOfficers] = useState<Officer[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -73,6 +91,8 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
         setPermLegal(company.perm_legal !== false);
         setPermAccounting(company.perm_accounting !== false);
         setPermFinance(company.perm_finance !== false);
+        // Load officers from DB
+        loadOfficers(company.id);
       } else {
         setName('');
         setSlug('');
@@ -84,9 +104,33 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
         setPermLegal(true);
         setPermAccounting(true);
         setPermFinance(true);
+        setOfficers([]);
       }
     }
   }, [open, company]);
+
+  const loadOfficers = async (companyId: string) => {
+    const { data, error } = await supabase
+      .from('company_officers')
+      .select('id, last_name, first_name, date_of_birth, position')
+      .eq('company_id', companyId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Error loading officers:', error);
+      return;
+    }
+
+    setOfficers(
+      (data || []).map((o) => ({
+        id: o.id,
+        last_name: o.last_name,
+        first_name: o.first_name,
+        date_of_birth: isoToDisplay(o.date_of_birth),
+        position: o.position,
+      }))
+    );
+  };
 
   const handleNameChange = (value: string) => {
     setName(value);
@@ -98,6 +142,60 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
   const handleSlugChange = (value: string) => {
     setSlugManuallyEdited(true);
     setSlug(toKebabCase(value));
+  };
+
+  const syncOfficers = async (companyId: string) => {
+    // Load existing officers from DB
+    const { data: existing, error: fetchErr } = await supabase
+      .from('company_officers')
+      .select('id')
+      .eq('company_id', companyId);
+
+    if (fetchErr) throw fetchErr;
+
+    const existingIds = new Set((existing || []).map((o) => o.id));
+    const localIds = new Set(officers.filter((o) => !o.id.startsWith('temp-')).map((o) => o.id));
+
+    // Delete removed officers
+    const toDelete = [...existingIds].filter((id) => !localIds.has(id));
+    if (toDelete.length > 0) {
+      const { error } = await supabase
+        .from('company_officers')
+        .delete()
+        .in('id', toDelete);
+      if (error) throw error;
+    }
+
+    // Insert new officers
+    const toInsert = officers
+      .filter((o) => o.id.startsWith('temp-'))
+      .map((o) => ({
+        company_id: companyId,
+        last_name: o.last_name,
+        first_name: o.first_name,
+        date_of_birth: displayToIso(o.date_of_birth || ''),
+        position: o.position,
+      }));
+
+    if (toInsert.length > 0) {
+      const { error } = await supabase.from('company_officers').insert(toInsert);
+      if (error) throw error;
+    }
+
+    // Update existing officers
+    const toUpdate = officers.filter((o) => !o.id.startsWith('temp-') && existingIds.has(o.id));
+    for (const o of toUpdate) {
+      const { error } = await supabase
+        .from('company_officers')
+        .update({
+          last_name: o.last_name,
+          first_name: o.first_name,
+          date_of_birth: displayToIso(o.date_of_birth || ''),
+          position: o.position,
+        })
+        .eq('id', o.id);
+      if (error) throw error;
+    }
   };
 
   const handleSave = async () => {
@@ -117,18 +215,27 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
         perm_finance: permFinance,
       };
 
+      let companyId: string;
+
       if (isEditing) {
         const { error } = await supabase
           .from('companies')
           .update(payload)
           .eq('id', company.id);
         if (error) throw error;
+        companyId = company.id;
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('companies')
-          .insert(payload);
+          .insert(payload)
+          .select('id')
+          .single();
         if (error) throw error;
+        companyId = data.id;
       }
+
+      // Sync officers
+      await syncOfficers(companyId);
 
       toast.success(t('admin.companies.saveSuccess'));
       onSuccess();
@@ -142,7 +249,7 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? t('admin.companies.edit') : t('admin.companies.create')}
@@ -250,6 +357,9 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
               <Switch checked={permFinance} onCheckedChange={setPermFinance} />
             </div>
           </div>
+
+          {/* Corporate officers */}
+          <OfficerSection officers={officers} onChange={setOfficers} />
         </div>
 
         <DialogFooter>

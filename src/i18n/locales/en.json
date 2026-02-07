@@ -89,7 +89,15 @@
       "deleteConfirmButton": "Delete permanently",
       "deleteSuccess": "Company deleted",
       "saveSuccess": "Company saved",
-      "noCompanies": "No companies found"
+      "noCompanies": "No companies found",
+      "officers": "Corporate officers",
+      "officerLastName": "Last name",
+      "officerFirstName": "First name",
+      "officerDob": "Date of birth",
+      "officerPosition": "Position",
+      "addOfficer": "Add officer",
+      "removeOfficer": "Remove",
+      "noOfficers": "No corporate officers added"
     },
     "users": {
       "title": "Users",
