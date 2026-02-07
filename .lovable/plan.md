@@ -1,144 +1,132 @@
 
-
-# Internationalization (i18n) - Simple Key/Value Translation System
+# Add Company Slug to URLs
 
 ## Overview
 
-Set up a lightweight translation system using local JSON files -- no external library needed. All text content will be centralized in translation files organized by language, making it easy to switch languages or add new ones without touching component code.
+Add a `slug` field to companies (a URL-friendly kebab-case version of the company name) and restructure routing so that all company-scoped pages are prefixed with the slug. For example: `/company-one/contrats`, `/company-two/finance`.
 
-## Approach: Custom i18n with JSON files + React Context
+Pages that are not company-specific (settings, legal pages, help) will remain at the root level without a slug prefix.
 
-Rather than adding a heavy library like `react-i18next`, we'll build a minimal system that fits the project's scale:
+## What Changes
 
-- One JSON file per language (e.g., `en.json`, `fr.json`)
-- A React context + hook (`useTranslation`) to access translations anywhere
-- A helper function `t("key.path")` that returns the translated string
-- Language preference stored in localStorage (default: English)
+**Before:** `/contrats`, `/finance`, `/entreprise`
+**After:** `/company-one/contrats`, `/company-two/finance`, `/company-one/entreprise`
 
-This keeps things simple, with zero dependencies, and is easy to extend later if needed.
-
-## File Structure
-
-```text
-src/
-  i18n/
-    locales/
-      en.json          -- English translations (default)
-      fr.json          -- French translations (for later)
-    i18n.ts            -- Core logic: load locale, lookup keys
-    I18nContext.tsx     -- React context + provider
-    useTranslation.ts  -- Hook returning the t() function
-```
-
-## How Translation Files Will Look
-
-Each JSON file uses nested keys organized by page/section:
-
-```json
-{
-  "common": {
-    "loading": "Loading...",
-    "save": "Save",
-    "saving": "Saving...",
-    "cancel": "Cancel",
-    "logout": "Log out",
-    "version": "Version 1.0.0"
-  },
-  "auth": {
-    "title": "Sign in",
-    "description": "Enter your email to sign in instantly",
-    "descriptionMagicLink": "Enter your email to receive a sign-in link",
-    "emailLabel": "Email",
-    "emailPlaceholder": "your@email.com",
-    "emailInvalid": "Invalid email address",
-    "submit": "Sign in",
-    "submitMagicLink": "Send sign-in link",
-    "checkInbox": "Check your inbox",
-    "emailSentMessage": "If an account exists with this email, you will receive a sign-in link shortly.",
-    "tryAnotherEmail": "Try another address",
-    "loginSuccess": "Successfully signed in!",
-    "userNotFound": "User not found",
-    "unexpectedError": "An error occurred. Please try again."
-  },
-  "sidebar": {
-    "navigation": "Navigation",
-    "company": "Company",
-    "contracts": "My contracts and invoices",
-    "legal": "Legal",
-    "accounting": "Accounting",
-    "finance": "Finance",
-    "settings": "Account settings",
-    "legalNotice": "Legal notice",
-    "privacyPolicy": "Privacy policy",
-    "terms": "Terms of use",
-    "help": "Help"
-  },
-  "dashboard": {
-    "welcome": "Welcome",
-    "noCompany": "You are not associated with any company yet.",
-    "noCompanyTitle": "No company",
-    "noCompanyDescription": "Contact an administrator to be added to a company.",
-    "accessSections": "Access the different sections of your company",
-    "noAccess": "No accessible section",
-    "noAccessDescription": "You don't have permissions to access sections of this company. Contact an administrator to change your access."
-  },
-  "settings": {
-    "title": "Account settings",
-    "subtitle": "Manage your preferences and personal information.",
-    "profile": "Profile",
-    "personalInfo": "Your personal information",
-    "email": "Email",
-    "name": "Name",
-    "namePlaceholder": "Your name",
-    "nameUpdated": "Name updated",
-    "updateError": "Error updating",
-    "appearance": "Appearance",
-    "appearanceDescription": "Customize the application appearance",
-    "themeLight": "Light",
-    "themeDark": "Dark",
-    "themeSystem": "System"
-  }
-}
-```
-
-(Plus keys for Help, Legal Notice, Privacy Policy, Terms pages, and placeholder pages like Company, Contracts, etc.)
-
-## Usage in Components
-
-Before (hardcoded French):
-```tsx
-<h1>Connexion</h1>
-<p>Entrez votre email pour recevoir un lien de connexion</p>
-```
-
-After (using translation keys):
-```tsx
-const { t } = useTranslation();
-<h1>{t("auth.title")}</h1>
-<p>{t("auth.descriptionMagicLink")}</p>
-```
+Non-company pages stay the same: `/parametres`, `/aide`, `/auth`, `/mentions-legales`, etc.
 
 ## Implementation Steps
 
-1. **Create the i18n infrastructure** (`i18n.ts`, `I18nContext.tsx`, `useTranslation.ts`)
-2. **Create `en.json`** with all text currently in the app, translated to English
-3. **Wrap the app** with `I18nProvider` in `App.tsx`
-4. **Update all pages and components** to use `t()` instead of hardcoded strings:
-   - `Auth.tsx` -- login form labels, messages, toasts
-   - `AppSidebar.tsx` -- menu items, dropdown labels
-   - `Dashboard.tsx` -- titles, descriptions, empty states
-   - `Parametres.tsx` -- settings labels, theme names, toasts
-   - `Entreprise.tsx`, `Contrats.tsx`, `Juridique.tsx`, `Comptabilite.tsx`, `Finance.tsx` -- page titles and placeholder text
-   - `Aide.tsx` -- FAQ content, contact section
-   - `MentionsLegales.tsx`, `Confidentialite.tsx`, `CGU.tsx` -- legal page content
-   - `NotFound.tsx` -- 404 text
-   - Zod validation messages in `Auth.tsx`
+### 1. Database: Add `slug` column to `companies`
+
+- Add a `slug` column (text, not null, unique) to the `companies` table
+- Populate existing rows automatically:
+  - "Company One" becomes `company-one`
+  - "Company Two" becomes `company-two`
+- Add a unique constraint so no two companies share a slug
+
+### 2. Update CompanyContext
+
+- Add `slug` to the `Company` interface and fetch query
+- When the provider loads, read the first URL segment to detect a company slug
+- If a slug is found in the URL, set that company as the current one (instead of only relying on localStorage)
+- When switching companies (via the selector), navigate to the equivalent page under the new slug
+- Expose a helper `companyPath(path)` that returns `/${slug}${path}` for building links
+
+### 3. Restructure Routes in App.tsx
+
+Current routes like:
+```
+<Route path="/contrats" element={...} />
+```
+
+Become:
+```
+<Route path="/:companySlug/contrats" element={...} />
+```
+
+Company-scoped routes (with slug prefix):
+- `/:companySlug` -- Dashboard
+- `/:companySlug/entreprise`
+- `/:companySlug/contrats`
+- `/:companySlug/juridique`
+- `/:companySlug/comptabilite`
+- `/:companySlug/finance`
+
+Root-level routes (no slug):
+- `/auth`
+- `/parametres`
+- `/aide`
+- `/mentions-legales`, `/confidentialite`, `/cgu`
+
+The root `/` will redirect to `/${firstCompanySlug}` once companies are loaded.
+
+### 4. Update Navigation Links
+
+**AppSidebar.tsx**: All company section links use `companyPath()`:
+```tsx
+// Before
+{ url: '/contrats', ... }
+// After
+{ url: companyPath('/contrats'), ... }
+```
+
+**Dashboard.tsx**: Section cards also use `companyPath()` for their links.
+
+### 5. Company Switching with Navigation
+
+When the user selects a different company in the sidebar dropdown:
+- Update the context as before
+- Navigate to `/${newSlug}` (or to the same sub-page under the new slug) using `useNavigate()`
+
+### 6. Slug Sync on Page Load
+
+In `CompanyProvider`, use `useParams()` to read `:companySlug` from the URL. If the slug matches a company the user belongs to, that company is selected. If it doesn't match, redirect to 404 or the first available company.
+
+---
 
 ## Technical Details
 
-- **Key lookup**: dot-notation path resolution on nested JSON objects (e.g., `t("auth.title")` resolves `translations.auth.title`)
-- **Fallback**: if a key is missing, the key itself is returned (makes it obvious what needs translating)
-- **Language storage**: `localStorage` key `app_language`, defaults to `"en"`
-- **No URL-based routing**: language is a user preference, not a URL segment
-- **Type safety**: a TypeScript type can be generated from the JSON structure for autocomplete (optional, can be added later)
+### Database Migration SQL
 
+```sql
+ALTER TABLE companies ADD COLUMN slug text;
+
+UPDATE companies SET slug = lower(replace(name, ' ', '-'));
+
+ALTER TABLE companies ALTER COLUMN slug SET NOT NULL;
+ALTER TABLE companies ADD CONSTRAINT companies_slug_unique UNIQUE (slug);
+```
+
+### Route Structure
+
+```text
+/:companySlug          --> Dashboard (company-scoped)
+/:companySlug/entreprise
+/:companySlug/contrats
+/:companySlug/juridique
+/:companySlug/comptabilite
+/:companySlug/finance
+/parametres            --> Settings (user-scoped)
+/aide                  --> Help
+/mentions-legales      --> Legal pages
+/confidentialite
+/cgu
+/auth                  --> Auth (public)
+```
+
+### Key Architecture Decision
+
+The `CompanyProvider` will need access to the URL slug. Since it wraps company-scoped routes, we'll use a layout route pattern with `useParams()` to extract `:companySlug` and sync it with the context. The provider will:
+1. Fetch all user companies (as today)
+2. Match the URL slug to a company
+3. Set it as current
+4. Redirect to the first company if the user lands on `/` with no slug
+
+### Files to Create/Modify
+
+- **Migration**: Add `slug` column to `companies`
+- **`src/contexts/CompanyContext.tsx`**: Add slug to interface, add `companyPath()` helper, sync from URL params
+- **`src/App.tsx`**: Restructure routes with `/:companySlug` prefix, add redirect from `/`
+- **`src/components/layout/AppSidebar.tsx`**: Use `companyPath()` for company-section links
+- **`src/pages/Dashboard.tsx`**: Use `companyPath()` for section card links
+- **`src/i18n/locales/en.json`**: No change needed (text stays the same)
