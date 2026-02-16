@@ -1,79 +1,87 @@
 
 
-# Passage en mode magic link avec protection contre l'enumeration d'emails
+# New Admin Tab: Corporate Officers
 
-## Objectif
+## Overview
 
-Passer exclusivement en mode magic link et empecher la revelation de l'existence d'un email : que l'utilisateur existe ou non, l'ecran affiche toujours "Verifiez votre boite mail".
+Add a new "Corporate Officers" page at `/admin/officers` following the same patterns as the existing Users and Companies admin pages. The page displays all officers across all companies in a table with edit and delete capabilities.
 
----
+## Changes
 
-## 1. Nouvelle edge function `check-user-exists`
+### 1. New page: `src/pages/admin/AdminOfficers.tsx`
 
-Fichier : `supabase/functions/check-user-exists/index.ts`
+A new page following the same structure as `AdminUsers.tsx`:
+- Header with icon (UserCheck from lucide) and title
+- Search bar filtering by full name, position, or company name
+- Table with columns: Full name (first_name + last_name), Company, Date of birth (DD/MM/YYYY format), Position, Actions (edit + delete buttons)
+- Data fetched via react-query from `company_officers` joined with `companies` for the company name
 
-- Recoit `{ email }` en POST
-- Interroge la table `public.users` avec le service role
-- Retourne `{ exists: true/false }`
-- Sans verification JWT (l'utilisateur n'est pas encore connecte)
+### 2. New component: `src/components/admin/OfficerFormDialog.tsx`
 
-Cette fonction permet de savoir cote serveur si l'email existe, sans reveler cette information a l'utilisateur.
+A dialog for editing an officer (similar to `UserFormDialog`):
+- Fields: First name, Last name, Date of birth (using `DateMaskInput`), Position, Company (read-only display or select)
+- Calls `supabase.from('company_officers').update(...)` on save
 
-## 2. Configuration
+### 3. New component: `src/components/admin/DeleteOfficerDialog.tsx`
 
-Fichier : `supabase/config.toml`
+A simple confirmation dialog (similar to `DeleteUserDialog`, without slug confirmation):
+- Shows officer name and asks for confirmation
+- Calls `supabase.from('company_officers').delete().eq('id', ...)`
 
-Ajouter :
-```text
-[functions.check-user-exists]
-verify_jwt = false
-```
+### 4. Routing: `src/App.tsx`
 
-## 3. Simplification de `Auth.tsx`
+Add route: `<Route path="officers" element={<AdminOfficers />} />`
 
-Le flux `onSubmit` devient :
+### 5. Sidebar: `src/components/layout/AppSidebar.tsx`
 
-```text
-1. Appeler check-user-exists avec l'email
-2. Si l'utilisateur existe :
-   - Appeler signInWithOtp (envoi du magic link)
-3. Si l'utilisateur n'existe pas :
-   - Ne rien faire (pas de signInWithOtp = pas de creation de compte)
-4. Dans les deux cas :
-   - Afficher l'ecran "Verifiez votre boite mail" (identique)
-```
+Add a new admin menu item "Corporate Officers" pointing to `/admin/officers`
 
-Suppressions :
-- Variable `isAutoConfirmEnabled` et la reference a `VITE_AUTOCONFIRM`
-- Fonction `handleAutoLogin` entiere
-- Toute la logique conditionnelle auto-confirm dans le JSX
-- Les textes conditionnels (description, bouton) : on utilise uniquement les variantes magic link
+### 6. Translations: `src/i18n/locales/en.json`
 
-Le bouton affiche toujours "Send sign-in link" et la description est toujours "Enter your email to receive a sign-in link".
+Add keys under `sidebar.adminOfficers` and `admin.officers.*` for title, search placeholder, column headers, empty state, delete confirmation, etc.
 
-## 4. Fichiers concernes
+## Technical Details
 
-| Fichier | Action |
-|---------|--------|
-| `supabase/functions/check-user-exists/index.ts` | Nouveau |
-| `supabase/config.toml` | Ajouter entree `check-user-exists` |
-| `src/pages/Auth.tsx` | Simplifier : retirer auto-confirm, ajouter verification silencieuse |
-
-## 5. Details techniques
-
-### Edge function `check-user-exists`
+### Data fetching in `AdminOfficers.tsx`
 
 ```text
-POST /check-user-exists
-Body: { "email": "user@example.com" }
-Response: { "exists": true } ou { "exists": false }
+1. Fetch all company_officers (id, first_name, last_name, date_of_birth, position, company_id)
+2. Fetch all companies (id, name) for display
+3. Join client-side to attach company name to each officer
+4. Filter by search term across full name, position, company name
 ```
 
-Utilise `supabase.from('users').select('id').eq('email', email).maybeSingle()` pour eviter les erreurs si l'email n'existe pas.
+### Table columns
 
-### Securite
+| Column | Content |
+|--------|---------|
+| Full name | `${first_name} ${last_name}` |
+| Company | Company name (Badge) |
+| Date of birth | DD/MM/YYYY format |
+| Position | Text |
+| Actions | Edit (Pencil) + Delete (Trash2) icons |
 
-- L'ecran "Verifiez votre boite mail" est identique que l'email existe ou non : aucune fuite d'information
-- `signInWithOtp` n'est jamais appele pour un email inconnu : aucun compte ne sera cree
-- Les logs serveur enregistrent la tentative pour un email inexistant (utile pour le monitoring)
+### OfficerFormDialog
+
+- Edit-only dialog (creation is done via the CompanyFormDialog)
+- Fields: first_name, last_name, date_of_birth (DateMaskInput), position
+- Company name displayed as read-only info
+- Uses same `displayToIso`/`isoToDisplay` helpers as CompanyFormDialog
+
+### DeleteOfficerDialog
+
+- Simple AlertDialog with confirmation text
+- No slug confirmation needed (unlike companies)
+- Deletes via `supabase.from('company_officers').delete().eq('id', officerId)`
+
+### Files summary
+
+| File | Action |
+|------|--------|
+| `src/pages/admin/AdminOfficers.tsx` | Create |
+| `src/components/admin/OfficerFormDialog.tsx` | Create |
+| `src/components/admin/DeleteOfficerDialog.tsx` | Create |
+| `src/App.tsx` | Add route |
+| `src/components/layout/AppSidebar.tsx` | Add sidebar item |
+| `src/i18n/locales/en.json` | Add translation keys |
 
