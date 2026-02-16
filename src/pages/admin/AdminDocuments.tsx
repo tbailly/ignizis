@@ -1,0 +1,198 @@
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { FileText, Pencil, Trash2, Search, Upload } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
+import { useTranslation } from '@/i18n/useTranslation';
+import { DocumentUploadDialog } from '@/components/admin/DocumentUploadDialog';
+import { DocumentEditDialog } from '@/components/admin/DocumentEditDialog';
+import { DeleteDocumentDialog } from '@/components/admin/DeleteDocumentDialog';
+
+interface DocumentRow {
+  id: string;
+  display_name: string;
+  document_type: 'contract' | 'invoice' | 'other';
+  storage_path: string;
+  original_filename: string;
+  file_size: number | null;
+  mime_type: string | null;
+  uploaded_by: string;
+  created_at: string;
+  tags: { id: string; name: string }[];
+}
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+const typeLabels: Record<string, string> = {
+  contract: 'Contrat',
+  invoice: 'Facture',
+  other: 'Autre',
+};
+
+export default function AdminDocuments() {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const [search, setSearch] = useState('');
+  const [showUpload, setShowUpload] = useState(false);
+  const [editingDoc, setEditingDoc] = useState<DocumentRow | null>(null);
+  const [deletingDoc, setDeletingDoc] = useState<DocumentRow | null>(null);
+
+  const { data: documents = [], isLoading } = useQuery({
+    queryKey: ['admin-documents'],
+    queryFn: async () => {
+      const { data: docs, error: docsError } = await supabase
+        .from('documents')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (docsError) throw docsError;
+
+      const { data: assignments, error: assignError } = await supabase
+        .from('document_tag_assignments')
+        .select('document_id, tag_id');
+
+      if (assignError) throw assignError;
+
+      const { data: tags, error: tagsError } = await supabase
+        .from('document_tags')
+        .select('id, name');
+
+      if (tagsError) throw tagsError;
+
+      const tagsById = new Map(tags.map(t => [t.id, t.name]));
+
+      return (docs || []).map(doc => ({
+        ...doc,
+        tags: (assignments || [])
+          .filter(a => a.document_id === doc.id)
+          .map(a => ({ id: a.tag_id, name: tagsById.get(a.tag_id) || '' }))
+          .filter(t => t.name),
+      })) as DocumentRow[];
+    },
+  });
+
+  const filtered = documents.filter(d =>
+    d.display_name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleSuccess = () => {
+    setShowUpload(false);
+    setEditingDoc(null);
+    setDeletingDoc(null);
+    queryClient.invalidateQueries({ queryKey: ['admin-documents'] });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+          <FileText className="h-8 w-8 text-primary" />
+          {t('admin.documents.title')}
+        </h1>
+        <Button onClick={() => setShowUpload(true)}>
+          <Upload className="h-4 w-4 mr-2" />
+          {t('admin.documents.import')}
+        </Button>
+      </div>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder={t('admin.documents.searchPlaceholder')}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t('admin.documents.displayName')}</TableHead>
+              <TableHead>{t('admin.documents.documentType')}</TableHead>
+              <TableHead>{t('admin.documents.tags')}</TableHead>
+              <TableHead>{t('admin.documents.uploadDate')}</TableHead>
+              <TableHead className="w-[100px]">{t('admin.documents.actions')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  {t('common.loading')}
+                </TableCell>
+              </TableRow>
+            ) : filtered.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  {t('admin.documents.noDocuments')}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filtered.map((doc) => (
+                <TableRow key={doc.id}>
+                  <TableCell className="font-medium">{doc.display_name}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{typeLabels[doc.document_type] || doc.document_type}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {doc.tags.map(tag => (
+                        <Badge key={tag.id} variant="secondary" className="text-xs">
+                          {tag.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell>{formatDate(doc.created_at)}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => setEditingDoc(doc)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setDeletingDoc(doc)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {showUpload && (
+        <DocumentUploadDialog
+          onClose={() => setShowUpload(false)}
+          onSuccess={handleSuccess}
+        />
+      )}
+
+      {editingDoc && (
+        <DocumentEditDialog
+          document={editingDoc}
+          onClose={() => setEditingDoc(null)}
+          onSuccess={handleSuccess}
+        />
+      )}
+
+      {deletingDoc && (
+        <DeleteDocumentDialog
+          document={deletingDoc}
+          onClose={() => setDeletingDoc(null)}
+          onSuccess={handleSuccess}
+        />
+      )}
+    </div>
+  );
+}

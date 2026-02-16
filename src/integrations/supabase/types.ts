@@ -97,6 +97,96 @@ export type Database = {
           },
         ]
       }
+      document_tag_assignments: {
+        Row: {
+          document_id: string
+          id: string
+          tag_id: string
+        }
+        Insert: {
+          document_id: string
+          id?: string
+          tag_id: string
+        }
+        Update: {
+          document_id?: string
+          id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_tag_assignments_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_tag_assignments_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "document_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_tags: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      documents: {
+        Row: {
+          created_at: string
+          display_name: string
+          document_type: Database["public"]["Enums"]["document_type"]
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          original_filename: string
+          storage_path: string
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          document_type: Database["public"]["Enums"]["document_type"]
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          original_filename: string
+          storage_path: string
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          document_type?: Database["public"]["Enums"]["document_type"]
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          original_filename?: string
+          storage_path?: string
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
       user_companies: {
         Row: {
           company_id: string
@@ -215,7 +305,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      document_type: "contract" | "invoice" | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -342,6 +432,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      document_type: ["contract", "invoice", "other"],
+    },
   },
 } as const

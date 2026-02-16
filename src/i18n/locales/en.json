@@ -42,7 +42,8 @@
     "admin": "Administration",
     "adminCompanies": "Companies",
     "adminUsers": "Users",
-    "adminOfficers": "Corporate Officers"
+    "adminOfficers": "Corporate Officers",
+    "adminDocuments": "Documents"
   },
   "admin": {
     "title": "Administration",
@@ -53,6 +54,8 @@
     "companiesCardDesc": "Manage companies and their settings",
     "usersCard": "Users",
     "usersCardDesc": "Manage users and their access",
+    "documentsCard": "Documents",
+    "documentsCardDesc": "Manage uploaded documents",
     "companies": {
       "title": "Companies",
       "create": "Create a company",
@@ -137,6 +140,29 @@
       "deleteConfirmDesc": "This action is irreversible. The following officer will be permanently deleted:",
       "deleteConfirmButton": "Delete permanently",
       "deleteSuccess": "Officer deleted"
+    },
+    "documents": {
+      "title": "Documents",
+      "searchPlaceholder": "Search by document name...",
+      "import": "Import",
+      "edit": "Edit document",
+      "editDesc": "Update the document's metadata.",
+      "displayName": "Display name",
+      "documentType": "Type",
+      "tags": "Tags",
+      "uploadDate": "Upload date",
+      "actions": "Actions",
+      "originalFile": "Original file",
+      "typeContract": "Contract",
+      "typeInvoice": "Invoice",
+      "typeOther": "Other",
+      "saveSuccess": "Document updated",
+      "deleteSuccess": "Document deleted",
+      "uploadSuccess": "Document(s) uploaded",
+      "deleteConfirmTitle": "Delete document",
+      "deleteConfirmDesc": "This action is irreversible. The following document will be permanently deleted:",
+      "deleteConfirmButton": "Delete permanently",
+      "noDocuments": "No documents found"
     }
   },
   "dashboard": {
