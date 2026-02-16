@@ -187,6 +187,18 @@ export function AppSidebar() {
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/admin/documents'}
+                    tooltip={t('sidebar.adminDocuments')}
+                  >
+                    <NavLink to="/admin/documents" onClick={closeMobileSidebar}>
+                      <FileText className="h-4 w-4" />
+                      <span>{t('sidebar.adminDocuments')}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

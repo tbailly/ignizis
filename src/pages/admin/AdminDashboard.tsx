@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Building2, Users } from 'lucide-react';
+import { Shield, Building2, Users, FileText } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/useTranslation';
 
@@ -20,6 +20,12 @@ export default function AdminDashboard() {
       description: t('admin.usersCardDesc'),
       icon: Users,
       path: '/admin/users',
+    },
+    {
+      title: t('admin.documentsCard'),
+      description: t('admin.documentsCardDesc'),
+      icon: FileText,
+      path: '/admin/documents',
     },
   ];
 
