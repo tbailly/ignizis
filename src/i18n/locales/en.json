@@ -41,7 +41,8 @@
     "help": "Help",
     "admin": "Administration",
     "adminCompanies": "Companies",
-    "adminUsers": "Users"
+    "adminUsers": "Users",
+    "adminOfficers": "Corporate Officers"
   },
   "admin": {
     "title": "Administration",
@@ -117,6 +118,25 @@
       "deleteSuccess": "User deleted",
       "saveSuccess": "User saved",
       "noUsers": "No users found"
+    },
+    "officers": {
+      "title": "Corporate Officers",
+      "searchPlaceholder": "Search by name, position, or company...",
+      "fullName": "Full name",
+      "company": "Company",
+      "dateOfBirth": "Date of birth",
+      "position": "Position",
+      "actions": "Actions",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "edit": "Edit officer",
+      "editDesc": "Update the officer's information.",
+      "noOfficers": "No officers found",
+      "saveSuccess": "Officer updated",
+      "deleteConfirmTitle": "Delete officer",
+      "deleteConfirmDesc": "This action is irreversible. The following officer will be permanently deleted:",
+      "deleteConfirmButton": "Delete permanently",
+      "deleteSuccess": "Officer deleted"
     }
   },
   "dashboard": {
