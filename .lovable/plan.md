@@ -1,87 +1,163 @@
 
 
-# New Admin Tab: Corporate Officers
+# Page d'administration "Documents"
 
-## Overview
+## Vue d'ensemble
 
-Add a new "Corporate Officers" page at `/admin/officers` following the same patterns as the existing Users and Companies admin pages. The page displays all officers across all companies in a table with edit and delete capabilities.
+Ajouter une page `/admin/documents` permettant aux administrateurs d'importer, modifier et supprimer des documents. Les fichiers sont stockes dans un bucket de stockage, et les metadonnees (nom d'affichage, type, tags) dans une table `documents`. Les tags disponibles sont geres dans une table separee `document_tags`.
 
-## Changes
+---
 
-### 1. New page: `src/pages/admin/AdminOfficers.tsx`
+## 1. Migration SQL
 
-A new page following the same structure as `AdminUsers.tsx`:
-- Header with icon (UserCheck from lucide) and title
-- Search bar filtering by full name, position, or company name
-- Table with columns: Full name (first_name + last_name), Company, Date of birth (DD/MM/YYYY format), Position, Actions (edit + delete buttons)
-- Data fetched via react-query from `company_officers` joined with `companies` for the company name
+### 1.1 Enum de type de document
 
-### 2. New component: `src/components/admin/OfficerFormDialog.tsx`
+Creer un type enum `document_type` avec les valeurs : `contract`, `invoice`, `other`.
 
-A dialog for editing an officer (similar to `UserFormDialog`):
-- Fields: First name, Last name, Date of birth (using `DateMaskInput`), Position, Company (read-only display or select)
-- Calls `supabase.from('company_officers').update(...)` on save
+### 1.2 Table `document_tags`
 
-### 3. New component: `src/components/admin/DeleteOfficerDialog.tsx`
+Table de reference pour les tags disponibles :
 
-A simple confirmation dialog (similar to `DeleteUserDialog`, without slug confirmation):
-- Shows officer name and asks for confirmation
-- Calls `supabase.from('company_officers').delete().eq('id', ...)`
+| Colonne | Type | Contraintes |
+|---------|------|-------------|
+| id | uuid | PK, gen_random_uuid() |
+| name | text | NOT NULL, UNIQUE |
+| created_at | timestamptz | DEFAULT now() |
 
-### 4. Routing: `src/App.tsx`
+Donnees par defaut inserees : `kbis`, `comptabilite`, `cloture`.
 
-Add route: `<Route path="officers" element={<AdminOfficers />} />`
+RLS :
+- SELECT : tous les utilisateurs authentifies
+- INSERT, UPDATE, DELETE : admins uniquement
 
-### 5. Sidebar: `src/components/layout/AppSidebar.tsx`
+### 1.3 Table `documents`
 
-Add a new admin menu item "Corporate Officers" pointing to `/admin/officers`
+| Colonne | Type | Contraintes |
+|---------|------|-------------|
+| id | uuid | PK, gen_random_uuid() |
+| display_name | text | NOT NULL |
+| document_type | document_type (enum) | NOT NULL |
+| storage_path | text | NOT NULL |
+| original_filename | text | NOT NULL |
+| file_size | bigint | Nullable |
+| mime_type | text | Nullable |
+| uploaded_by | uuid | NOT NULL |
+| created_at | timestamptz | DEFAULT now() |
+| updated_at | timestamptz | DEFAULT now() |
 
-### 6. Translations: `src/i18n/locales/en.json`
+Trigger `update_updated_at_column` attache.
 
-Add keys under `sidebar.adminOfficers` and `admin.officers.*` for title, search placeholder, column headers, empty state, delete confirmation, etc.
+RLS :
+- SELECT, INSERT, UPDATE, DELETE : admins uniquement (pour le moment, l'acces conditionne par les liens sera ajoute plus tard cote DB)
 
-## Technical Details
+### 1.4 Table `document_tag_assignments` (jointure documents <-> tags)
 
-### Data fetching in `AdminOfficers.tsx`
+| Colonne | Type | Contraintes |
+|---------|------|-------------|
+| id | uuid | PK, gen_random_uuid() |
+| document_id | uuid | NOT NULL, FK -> documents(id) ON DELETE CASCADE |
+| tag_id | uuid | NOT NULL, FK -> document_tags(id) ON DELETE CASCADE |
+| UNIQUE(document_id, tag_id) | | |
 
-```text
-1. Fetch all company_officers (id, first_name, last_name, date_of_birth, position, company_id)
-2. Fetch all companies (id, name) for display
-3. Join client-side to attach company name to each officer
-4. Filter by search term across full name, position, company name
-```
+RLS : memes regles que `documents`.
 
-### Table columns
+### 1.5 Bucket de stockage `documents`
 
-| Column | Content |
-|--------|---------|
-| Full name | `${first_name} ${last_name}` |
-| Company | Company name (Badge) |
-| Date of birth | DD/MM/YYYY format |
-| Position | Text |
-| Actions | Edit (Pencil) + Delete (Trash2) icons |
+Creer un bucket `documents` (non public). Politiques :
+- SELECT (download) : admins uniquement (les politiques d'acces conditionnel seront ajoutees plus tard)
+- INSERT, UPDATE, DELETE : admins uniquement
 
-### OfficerFormDialog
+---
 
-- Edit-only dialog (creation is done via the CompanyFormDialog)
-- Fields: first_name, last_name, date_of_birth (DateMaskInput), position
-- Company name displayed as read-only info
-- Uses same `displayToIso`/`isoToDisplay` helpers as CompanyFormDialog
+## 2. Nouveaux fichiers frontend
 
-### DeleteOfficerDialog
+### 2.1 Page `src/pages/admin/AdminDocuments.tsx`
 
-- Simple AlertDialog with confirmation text
-- No slug confirmation needed (unlike companies)
-- Deletes via `supabase.from('company_officers').delete().eq('id', officerId)`
+Meme structure que `AdminOfficers.tsx` :
+- En-tete avec icone (FileText) et titre + bouton "Importer"
+- Barre de recherche filtrant par nom d'affichage
+- Table avec colonnes :
 
-### Files summary
+| Colonne | Contenu |
+|---------|---------|
+| Nom d'affichage | display_name |
+| Type | Badge (Contrat / Facture / Autre) |
+| Tags | Badges (depuis document_tag_assignments) |
+| Date d'import | created_at formate DD/MM/YYYY |
+| Actions | Edit (Pencil) + Delete (Trash2) |
 
-| File | Action |
-|------|--------|
-| `src/pages/admin/AdminOfficers.tsx` | Create |
-| `src/components/admin/OfficerFormDialog.tsx` | Create |
-| `src/components/admin/DeleteOfficerDialog.tsx` | Create |
-| `src/App.tsx` | Add route |
-| `src/components/layout/AppSidebar.tsx` | Add sidebar item |
-| `src/i18n/locales/en.json` | Add translation keys |
+Donnees chargees via react-query : fetch `documents`, fetch `document_tag_assignments` + `document_tags` pour resoudre les noms de tags.
+
+### 2.2 Composant `src/components/admin/DocumentUploadDialog.tsx`
+
+Modale d'import multi-fichiers :
+- Input file (multiple)
+- Pour chaque fichier selectionne :
+  - Nom d'affichage (pre-rempli avec le nom du fichier sans extension)
+  - Type de document (select : Contrat, Facture, Autre)
+  - Tags (multi-select parmi les tags de la table `document_tags`)
+- Bouton "Importer" :
+  1. Upload chaque fichier vers le bucket `documents` sous le chemin `{uuid}_{filename}`
+  2. Insert dans `documents`
+  3. Insert les associations dans `document_tag_assignments`
+
+### 2.3 Composant `src/components/admin/DocumentEditDialog.tsx`
+
+Modale d'edition (similaire a `OfficerFormDialog`) :
+- Champs editables : nom d'affichage, type de document, tags
+- Le fichier original n'est pas modifiable
+- Met a jour `documents` + synchronise `document_tag_assignments` (delete + re-insert)
+
+### 2.4 Composant `src/components/admin/DeleteDocumentDialog.tsx`
+
+Modale de confirmation simple :
+- Affiche le nom du document
+- Supprime du bucket via `supabase.storage.from('documents').remove([path])`
+- Supprime de la table `documents` (cascade supprime les tag_assignments)
+
+---
+
+## 3. Integration
+
+### 3.1 Route (`App.tsx`)
+
+Ajouter dans le bloc admin : `<Route path="documents" element={<AdminDocuments />} />`
+
+### 3.2 Sidebar (`AppSidebar.tsx`)
+
+Ajouter un item "Documents" avec icone `FileText` dans la section admin, pointant vers `/admin/documents`
+
+### 3.3 Dashboard admin (`AdminDashboard.tsx`)
+
+Ajouter une carte "Documents" dans la grille
+
+### 3.4 Traductions (`en.json`)
+
+Ajouter les cles sous `sidebar.adminDocuments` et `admin.documents.*` :
+- title, searchPlaceholder, import, edit, editDesc
+- displayName, documentType, tags, uploadDate, actions, originalFile
+- Types : contract, invoice, other
+- Messages : saveSuccess, deleteSuccess, uploadSuccess, deleteConfirmTitle, deleteConfirmDesc, deleteConfirmButton, noDocuments
+
+---
+
+## 4. Resume des fichiers
+
+| Fichier | Action |
+|---------|--------|
+| Migration SQL | Creer enum, tables `document_tags`, `documents`, `document_tag_assignments`, bucket, RLS, donnees par defaut |
+| `src/pages/admin/AdminDocuments.tsx` | Creer |
+| `src/components/admin/DocumentUploadDialog.tsx` | Creer |
+| `src/components/admin/DocumentEditDialog.tsx` | Creer |
+| `src/components/admin/DeleteDocumentDialog.tsx` | Creer |
+| `src/App.tsx` | Ajouter route |
+| `src/components/layout/AppSidebar.tsx` | Ajouter item sidebar |
+| `src/pages/admin/AdminDashboard.tsx` | Ajouter carte |
+| `src/i18n/locales/en.json` | Ajouter traductions |
+
+---
+
+## 5. Note sur l'architecture
+
+La table `documents` ne contient volontairement ni `company_id` ni `officer_id`. Cette architecture est preparee pour que les liens d'acces soient ajoutes plus tard cote DB (par exemple via une table `document_links` polymorphique). Pour le moment, seuls les admins peuvent voir et gerer tous les documents. Quand les liens seront en place, il suffira d'adapter les politiques RLS de `documents` et du bucket sans modifier la structure de la table.
 
