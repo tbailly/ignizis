@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { FileText, Pencil, Trash2, Search, Upload } from 'lucide-react';
+import { FileText, Pencil, Trash2, Search, Upload, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,9 @@ import { useTranslation } from '@/i18n/useTranslation';
 import { DocumentUploadDialog } from '@/components/admin/DocumentUploadDialog';
 import { DocumentEditDialog } from '@/components/admin/DocumentEditDialog';
 import { DeleteDocumentDialog } from '@/components/admin/DeleteDocumentDialog';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
 
 interface DocumentRow {
   id: string;
@@ -44,7 +47,8 @@ export default function AdminDocuments() {
   const [showUpload, setShowUpload] = useState(false);
   const [editingDoc, setEditingDoc] = useState<DocumentRow | null>(null);
   const [deletingDoc, setDeletingDoc] = useState<DocumentRow | null>(null);
-
+  const [previewDoc, setPreviewDoc] = useState<DocumentRow | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const { data: documents = [], isLoading } = useQuery({
     queryKey: ['admin-documents'],
     queryFn: async () => {
@@ -88,6 +92,17 @@ export default function AdminDocuments() {
     setEditingDoc(null);
     setDeletingDoc(null);
     queryClient.invalidateQueries({ queryKey: ['admin-documents'] });
+  };
+
+  const isPdf = (doc: DocumentRow) =>
+    doc.mime_type === 'application/pdf' || doc.original_filename.toLowerCase().endsWith('.pdf');
+
+  const handlePreview = async (doc: DocumentRow) => {
+    const { data } = await supabase.storage.from('documents').createSignedUrl(doc.storage_path, 300);
+    if (data?.signedUrl) {
+      setPreviewUrl(data.signedUrl);
+      setPreviewDoc(doc);
+    }
   };
 
   return (
@@ -156,6 +171,11 @@ export default function AdminDocuments() {
                   <TableCell>{formatDate(doc.created_at)}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
+                      {isPdf(doc) && (
+                        <Button variant="ghost" size="icon" onClick={() => handlePreview(doc)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button variant="ghost" size="icon" onClick={() => setEditingDoc(doc)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -193,6 +213,21 @@ export default function AdminDocuments() {
           onSuccess={handleSuccess}
         />
       )}
+
+      <Dialog open={!!previewDoc} onOpenChange={(open) => { if (!open) { setPreviewDoc(null); setPreviewUrl(null); } }}>
+        <DialogContent className="max-w-4xl h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{previewDoc?.display_name}</DialogTitle>
+          </DialogHeader>
+          {previewUrl && (
+            <iframe
+              src={previewUrl}
+              className="flex-1 w-full rounded-md border"
+              title="PDF Preview"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
