@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { FileText, Pencil, Trash2, Search, Upload, Eye } from 'lucide-react';
+import { FileText, Pencil, Trash2, Search, Upload, Eye, Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -105,6 +105,13 @@ export default function AdminDocuments() {
     }
   };
 
+  const handleDownload = async (doc: DocumentRow) => {
+    const { data } = await supabase.storage.from('documents').createSignedUrl(doc.storage_path, 300, { download: doc.original_filename });
+    if (data?.signedUrl) {
+      window.open(data.signedUrl, '_blank');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -176,6 +183,9 @@ export default function AdminDocuments() {
                           <Eye className="h-4 w-4" />
                         </Button>
                       )}
+                      <Button variant="ghost" size="icon" onClick={() => handleDownload(doc)}>
+                        <Download className="h-4 w-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => setEditingDoc(doc)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
