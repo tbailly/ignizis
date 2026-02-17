@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { FileText, Pencil, Trash2, Search, Upload, Eye, Download } from 'lucide-react';
+import { FileText, Pencil, Trash2, Search, Upload, Eye, Download, Tags } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import { useTranslation } from '@/i18n/useTranslation';
 import { DocumentUploadDialog } from '@/components/admin/DocumentUploadDialog';
 import { DocumentEditDialog } from '@/components/admin/DocumentEditDialog';
 import { DeleteDocumentDialog } from '@/components/admin/DeleteDocumentDialog';
+import { TagManagementDialog } from '@/components/admin/TagManagementDialog';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -48,6 +49,7 @@ export default function AdminDocuments() {
   const [editingDoc, setEditingDoc] = useState<DocumentRow | null>(null);
   const [deletingDoc, setDeletingDoc] = useState<DocumentRow | null>(null);
   const [previewDoc, setPreviewDoc] = useState<DocumentRow | null>(null);
+  const [showTagManager, setShowTagManager] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const { data: documents = [], isLoading } = useQuery({
     queryKey: ['admin-documents'],
@@ -119,10 +121,16 @@ export default function AdminDocuments() {
           <FileText className="h-8 w-8 text-primary" />
           {t('admin.documents.title')}
         </h1>
-        <Button onClick={() => setShowUpload(true)}>
-          <Upload className="h-4 w-4 mr-2" />
-          {t('admin.documents.import')}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowTagManager(true)}>
+            <Tags className="h-4 w-4 mr-2" />
+            {t('admin.documents.manageTags')}
+          </Button>
+          <Button onClick={() => setShowUpload(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            {t('admin.documents.import')}
+          </Button>
+        </div>
       </div>
 
       <div className="relative">
@@ -214,6 +222,10 @@ export default function AdminDocuments() {
           onClose={() => setEditingDoc(null)}
           onSuccess={handleSuccess}
         />
+      )}
+
+      {showTagManager && (
+        <TagManagementDialog onClose={() => setShowTagManager(false)} />
       )}
 
       {deletingDoc && (
