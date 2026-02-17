@@ -162,7 +162,17 @@
       "deleteConfirmTitle": "Delete document",
       "deleteConfirmDesc": "This action is irreversible. The following document will be permanently deleted:",
       "deleteConfirmButton": "Delete permanently",
-      "noDocuments": "No documents found"
+      "noDocuments": "No documents found",
+      "manageTags": "Manage tags",
+      "addTag": "Add",
+      "tagName": "Tag name",
+      "tagRenameSuccess": "Tag renamed",
+      "tagCreateSuccess": "Tag created",
+      "tagDeleteSuccess": "Tag deleted",
+      "tagDeleteConfirmTitle": "Delete tag",
+      "tagDeleteConfirmDesc": "This action is irreversible. Type the tag name to confirm:",
+      "tagDeleteConfirmButton": "Delete permanently",
+      "noTags": "No tags yet"
     }
   },
   "dashboard": {
