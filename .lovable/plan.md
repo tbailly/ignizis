@@ -1,70 +1,65 @@
 
-# Gestion des tags depuis la page Documents
+
+# Affichage des sections verrouillees pour les entreprises sans permission
 
 ## Vue d'ensemble
 
-Ajouter un bouton "Manage tags" a cote du bouton "Import" dans la page Documents. Ce bouton ouvre une modale permettant de :
-- Voir la liste des tags existants
-- Ajouter un nouveau tag
-- Renommer un tag (edition inline)
-- Supprimer un tag (avec confirmation par saisie du nom)
+Actuellement, les onglets "Legal", "Accounting" et "Finance" sont masques dans le menu si l'entreprise n'a pas la permission correspondante. L'objectif est de les afficher en permanence, avec un indicateur visuel de verrouillage, et d'afficher un contenu specifique (page "option non activee") lorsque l'utilisateur clique dessus sans avoir la permission.
 
 ---
 
-## 1. Nouveau composant `src/components/admin/TagManagementDialog.tsx`
+## 1. Modifications du menu lateral (`AppSidebar.tsx`)
 
-Modale (Dialog) contenant :
-
-### Liste des tags
-- Chaque tag affiche son nom + icone Pencil (edition) + icone Trash2 (suppression)
-- Les tags sont charges via react-query (`document_tags`)
-
-### Edition inline
-- Cliquer sur Pencil transforme le nom en Input editable, et l'icone Pencil devient une icone Check (sauvegarde)
-- Cliquer sur Check fait un `UPDATE` sur `document_tags` puis rafraichit la liste
-- Possibilite d'annuler avec Echap ou un bouton X
-
-### Ajout d'un tag
-- Un champ Input + bouton "Add" en bas de la liste
-- Insert dans `document_tags`, puis rafraichissement
-
-### Suppression d'un tag
-- Cliquer sur Trash2 ouvre une sous-modale (AlertDialog) de confirmation
-- L'utilisateur doit saisir le nom exact du tag pour valider
-- La suppression cascade automatiquement les `document_tag_assignments` grace aux FK
+- Remplacer `visibleMenuItems` (filtre par permission) par la liste complete `menuItems`
+- Pour chaque item, verifier `hasPermission(item.permission)` :
+  - Si autorise : affichage normal (comme aujourd'hui)
+  - Si verrouille : appliquer une opacite reduite (`opacity-50`), ajouter une icone cadenas (`Lock` de lucide-react) a droite du label, le lien reste cliquable et pointe vers la meme route
 
 ---
 
-## 2. Modifications de `AdminDocuments.tsx`
+## 2. Pages avec contenu conditionnel (`Juridique.tsx`, `Comptabilite.tsx`, `Finance.tsx`)
 
-- Ajouter un state `showTagManager` et un bouton "Manage tags" (icone Tags) a cote du bouton Import
-- Rendre le composant `TagManagementDialog` conditionnel
-- Invalider aussi `admin-documents` apres modification de tags (pour rafraichir les badges)
+Chaque page verifiera `hasPermission` depuis le `CompanyContext` :
 
----
-
-## 3. Traductions (`en.json`)
-
-Ajouter sous `admin.documents` :
-- `manageTags` : "Manage tags"
-- `addTag` : "Add"
-- `tagName` : "Tag name"
-- `tagRenameSuccess` : "Tag renamed"
-- `tagCreateSuccess` : "Tag created"
-- `tagDeleteSuccess` : "Tag deleted"
-- `tagDeleteConfirmTitle` : "Delete tag"
-- `tagDeleteConfirmDesc` : "This action is irreversible. Type the tag name to confirm:"
-- `tagDeleteConfirmButton` : "Delete permanently"
-- `noTags` : "No tags yet"
+- **Si autorise** : affichage du contenu actuel (inchange)
+- **Si verrouille** : affichage d'un ecran "option non activee" avec :
+  - Icone cadenas grande taille
+  - Titre : "Option non activee" (traduit)
+  - Description : "Cette fonctionnalite n'est pas incluse dans votre offre actuelle. Contactez votre administrateur pour l'activer."
+  - Pas de bouton d'action (simple information)
 
 ---
 
-## 4. Resume des fichiers
+## 3. Dashboard (`Dashboard.tsx`)
 
-| Fichier | Action |
-|---------|--------|
-| `src/components/admin/TagManagementDialog.tsx` | Creer |
-| `src/pages/admin/AdminDocuments.tsx` | Ajouter bouton + state |
-| `src/i18n/locales/en.json` | Ajouter traductions |
+- Afficher toutes les sections (pas seulement les autorisees)
+- Les cartes sans permission auront :
+  - Une opacite reduite + icone cadenas dans le coin
+  - Un badge "Non actif" sur la carte
+  - Le lien reste cliquable (redirige vers la page avec le contenu verrouille)
 
-Aucune migration SQL necessaire : les politiques RLS existantes sur `document_tags` autorisent deja les admins a inserer, modifier et supprimer.
+---
+
+## 4. Traductions (`en.json`)
+
+Ajouter les cles suivantes :
+
+- `common.locked` : "Not active"
+- `common.lockedTitle` : "Option not activated"
+- `common.lockedDescription` : "This feature is not included in your current plan. Contact your administrator to activate it."
+
+---
+
+## 5. Resume des fichiers modifies
+
+| Fichier | Modification |
+|---------|-------------|
+| `src/components/layout/AppSidebar.tsx` | Afficher tous les items, ajouter icone Lock + opacite pour les verrouilles |
+| `src/pages/Juridique.tsx` | Ajouter verification de permission, afficher contenu verrouille si non autorise |
+| `src/pages/Comptabilite.tsx` | Idem |
+| `src/pages/Finance.tsx` | Idem |
+| `src/pages/Dashboard.tsx` | Afficher toutes les cartes, marquer visuellement les verrouillees |
+| `src/i18n/locales/en.json` | Ajouter les traductions pour l'etat verrouille |
+
+Aucune migration SQL necessaire. Les routes existent deja, seul le contenu change selon les permissions.
+
