@@ -1,65 +1,87 @@
 
 
-# Affichage des sections verrouillees pour les entreprises sans permission
+# Restriction des entreprises inactives pour les non-admins
 
 ## Vue d'ensemble
 
-Actuellement, les onglets "Legal", "Accounting" et "Finance" sont masques dans le menu si l'entreprise n'a pas la permission correspondante. L'objectif est de les afficher en permanence, avec un indicateur visuel de verrouillage, et d'afficher un contenu specifique (page "option non activee") lorsque l'utilisateur clique dessus sans avoir la permission.
+Deux changements principaux :
+1. Les utilisateurs non-admin ne voient et n'accedent qu'aux entreprises **actives**
+2. Les admins voient **toutes** les entreprises (actives et inactives, avec ou sans utilisateurs associes) dans le selecteur
 
 ---
 
-## 1. Modifications du menu lateral (`AppSidebar.tsx`)
+## 1. Modifier `CompanyContext.tsx` : logique de chargement conditionnelle
 
-- Remplacer `visibleMenuItems` (filtre par permission) par la liste complete `menuItems`
-- Pour chaque item, verifier `hasPermission(item.permission)` :
-  - Si autorise : affichage normal (comme aujourd'hui)
-  - Si verrouille : appliquer une opacite reduite (`opacity-50`), ajouter une icone cadenas (`Lock` de lucide-react) a droite du label, le lien reste cliquable et pointe vers la meme route
+Le `fetchCompanies` actuel passe par `user_companies` avec jointure sur `companies`. Cela ne permet pas aux admins de voir les entreprises sans association utilisateur.
 
----
+### Pour les non-admins :
+- Garder la requete actuelle via `user_companies`
+- Ajouter un filtre `.eq('company.status', 'active')` ou filtrer cote client les entreprises inactives
 
-## 2. Pages avec contenu conditionnel (`Juridique.tsx`, `Comptabilite.tsx`, `Finance.tsx`)
+### Pour les admins :
+- Requeter directement la table `companies` (toutes les entreprises)
+- Construire des objets `UserCompany` synthetiques avec `company_id = company.id`
+- Dedupliquer pour ne pas avoir de doublons (une entreprise avec plusieurs utilisateurs n'apparait qu'une fois)
 
-Chaque page verifiera `hasPermission` depuis le `CompanyContext` :
-
-- **Si autorise** : affichage du contenu actuel (inchange)
-- **Si verrouille** : affichage d'un ecran "option non activee" avec :
-  - Icone cadenas grande taille
-  - Titre : "Option non activee" (traduit)
-  - Description : "Cette fonctionnalite n'est pas incluse dans votre offre actuelle. Contactez votre administrateur pour l'activer."
-  - Pas de bouton d'action (simple information)
+Le contexte a besoin d'acceder a `isAdmin` depuis `AuthContext` pour choisir la bonne strategie.
 
 ---
 
-## 3. Dashboard (`Dashboard.tsx`)
+## 2. Protection de l'acces URL (`CompanySlugSync` dans `App.tsx`)
 
-- Afficher toutes les sections (pas seulement les autorisees)
-- Les cartes sans permission auront :
-  - Une opacite reduite + icone cadenas dans le coin
-  - Un badge "Non actif" sur la carte
-  - Le lien reste cliquable (redirige vers la page avec le contenu verrouille)
+Actuellement, si un non-admin tape manuellement l'URL d'une entreprise inactive, il peut y acceder si elle est dans sa liste `companies`.
 
----
+Avec le filtre cote `CompanyContext`, les entreprises inactives ne seront plus dans la liste du non-admin. Le `CompanySlugSync` redirigera donc automatiquement vers la premiere entreprise valide si le slug ne correspond a rien dans `companies` (comportement existant ligne 68-69).
 
-## 4. Traductions (`en.json`)
-
-Ajouter les cles suivantes :
-
-- `common.locked` : "Not active"
-- `common.lockedTitle` : "Option not activated"
-- `common.lockedDescription` : "This feature is not included in your current plan. Contact your administrator to activate it."
+Aucune modification supplementaire necessaire dans `App.tsx`.
 
 ---
 
-## 5. Resume des fichiers modifies
+## 3. Indicateur visuel pour les entreprises inactives (selecteur admin)
+
+Dans `AppSidebar.tsx`, pour le selecteur d'entreprises :
+- Ajouter un badge "Inactive" a cote du nom des entreprises dont le `status !== 'active'`
+- Necessite d'ajouter `status` au type `Company` dans `CompanyContext`
+
+---
+
+## 4. Ajout du champ `status` au type Company
+
+Le type `Company` dans `CompanyContext` ne contient pas `status`. Il faut l'ajouter pour :
+- Filtrer les inactives cote client (non-admins)
+- Afficher le badge inactive dans le selecteur (admins)
+
+---
+
+## Resume des fichiers modifies
 
 | Fichier | Modification |
 |---------|-------------|
-| `src/components/layout/AppSidebar.tsx` | Afficher tous les items, ajouter icone Lock + opacite pour les verrouilles |
-| `src/pages/Juridique.tsx` | Ajouter verification de permission, afficher contenu verrouille si non autorise |
-| `src/pages/Comptabilite.tsx` | Idem |
-| `src/pages/Finance.tsx` | Idem |
-| `src/pages/Dashboard.tsx` | Afficher toutes les cartes, marquer visuellement les verrouillees |
-| `src/i18n/locales/en.json` | Ajouter les traductions pour l'etat verrouille |
+| `src/contexts/CompanyContext.tsx` | Ajouter `status` au type Company, importer `useAuth`/`isAdmin`, separer la logique de chargement admin vs non-admin, filtrer les inactives pour les non-admins |
+| `src/components/layout/AppSidebar.tsx` | Afficher un badge "Inactive" dans le selecteur pour les entreprises inactives |
 
-Aucune migration SQL necessaire. Les routes existent deja, seul le contenu change selon les permissions.
+Aucune migration SQL necessaire. Les politiques RLS existantes (`Admins have full select on companies`) permettent deja aux admins de lire toutes les entreprises directement.
+
+---
+
+## Detail technique
+
+### CompanyContext - fetchCompanies refactorise
+
+```text
+si isAdmin:
+  1. SELECT * FROM companies ORDER BY name
+  2. Construire UserCompany[] avec id = company.id (synthetique)
+sinon:
+  1. SELECT via user_companies JOIN companies
+  2. Filtrer: garder uniquement status === 'active'
+```
+
+### AppSidebar - selecteur
+
+```text
+Pour chaque entreprise dans le dropdown:
+  - Afficher le nom
+  - Si status !== 'active': ajouter Badge "Inactive" (variant outline, texte discret)
+```
 
