@@ -1,28 +1,37 @@
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, Lock } from 'lucide-react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useTranslation } from '@/i18n/useTranslation';
 
 export default function Finance() {
-  const { currentCompany } = useCompany();
+  const { currentCompany, hasPermission } = useCompany();
   const { t } = useTranslation();
+
+  if (!hasPermission('finance')) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{t('finance.title')}</h1>
+          <p className="text-muted-foreground">{currentCompany?.company.name}</p>
+        </div>
+        <div className="flex flex-col items-center justify-center min-h-[400px] border-2 border-dashed rounded-lg bg-muted/20">
+          <Lock className="h-16 w-16 text-muted-foreground mb-4" />
+          <h2 className="text-xl font-semibold text-muted-foreground">{t('common.lockedTitle')}</h2>
+          <p className="text-muted-foreground text-center max-w-md mt-2">{t('common.lockedDescription')}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">{t('finance.title')}</h1>
-        <p className="text-muted-foreground">
-          {currentCompany?.company.name}
-        </p>
+        <p className="text-muted-foreground">{currentCompany?.company.name}</p>
       </div>
-      
       <div className="flex flex-col items-center justify-center min-h-[400px] border-2 border-dashed rounded-lg bg-muted/20">
         <TrendingUp className="h-16 w-16 text-muted-foreground mb-4" />
-        <h2 className="text-xl font-semibold text-muted-foreground">
-          {t('finance.sectionTitle')}
-        </h2>
-        <p className="text-muted-foreground text-center max-w-md mt-2">
-          {t('finance.sectionDescription')}
-        </p>
+        <h2 className="text-xl font-semibold text-muted-foreground">{t('finance.sectionTitle')}</h2>
+        <p className="text-muted-foreground text-center max-w-md mt-2">{t('finance.sectionDescription')}</p>
       </div>
     </div>
   );
