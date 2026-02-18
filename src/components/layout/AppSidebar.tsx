@@ -1,4 +1,4 @@
-import { Building2, FileText, Scale, Calculator, TrendingUp, ChevronDown, Settings, FileQuestion, LogOut, Info, ChevronsUpDown, Shield, Users, UserCheck } from 'lucide-react';
+import { Building2, FileText, Scale, Calculator, TrendingUp, ChevronDown, Settings, FileQuestion, LogOut, Info, ChevronsUpDown, Shield, Users, UserCheck, Lock } from 'lucide-react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
@@ -59,7 +59,7 @@ export function AppSidebar() {
     { title: t('sidebar.finance'), path: '/finance', icon: TrendingUp, permission: 'finance' as const },
   ];
 
-  const visibleMenuItems = menuItems.filter(item => hasPermission(item.permission));
+  
 
   return (
     <Sidebar collapsible="icon" className="border-r">
@@ -112,18 +112,21 @@ export function AppSidebar() {
           <SidebarGroupLabel>{t('sidebar.navigation')}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {visibleMenuItems.map((item) => {
+              {menuItems.map((item) => {
                 const fullPath = companyPath(item.path);
+                const locked = !hasPermission(item.permission);
                 return (
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton
                       asChild
                       isActive={location.pathname === fullPath}
-                      tooltip={item.title}
+                      tooltip={locked ? `${item.title} (${t('common.locked')})` : item.title}
+                      className={cn(locked && "opacity-50")}
                     >
                       <NavLink to={fullPath} onClick={closeMobileSidebar}>
                         <item.icon className="h-4 w-4" />
-                        <span>{item.title}</span>
+                        <span className="flex-1">{item.title}</span>
+                        {locked && <Lock className="h-3.5 w-3.5 text-muted-foreground ml-auto" />}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

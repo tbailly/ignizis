@@ -8,7 +8,10 @@
     "logout": "Log out",
     "version": "Version 1.1.0",
     "select": "Select",
-    "user": "User"
+    "user": "User",
+    "locked": "Not active",
+    "lockedTitle": "Option not activated",
+    "lockedDescription": "This feature is not included in your current plan. Contact your administrator to activate it."
   },
   "auth": {
     "title": "Sign in",
