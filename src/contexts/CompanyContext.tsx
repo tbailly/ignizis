@@ -11,6 +11,7 @@ interface Company {
   address: string | null;
   company_number: string | null;
   country: string | null;
+  status: string;
   perm_legal: boolean;
   perm_accounting: boolean;
   perm_finance: boolean;
@@ -37,7 +38,7 @@ const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
 const CURRENT_COMPANY_KEY = 'current_company_id';
 
 export function CompanyProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [companies, setCompanies] = useState<UserCompany[]>([]);
   const [currentCompany, setCurrentCompanyState] = useState<UserCompany | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,40 +53,65 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       setCurrentCompanyState(null);
       setLoading(false);
     }
-  }, [user]);
+  }, [user, isAdmin]);
 
   const fetchCompanies = async () => {
     try {
       setLoading(true);
-      
-      const { data, error } = await supabase
-        .from('user_companies')
-        .select(`
-          id,
-          company_id,
-          company:companies (
+
+      let userCompanies: UserCompany[];
+
+      if (isAdmin) {
+        // Admins see ALL companies (including inactive, unassigned)
+        const { data, error } = await supabase
+          .from('companies')
+          .select('id, name, slug, address, company_number, country, status, perm_legal, perm_accounting, perm_finance')
+          .order('name');
+
+        if (error) {
+          console.error('Error fetching companies:', error);
+          return;
+        }
+
+        userCompanies = (data || []).map((c: any) => ({
+          id: c.id,
+          company_id: c.id,
+          company: c,
+        }));
+      } else {
+        // Non-admins: only their active companies
+        const { data, error } = await supabase
+          .from('user_companies')
+          .select(`
             id,
-            name,
-            slug,
-            address,
-            company_number,
-            country,
-            perm_legal,
-            perm_accounting,
-            perm_finance
-          )
-        `);
+            company_id,
+            company:companies (
+              id,
+              name,
+              slug,
+              address,
+              company_number,
+              country,
+              status,
+              perm_legal,
+              perm_accounting,
+              perm_finance
+            )
+          `);
 
-      if (error) {
-        console.error('Error fetching companies:', error);
-        return;
+        if (error) {
+          console.error('Error fetching companies:', error);
+          return;
+        }
+
+        userCompanies = (data || [])
+          .map((item: any) => ({
+            id: item.id,
+            company_id: item.company_id,
+            company: item.company,
+          }))
+          .filter((uc: UserCompany) => uc.company?.status === 'active');
       }
-
-      const userCompanies = (data || []).map((item: any) => ({
-        id: item.id,
-        company_id: item.company_id,
-        company: item.company,
-      }));
 
       setCompanies(userCompanies);
 

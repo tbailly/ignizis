@@ -1,4 +1,5 @@
 import { Building2, FileText, Scale, Calculator, TrendingUp, ChevronDown, Settings, FileQuestion, LogOut, Info, ChevronsUpDown, Shield, Users, UserCheck, Lock } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
@@ -96,10 +97,15 @@ export function AppSidebar() {
                   currentCompany?.company_id === uc.company_id && "bg-accent"
                 )}
               >
-                <div className="flex h-6 w-6 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-semibold">
+                <div className="flex h-6 w-6 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-semibold shrink-0">
                   {uc.company.name.charAt(0).toUpperCase()}
                 </div>
-                <span className="truncate">{uc.company.name}</span>
+                <span className="truncate flex-1">{uc.company.name}</span>
+                {uc.company.status !== 'active' && (
+                  <Badge variant="outline" className="text-muted-foreground text-[10px] px-1.5 py-0 shrink-0">
+                    Inactive
+                  </Badge>
+                )}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
