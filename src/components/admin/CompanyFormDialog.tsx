@@ -110,10 +110,27 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
   }, [open, company]);
 
   const loadOfficers = async (companyId: string) => {
+    // Load officers via junction table
+    const { data: assignments, error: assignErr } = await (supabase
+      .from('officer_company_assignments' as any)
+      .select('officer_id')
+      .eq('company_id', companyId) as any);
+
+    if (assignErr) {
+      console.error('Error loading officer assignments:', assignErr);
+      return;
+    }
+
+    const officerIds = (assignments || []).map((a: any) => a.officer_id as string);
+    if (officerIds.length === 0) {
+      setOfficers([]);
+      return;
+    }
+
     const { data, error } = await supabase
       .from('company_officers')
       .select('id, last_name, first_name, date_of_birth, position')
-      .eq('company_id', companyId)
+      .in('id', officerIds)
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -145,41 +162,61 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
   };
 
   const syncOfficers = async (companyId: string) => {
-    // Load existing officers from DB
-    const { data: existing, error: fetchErr } = await supabase
-      .from('company_officers')
-      .select('id')
-      .eq('company_id', companyId);
+    // Load existing officer assignments for this company
+    const { data: existingAssignments, error: fetchErr } = await (supabase
+      .from('officer_company_assignments' as any)
+      .select('officer_id')
+      .eq('company_id', companyId) as any);
 
     if (fetchErr) throw fetchErr;
 
-    const existingIds = new Set((existing || []).map((o) => o.id));
+    const existingIds = new Set((existingAssignments || []).map((a: any) => a.officer_id as string));
     const localIds = new Set(officers.filter((o) => !o.id.startsWith('temp-')).map((o) => o.id));
 
-    // Delete removed officers
-    const toDelete = [...existingIds].filter((id) => !localIds.has(id));
-    if (toDelete.length > 0) {
-      const { error } = await supabase
-        .from('company_officers')
+    // Remove assignments for officers no longer in the list
+    const toRemove = ([...existingIds] as string[]).filter((id) => !localIds.has(id));
+    if (toRemove.length > 0) {
+      // Delete assignment
+      const { error } = await (supabase
+        .from('officer_company_assignments' as any)
         .delete()
-        .in('id', toDelete);
+        .eq('company_id', companyId)
+        .in('officer_id', toRemove) as any);
       if (error) throw error;
+
+      // Delete orphan officers (no remaining assignments)
+      for (const officerId of toRemove) {
+        const { data: remaining } = await (supabase
+          .from('officer_company_assignments' as any)
+          .select('id')
+          .eq('officer_id', officerId)
+          .limit(1) as any);
+        if (!remaining || remaining.length === 0) {
+          await supabase.from('company_officers').delete().eq('id', officerId as string);
+        }
+      }
     }
 
     // Insert new officers
-    const toInsert = officers
-      .filter((o) => o.id.startsWith('temp-'))
-      .map((o) => ({
-        company_id: companyId,
-        last_name: o.last_name,
-        first_name: o.first_name,
-        date_of_birth: displayToIso(o.date_of_birth || ''),
-        position: o.position,
-      }));
+    const toInsert = officers.filter((o) => o.id.startsWith('temp-'));
+    for (const o of toInsert) {
+      const { data: inserted, error: insertErr } = await supabase
+        .from('company_officers')
+        .insert({
+          last_name: o.last_name,
+          first_name: o.first_name,
+          date_of_birth: displayToIso(o.date_of_birth || ''),
+          position: o.position,
+        })
+        .select('id')
+        .single();
+      if (insertErr) throw insertErr;
 
-    if (toInsert.length > 0) {
-      const { error } = await supabase.from('company_officers').insert(toInsert);
-      if (error) throw error;
+      // Create the assignment
+      const { error: assignErr } = await (supabase
+        .from('officer_company_assignments' as any)
+        .insert({ officer_id: inserted.id, company_id: companyId }) as any);
+      if (assignErr) throw assignErr;
     }
 
     // Update existing officers

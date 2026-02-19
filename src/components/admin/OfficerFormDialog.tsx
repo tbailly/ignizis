@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DateMaskInput } from '@/components/ui/date-mask-input';
+import { MultiCompanySelect } from '@/components/admin/MultiCompanySelect';
 
 interface OfficerData {
   id: string;
@@ -16,7 +17,7 @@ interface OfficerData {
   last_name: string;
   date_of_birth: string | null;
   position: string;
-  company_name: string;
+  companies: { id: string; name: string }[];
 }
 
 interface OfficerFormDialogProps {
@@ -47,6 +48,8 @@ export function OfficerFormDialog({ officer, onClose, onSuccess }: OfficerFormDi
   const [lastName, setLastName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [position, setPosition] = useState('');
+  const [selectedCompanyIds, setSelectedCompanyIds] = useState<string[]>([]);
+  const [allCompanies, setAllCompanies] = useState<{ id: string; name: string }[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -54,6 +57,12 @@ export function OfficerFormDialog({ officer, onClose, onSuccess }: OfficerFormDi
     setLastName(officer.last_name);
     setDateOfBirth(isoToDisplay(officer.date_of_birth));
     setPosition(officer.position);
+    setSelectedCompanyIds(officer.companies.map(c => c.id));
+
+    // Load all companies for the selector
+    supabase.from('companies').select('id, name').order('name').then(({ data }) => {
+      setAllCompanies(data || []);
+    });
   }, [officer]);
 
   const handleSave = async () => {
@@ -61,6 +70,7 @@ export function OfficerFormDialog({ officer, onClose, onSuccess }: OfficerFormDi
     setSaving(true);
 
     try {
+      // Update officer personal fields
       const { error } = await supabase
         .from('company_officers')
         .update({
@@ -72,6 +82,30 @@ export function OfficerFormDialog({ officer, onClose, onSuccess }: OfficerFormDi
         .eq('id', officer.id);
 
       if (error) throw error;
+
+      // Sync company assignments
+      const currentIds = new Set(officer.companies.map(c => c.id));
+      const newIds = new Set(selectedCompanyIds);
+
+      // Delete removed assignments
+      const toRemove = [...currentIds].filter(id => !newIds.has(id));
+      if (toRemove.length > 0) {
+        const { error: delErr } = await (supabase
+          .from('officer_company_assignments' as any)
+          .delete()
+          .eq('officer_id', officer.id)
+          .in('company_id', toRemove) as any);
+        if (delErr) throw delErr;
+      }
+
+      // Insert new assignments
+      const toAdd = [...newIds].filter(id => !currentIds.has(id));
+      if (toAdd.length > 0) {
+        const { error: insErr } = await (supabase
+          .from('officer_company_assignments' as any)
+          .insert(toAdd.map(companyId => ({ officer_id: officer.id, company_id: companyId }))) as any);
+        if (insErr) throw insErr;
+      }
 
       toast.success(t('admin.officers.saveSuccess'));
       onSuccess();
@@ -93,8 +127,13 @@ export function OfficerFormDialog({ officer, onClose, onSuccess }: OfficerFormDi
 
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label>{t('admin.officers.company')}</Label>
-            <Input value={officer.company_name} disabled />
+            <Label>{t('admin.officers.companies')}</Label>
+            <MultiCompanySelect
+              companies={allCompanies}
+              selectedIds={selectedCompanyIds}
+              onChange={setSelectedCompanyIds}
+              placeholder={t('admin.officers.selectCompanies')}
+            />
           </div>
 
           <div className="space-y-2">

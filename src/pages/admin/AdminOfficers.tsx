@@ -12,14 +12,13 @@ import { useTranslation } from '@/i18n/useTranslation';
 import { OfficerFormDialog } from '@/components/admin/OfficerFormDialog';
 import { DeleteOfficerDialog } from '@/components/admin/DeleteOfficerDialog';
 
-interface OfficerWithCompany {
+interface OfficerWithCompanies {
   id: string;
   first_name: string;
   last_name: string;
   date_of_birth: string | null;
   position: string;
-  company_id: string;
-  company_name: string;
+  companies: { id: string; name: string }[];
 }
 
 function isoToDisplay(iso: string | null): string {
@@ -32,18 +31,24 @@ export default function AdminOfficers() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
-  const [editingOfficer, setEditingOfficer] = useState<OfficerWithCompany | null>(null);
-  const [deletingOfficer, setDeletingOfficer] = useState<OfficerWithCompany | null>(null);
+  const [editingOfficer, setEditingOfficer] = useState<OfficerWithCompanies | null>(null);
+  const [deletingOfficer, setDeletingOfficer] = useState<OfficerWithCompanies | null>(null);
 
   const { data: officers = [], isLoading } = useQuery({
     queryKey: ['admin-officers'],
     queryFn: async () => {
       const { data: officersData, error: officersError } = await supabase
         .from('company_officers')
-        .select('id, first_name, last_name, date_of_birth, position, company_id')
+        .select('id, first_name, last_name, date_of_birth, position')
         .order('last_name');
 
       if (officersError) throw officersError;
+
+      const { data: assignments, error: assignErr } = await (supabase
+        .from('officer_company_assignments' as any)
+        .select('officer_id, company_id') as any);
+
+      if (assignErr) throw assignErr;
 
       const { data: companiesData, error: companiesError } = await supabase
         .from('companies')
@@ -53,20 +58,31 @@ export default function AdminOfficers() {
 
       const companiesById = new Map(companiesData.map(c => [c.id, c.name]));
 
+      // Group assignments by officer
+      const assignmentsByOfficer = new Map<string, { id: string; name: string }[]>();
+      for (const a of (assignments || []) as any[]) {
+        if (!assignmentsByOfficer.has(a.officer_id)) {
+          assignmentsByOfficer.set(a.officer_id, []);
+        }
+        const name = companiesById.get(a.company_id) || '—';
+        assignmentsByOfficer.get(a.officer_id)!.push({ id: a.company_id, name });
+      }
+
       return (officersData || []).map(o => ({
         ...o,
-        company_name: companiesById.get(o.company_id) || '—',
-      })) as OfficerWithCompany[];
+        companies: assignmentsByOfficer.get(o.id) || [],
+      })) as OfficerWithCompanies[];
     },
   });
 
   const filtered = officers.filter(o => {
     const term = search.toLowerCase();
     const fullName = `${o.first_name} ${o.last_name}`.toLowerCase();
+    const companyNames = o.companies.map(c => c.name.toLowerCase()).join(' ');
     return (
       fullName.includes(term) ||
       o.position.toLowerCase().includes(term) ||
-      o.company_name.toLowerCase().includes(term)
+      companyNames.includes(term)
     );
   });
 
@@ -104,7 +120,7 @@ export default function AdminOfficers() {
           <TableHeader>
             <TableRow>
               <TableHead>{t('admin.officers.fullName')}</TableHead>
-              <TableHead>{t('admin.officers.company')}</TableHead>
+              <TableHead>{t('admin.officers.companies')}</TableHead>
               <TableHead>{t('admin.officers.dateOfBirth')}</TableHead>
               <TableHead>{t('admin.officers.position')}</TableHead>
               <TableHead className="w-[100px]">{t('admin.officers.actions')}</TableHead>
@@ -130,9 +146,17 @@ export default function AdminOfficers() {
                     {officer.first_name} {officer.last_name}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className="text-xs">
-                      {officer.company_name}
-                    </Badge>
+                    {officer.companies.length === 0 ? (
+                      <span className="text-muted-foreground text-xs">{t('admin.officers.noCompanies')}</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {officer.companies.map(c => (
+                          <Badge key={c.id} variant="secondary" className="text-xs">
+                            {c.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell>{isoToDisplay(officer.date_of_birth)}</TableCell>
                   <TableCell>{officer.position}</TableCell>
