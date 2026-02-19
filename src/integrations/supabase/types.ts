@@ -176,6 +176,42 @@ export type Database = {
         }
         Relationships: []
       }
+      officer_company_assignments: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          officer_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          officer_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          officer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "officer_company_assignments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "officer_company_assignments_officer_id_fkey"
+            columns: ["officer_id"]
+            isOneToOne: false
+            referencedRelation: "company_officers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_companies: {
         Row: {
           company_id: string
