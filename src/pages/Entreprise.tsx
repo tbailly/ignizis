@@ -67,28 +67,30 @@ export default function Entreprise() {
 
     const fetchOfficers = async () => {
       setLoadingOfficers(true);
-      // Load via junction table
-      const { data: assignments } = await (supabase
-        .from('officer_company_assignments' as any)
-        .select('officer_id')
-        .eq('company_id', currentCompany.company_id) as any);
+      try {
+        // Load officers assigned to this company via junction table
+        const { data, error } = await (supabase
+          .from('officer_company_assignments' as any)
+          .select('officer_id, company_officers:officer_id(id, last_name, first_name, date_of_birth, position)')
+          .eq('company_id', currentCompany.company_id) as any);
 
-      const officerIds = (assignments || []).map((a: any) => a.officer_id as string);
-      if (officerIds.length === 0) {
+        if (error) {
+          console.error('Error fetching officers:', error);
+          setOfficers([]);
+          return;
+        }
+
+        const result: Officer[] = (data || [])
+          .map((a: any) => a.company_officers)
+          .filter(Boolean);
+
+        setOfficers(result);
+      } catch (err) {
+        console.error('Error fetching officers:', err);
         setOfficers([]);
+      } finally {
         setLoadingOfficers(false);
-        return;
       }
-
-      const { data, error } = await supabase
-        .from('company_officers')
-        .select('id, last_name, first_name, date_of_birth, position')
-        .in('id', officerIds);
-
-      if (!error && data) {
-        setOfficers(data);
-      }
-      setLoadingOfficers(false);
     };
 
     fetchOfficers();
