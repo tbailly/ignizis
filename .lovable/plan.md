@@ -1,41 +1,53 @@
 
-## Modifications visuelles de la Sidebar
+## Ajout du bouton "Créer un mandataire" dans AdminOfficers
 
-Trois changements ciblés dans `src/components/layout/AppSidebar.tsx` :
-
----
-
-### 1. Supprimer le carré avec la première lettre de l'entreprise
-
-**Header (entreprise active) — lignes 75–77 :**
-Supprimer le `<div>` contenant la lettre initiale. Le bouton trigger affichera directement le nom de l'entreprise (et l'icône `ChevronsUpDown`). En mode collapsed, on peut afficher l'icône `Building2` à la place.
-
-**Dropdown (liste des entreprises) — lignes 100–102 :**
-Supprimer le `<div>` avec la lettre initiale dans chaque `DropdownMenuItem`.
+### Objectif
+Permettre aux admins de créer un mandataire depuis un bouton similaire à "Create a company", sans dupliquer le code de la modale d'édition existante.
 
 ---
 
-### 2. Truncate du nom de l'entreprise active
+### Approche : prop `officer` optionnelle dans `OfficerFormDialog`
 
-Le nom est déjà dans un `<p className="text-sm font-medium truncate">`, mais le conteneur parent `<div className="flex-1 text-left">` n'a pas `min-w-0`, ce qui empêche le `truncate` de fonctionner dans un contexte flex. Ajouter `min-w-0` au `<div className="flex-1 text-left">` (ligne 80).
+Le composant `OfficerFormDialog` est refactorisé pour accepter `officer` en prop **optionnelle**. L'absence de la prop détermine le mode :
+
+- `officer` absent → **mode création** : champs vides, `INSERT` en base
+- `officer` présent → **mode édition** : champs pré-remplis, `UPDATE` + diff des assignments (comportement actuel inchangé)
+
+Le JSX du formulaire (champs, structure, footer) est **identique dans les deux modes**. Seules la logique de sauvegarde et les traductions du header diffèrent — gérées par une simple condition `isEditMode`.
 
 ---
 
-### 3. Cursor pointer sur les items du dropdown utilisateur
+### Fichiers modifiés
 
-Les `DropdownMenuItem` du footer (Settings, Legal Notice, Privacy, Terms, Help, Logout) n'ont pas de `cursor-pointer` explicite. Ajouter `className="cursor-pointer"` à chacun d'eux.
+**1. `src/components/admin/OfficerFormDialog.tsx`**
+
+- `officer?: OfficerData` (prop optionnelle)
+- Constante `isEditMode = !!officer`
+- `useEffect` : initialise les champs vides si pas d'officer, sinon pré-remplit comme aujourd'hui
+- `handleSave` branché :
+  - Mode **création** : `INSERT INTO company_officers` → récupère l'`id` → `INSERT` tous les assignments sélectionnés
+  - Mode **édition** : comportement actuel (`UPDATE` + diff remove/add assignments)
+- Titre/description via `isEditMode ? t('admin.officers.edit') : t('admin.officers.create')`
+
+**2. `src/pages/admin/AdminOfficers.tsx`**
+
+- Ajout de l'import `Plus` depuis `lucide-react`
+- Nouveau state `const [creatingOfficer, setCreatingOfficer] = useState(false)`
+- Header de la page : bouton `<Button onClick={() => setCreatingOfficer(true)}>` avec icône `Plus` et label `t('admin.officers.create')`, aligné à droite (flex justify-between comme `AdminCompanies`)
+- Rendu conditionnel : `{creatingOfficer && <OfficerFormDialog onClose={...} onSuccess={...} />}`
+- `handleCreateSuccess` : ferme la modale + invalide la query
+
+**3. `src/i18n/locales/en.json`**
+
+Ajout dans `admin.officers` :
+```json
+"create": "Create an officer",
+"createDesc": "Fill in the officer's information.",
+"createSuccess": "Officer created"
+```
 
 ---
 
-### Détail technique des changements
+### Aucune migration base de données nécessaire
 
-**Fichier :** `src/components/layout/AppSidebar.tsx`
-
-| Zone | Ligne(s) | Action |
-|------|----------|--------|
-| Header trigger — avatar carré | 75–77 | Supprimer le `<div>` avec la lettre initiale ; en mode collapsed, remplacer par l'icône `Building2` |
-| Header trigger — conteneur nom | 80 | Ajouter `min-w-0` au div flex-1 |
-| Dropdown entreprises — avatar carré | 100–102 | Supprimer le `<div>` avec la lettre initiale |
-| Footer dropdown — tous les items | 244–286 | Ajouter `cursor-pointer` à chaque `DropdownMenuItem` |
-
-Aucune dépendance extérieure ni migration base de données nécessaire.
+Les tables `company_officers` et `officer_company_assignments` et leurs policies RLS existantes couvrent déjà les `INSERT` pour les admins.
