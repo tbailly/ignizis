@@ -1,73 +1,41 @@
 
+## Modifications visuelles de la Sidebar
 
-# Creation de la table `officer_company_assignments`
+Trois changements ciblés dans `src/components/layout/AppSidebar.tsx` :
 
-## Constat
+---
 
-- La colonne `company_id` a ete supprimee de `company_officers` (OK)
-- Le code frontend (`CompanyFormDialog`, `AdminOfficers`, `OfficerFormDialog`, `Entreprise`) reference deja `officer_company_assignments` (OK)
-- **Mais la table `officer_company_assignments` n'a jamais ete creee en base**
-- Les donnees de liaison existantes sont perdues (accepte par l'utilisateur)
+### 1. Supprimer le carré avec la première lettre de l'entreprise
 
-## Action requise : une seule migration SQL
+**Header (entreprise active) — lignes 75–77 :**
+Supprimer le `<div>` contenant la lettre initiale. Le bouton trigger affichera directement le nom de l'entreprise (et l'icône `ChevronsUpDown`). En mode collapsed, on peut afficher l'icône `Building2` à la place.
 
-Creer la table `officer_company_assignments` avec :
+**Dropdown (liste des entreprises) — lignes 100–102 :**
+Supprimer le `<div>` avec la lettre initiale dans chaque `DropdownMenuItem`.
 
-| Colonne | Type | Description |
-|---------|------|-------------|
-| id | uuid PK, default gen_random_uuid() | Identifiant |
-| officer_id | uuid FK -> company_officers.id ON DELETE CASCADE, NOT NULL | Mandataire |
-| company_id | uuid FK -> companies.id ON DELETE CASCADE, NOT NULL | Entreprise |
-| created_at | timestamptz, default now() | Date de creation |
+---
 
-Contrainte UNIQUE sur `(officer_id, company_id)`.
+### 2. Truncate du nom de l'entreprise active
 
-Activer RLS et creer les politiques :
-- **SELECT** : admins (`is_admin(auth.uid())`) + membres de l'entreprise (`is_member_of_company(company_id)`)
-- **INSERT / UPDATE / DELETE** : admins uniquement
+Le nom est déjà dans un `<p className="text-sm font-medium truncate">`, mais le conteneur parent `<div className="flex-1 text-left">` n'a pas `min-w-0`, ce qui empêche le `truncate` de fonctionner dans un contexte flex. Ajouter `min-w-0` au `<div className="flex-1 text-left">` (ligne 80).
 
-## Fichiers a modifier
+---
 
-Aucun fichier frontend a modifier -- tout le code est deja en place et utilise la table `officer_company_assignments`. Il suffit de creer la table manquante.
+### 3. Cursor pointer sur les items du dropdown utilisateur
 
-## Detail technique de la migration
+Les `DropdownMenuItem` du footer (Settings, Legal Notice, Privacy, Terms, Help, Logout) n'ont pas de `cursor-pointer` explicite. Ajouter `className="cursor-pointer"` à chacun d'eux.
 
-```text
-CREATE TABLE public.officer_company_assignments (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  officer_id uuid NOT NULL REFERENCES public.company_officers(id) ON DELETE CASCADE,
-  company_id uuid NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (officer_id, company_id)
-);
+---
 
-ALTER TABLE public.officer_company_assignments ENABLE ROW LEVEL SECURITY;
+### Détail technique des changements
 
--- SELECT: admins
-CREATE POLICY "Admins can view all assignments"
-  ON public.officer_company_assignments FOR SELECT
-  USING (public.is_admin(auth.uid()));
+**Fichier :** `src/components/layout/AppSidebar.tsx`
 
--- SELECT: members of the company
-CREATE POLICY "Members can view company assignments"
-  ON public.officer_company_assignments FOR SELECT
-  USING (public.is_member_of_company(company_id));
+| Zone | Ligne(s) | Action |
+|------|----------|--------|
+| Header trigger — avatar carré | 75–77 | Supprimer le `<div>` avec la lettre initiale ; en mode collapsed, remplacer par l'icône `Building2` |
+| Header trigger — conteneur nom | 80 | Ajouter `min-w-0` au div flex-1 |
+| Dropdown entreprises — avatar carré | 100–102 | Supprimer le `<div>` avec la lettre initiale |
+| Footer dropdown — tous les items | 244–286 | Ajouter `cursor-pointer` à chaque `DropdownMenuItem` |
 
--- INSERT: admins only
-CREATE POLICY "Admins can insert assignments"
-  ON public.officer_company_assignments FOR INSERT
-  WITH CHECK (public.is_admin(auth.uid()));
-
--- UPDATE: admins only
-CREATE POLICY "Admins can update assignments"
-  ON public.officer_company_assignments FOR UPDATE
-  USING (public.is_admin(auth.uid()));
-
--- DELETE: admins only
-CREATE POLICY "Admins can delete assignments"
-  ON public.officer_company_assignments FOR DELETE
-  USING (public.is_admin(auth.uid()));
-```
-
-Pas de populate de donnees -- les associations seront recrees manuellement via l'interface admin.
-
+Aucune dépendance extérieure ni migration base de données nécessaire.
