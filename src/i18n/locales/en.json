@@ -148,7 +148,12 @@
       "deleteConfirmTitle": "Delete officer",
       "deleteConfirmDesc": "This action is irreversible. The following officer will be permanently deleted:",
       "deleteConfirmButton": "Delete permanently",
-      "deleteSuccess": "Officer deleted"
+      "deleteSuccess": "Officer deleted",
+      "passport": "Passport",
+      "secondaryId": "Secondary ID",
+      "powerOfAttorney": "Power of Attorney",
+      "selectDocument": "Search and select a document...",
+      "noDocument": "No document selected"
     },
     "documents": {
       "title": "Documents",

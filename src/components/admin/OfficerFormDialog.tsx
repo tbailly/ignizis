@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DateMaskInput } from '@/components/ui/date-mask-input';
 import { MultiCompanySelect } from '@/components/admin/MultiCompanySelect';
+import { DocumentSelect } from '@/components/admin/DocumentSelect';
 
 interface OfficerData {
   id: string;
@@ -18,6 +19,9 @@ interface OfficerData {
   date_of_birth: string | null;
   position: string;
   companies: { id: string; name: string }[];
+  passport_document_id?: string | null;
+  secondary_id_document_id?: string | null;
+  power_of_attorney_document_id?: string | null;
 }
 
 interface OfficerFormDialogProps {
@@ -51,6 +55,10 @@ export function OfficerFormDialog({ officer, onClose, onSuccess }: OfficerFormDi
   const [position, setPosition] = useState('');
   const [selectedCompanyIds, setSelectedCompanyIds] = useState<string[]>([]);
   const [allCompanies, setAllCompanies] = useState<{ id: string; name: string }[]>([]);
+  const [allDocuments, setAllDocuments] = useState<{ id: string; display_name: string }[]>([]);
+  const [passportDocId, setPassportDocId] = useState<string | null>(null);
+  const [secondaryIdDocId, setSecondaryIdDocId] = useState<string | null>(null);
+  const [powerOfAttorneyDocId, setPowerOfAttorneyDocId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -60,16 +68,26 @@ export function OfficerFormDialog({ officer, onClose, onSuccess }: OfficerFormDi
       setDateOfBirth(isoToDisplay(officer.date_of_birth));
       setPosition(officer.position);
       setSelectedCompanyIds(officer.companies.map(c => c.id));
+      setPassportDocId(officer.passport_document_id ?? null);
+      setSecondaryIdDocId(officer.secondary_id_document_id ?? null);
+      setPowerOfAttorneyDocId(officer.power_of_attorney_document_id ?? null);
     } else {
       setFirstName('');
       setLastName('');
       setDateOfBirth('');
       setPosition('');
       setSelectedCompanyIds([]);
+      setPassportDocId(null);
+      setSecondaryIdDocId(null);
+      setPowerOfAttorneyDocId(null);
     }
 
     supabase.from('companies').select('id, name').order('name').then(({ data }) => {
       setAllCompanies(data || []);
+    });
+
+    supabase.from('documents').select('id, display_name').order('display_name').then(({ data }) => {
+      setAllDocuments(data || []);
     });
   }, [officer]);
 
@@ -78,6 +96,12 @@ export function OfficerFormDialog({ officer, onClose, onSuccess }: OfficerFormDi
     setSaving(true);
 
     try {
+      const docFields = {
+        passport_document_id: passportDocId,
+        secondary_id_document_id: secondaryIdDocId,
+        power_of_attorney_document_id: powerOfAttorneyDocId,
+      };
+
       if (isEditMode && officer) {
         // Edit mode: UPDATE + diff assignments
         const { error } = await supabase
@@ -87,6 +111,7 @@ export function OfficerFormDialog({ officer, onClose, onSuccess }: OfficerFormDi
             last_name: lastName.trim(),
             date_of_birth: displayToIso(dateOfBirth),
             position: position.trim(),
+            ...docFields,
           })
           .eq('id', officer.id);
 
@@ -123,6 +148,7 @@ export function OfficerFormDialog({ officer, onClose, onSuccess }: OfficerFormDi
             last_name: lastName.trim(),
             date_of_birth: displayToIso(dateOfBirth),
             position: position.trim(),
+            ...docFields,
           })
           .select('id')
           .single();
@@ -204,6 +230,36 @@ export function OfficerFormDialog({ officer, onClose, onSuccess }: OfficerFormDi
               id="officer-position"
               value={position}
               onChange={(e) => setPosition(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t('admin.officers.passport')}</Label>
+            <DocumentSelect
+              documents={allDocuments}
+              value={passportDocId}
+              onChange={setPassportDocId}
+              placeholder={t('admin.officers.selectDocument')}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t('admin.officers.secondaryId')}</Label>
+            <DocumentSelect
+              documents={allDocuments}
+              value={secondaryIdDocId}
+              onChange={setSecondaryIdDocId}
+              placeholder={t('admin.officers.selectDocument')}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t('admin.officers.powerOfAttorney')}</Label>
+            <DocumentSelect
+              documents={allDocuments}
+              value={powerOfAttorneyDocId}
+              onChange={setPowerOfAttorneyDocId}
+              placeholder={t('admin.officers.selectDocument')}
             />
           </div>
         </div>
