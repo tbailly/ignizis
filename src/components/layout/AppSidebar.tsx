@@ -72,12 +72,11 @@ export function AppSidebar() {
               "flex items-center gap-2 w-full rounded-md p-2 hover:bg-sidebar-accent transition-colors",
               "focus:outline-none focus:ring-2 focus:ring-sidebar-ring"
             )}>
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-semibold shrink-0">
-                {currentCompany?.company.name.charAt(0).toUpperCase() || '?'}
-              </div>
-              {!collapsed && (
+              {collapsed ? (
+                <Building2 className="h-5 w-5 shrink-0" />
+              ) : (
                 <>
-                  <div className="flex-1 text-left">
+                  <div className="flex-1 text-left min-w-0">
                     <p className="text-sm font-medium truncate">
                       {currentCompany?.company.name || t('common.select')}
                     </p>
@@ -93,13 +92,10 @@ export function AppSidebar() {
                 key={uc.company_id}
                 onClick={() => handleCompanySwitch(uc)}
                 className={cn(
-                  "flex items-center gap-2",
+                  "flex items-center gap-2 cursor-pointer",
                   currentCompany?.company_id === uc.company_id && "bg-accent"
                 )}
               >
-                <div className="flex h-6 w-6 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-semibold shrink-0">
-                  {uc.company.name.charAt(0).toUpperCase()}
-                </div>
                 <span className="truncate flex-1">{uc.company.name}</span>
                 {uc.company.status !== 'active' && (
                   <Badge variant="outline" className="text-muted-foreground text-[10px] px-1.5 py-0 shrink-0">
@@ -241,33 +237,33 @@ export function AppSidebar() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
-            <DropdownMenuItem asChild>
+            <DropdownMenuItem asChild className="cursor-pointer">
               <NavLink to="/settings" className="flex items-center gap-2" onClick={closeMobileSidebar}>
                 <Settings className="h-4 w-4" />
                 {t('sidebar.settings')}
               </NavLink>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
+            <DropdownMenuItem asChild className="cursor-pointer">
               <NavLink to="/legal-notice" className="flex items-center gap-2" onClick={closeMobileSidebar}>
                 <Scale className="h-4 w-4" />
                 {t('sidebar.legalNotice')}
               </NavLink>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
+            <DropdownMenuItem asChild className="cursor-pointer">
               <NavLink to="/privacy" className="flex items-center gap-2" onClick={closeMobileSidebar}>
                 <FileQuestion className="h-4 w-4" />
                 {t('sidebar.privacyPolicy')}
               </NavLink>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
+            <DropdownMenuItem asChild className="cursor-pointer">
               <NavLink to="/terms" className="flex items-center gap-2" onClick={closeMobileSidebar}>
                 <FileText className="h-4 w-4" />
                 {t('sidebar.terms')}
               </NavLink>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
+            <DropdownMenuItem asChild className="cursor-pointer">
               <NavLink to="/help" className="flex items-center gap-2" onClick={closeMobileSidebar}>
                 <Info className="h-4 w-4" />
                 {t('sidebar.help')}
@@ -279,7 +275,7 @@ export function AppSidebar() {
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               onClick={signOut}
-              className="text-destructive focus:text-destructive"
+              className="cursor-pointer text-destructive focus:text-destructive"
             >
               <LogOut className="h-4 w-4 mr-2" />
               {t('common.logout')}
