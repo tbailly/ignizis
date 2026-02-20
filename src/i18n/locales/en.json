@@ -46,7 +46,8 @@
     "adminCompanies": "Companies",
     "adminUsers": "Users",
     "adminOfficers": "Corporate Officers",
-    "adminDocuments": "Documents"
+    "adminDocuments": "Documents",
+    "adminRequests": "Requests"
   },
   "admin": {
     "title": "Administration",
@@ -59,6 +60,8 @@
     "usersCardDesc": "Manage users and their access",
     "documentsCard": "Documents",
     "documentsCardDesc": "Manage uploaded documents",
+    "requestsCard": "Requests",
+    "requestsCardDesc": "Manage and track requests",
     "companies": {
       "title": "Companies",
       "create": "Create a company",
@@ -187,6 +190,36 @@
       "tagDeleteConfirmDesc": "This action is irreversible. Type the tag name to confirm:",
       "tagDeleteConfirmButton": "Delete permanently",
       "noTags": "No tags yet"
+    },
+    "requests": {
+      "title": "Requests",
+      "create": "New request",
+      "createDesc": "Fill in the request details.",
+      "edit": "Edit request",
+      "editDesc": "Update the request.",
+      "titleField": "Title",
+      "titlePlaceholder": "Request title...",
+      "descriptionField": "Description",
+      "descriptionPlaceholder": "Describe the request...",
+      "company": "Company",
+      "companyPlaceholder": "Search and select a company...",
+      "status": "Status",
+      "saveSuccess": "Request saved",
+      "createSuccess": "Request created",
+      "deleteSuccess": "Request deleted",
+      "deleteConfirmTitle": "Delete request",
+      "deleteConfirmDesc": "This action is irreversible. The following request will be permanently deleted:",
+      "deleteConfirmButton": "Delete permanently",
+      "noRequests": "No requests",
+      "statusChanged": "Status updated",
+      "columns": {
+        "new": "New request",
+        "quote_pending": "Awaiting quote validation",
+        "in_progress": "Work in progress",
+        "client_response": "Awaiting client response",
+        "invoiced": "Invoiced",
+        "done": "Done"
+      }
     }
   },
   "dashboard": {

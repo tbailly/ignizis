@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Building2, Users, FileText } from 'lucide-react';
+import { Shield, Building2, Users, FileText, Kanban } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/useTranslation';
 
@@ -26,6 +26,12 @@ export default function AdminDashboard() {
       description: t('admin.documentsCardDesc'),
       icon: FileText,
       path: '/admin/documents',
+    },
+    {
+      title: t('admin.requestsCard'),
+      description: t('admin.requestsCardDesc'),
+      icon: Kanban,
+      path: '/admin/requests',
     },
   ];
 

@@ -1,4 +1,4 @@
-import { Building2, FileText, Scale, Calculator, TrendingUp, ChevronDown, Settings, FileQuestion, LogOut, Info, ChevronsUpDown, Shield, Users, UserCheck, Lock } from 'lucide-react';
+import { Building2, FileText, Scale, Calculator, TrendingUp, ChevronDown, Settings, FileQuestion, LogOut, Info, ChevronsUpDown, Shield, Users, UserCheck, Lock, Kanban } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -201,6 +201,18 @@ export function AppSidebar() {
                     <NavLink to="/admin/documents" onClick={closeMobileSidebar}>
                       <FileText className="h-4 w-4" />
                       <span>{t('sidebar.adminDocuments')}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/admin/requests'}
+                    tooltip={t('sidebar.adminRequests')}
+                  >
+                    <NavLink to="/admin/requests" onClick={closeMobileSidebar}>
+                      <Kanban className="h-4 w-4" />
+                      <span>{t('sidebar.adminRequests')}</span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
