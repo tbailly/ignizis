@@ -21,7 +21,7 @@ interface OfficerData {
 }
 
 interface OfficerFormDialogProps {
-  officer: OfficerData;
+  officer?: OfficerData;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -43,6 +43,7 @@ function displayToIso(display: string): string | null {
 
 export function OfficerFormDialog({ officer, onClose, onSuccess }: OfficerFormDialogProps) {
   const { t } = useTranslation();
+  const isEditMode = !!officer;
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -53,13 +54,20 @@ export function OfficerFormDialog({ officer, onClose, onSuccess }: OfficerFormDi
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setFirstName(officer.first_name);
-    setLastName(officer.last_name);
-    setDateOfBirth(isoToDisplay(officer.date_of_birth));
-    setPosition(officer.position);
-    setSelectedCompanyIds(officer.companies.map(c => c.id));
+    if (officer) {
+      setFirstName(officer.first_name);
+      setLastName(officer.last_name);
+      setDateOfBirth(isoToDisplay(officer.date_of_birth));
+      setPosition(officer.position);
+      setSelectedCompanyIds(officer.companies.map(c => c.id));
+    } else {
+      setFirstName('');
+      setLastName('');
+      setDateOfBirth('');
+      setPosition('');
+      setSelectedCompanyIds([]);
+    }
 
-    // Load all companies for the selector
     supabase.from('companies').select('id, name').order('name').then(({ data }) => {
       setAllCompanies(data || []);
     });
@@ -70,47 +78,70 @@ export function OfficerFormDialog({ officer, onClose, onSuccess }: OfficerFormDi
     setSaving(true);
 
     try {
-      // Update officer personal fields
-      const { error } = await supabase
-        .from('company_officers')
-        .update({
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          date_of_birth: displayToIso(dateOfBirth),
-          position: position.trim(),
-        })
-        .eq('id', officer.id);
+      if (isEditMode && officer) {
+        // Edit mode: UPDATE + diff assignments
+        const { error } = await supabase
+          .from('company_officers')
+          .update({
+            first_name: firstName.trim(),
+            last_name: lastName.trim(),
+            date_of_birth: displayToIso(dateOfBirth),
+            position: position.trim(),
+          })
+          .eq('id', officer.id);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      // Sync company assignments
-      const currentIds = new Set(officer.companies.map(c => c.id));
-      const newIds = new Set(selectedCompanyIds);
+        const currentIds = new Set(officer.companies.map(c => c.id));
+        const newIds = new Set(selectedCompanyIds);
 
-      // Delete removed assignments
-      const toRemove = [...currentIds].filter(id => !newIds.has(id));
-      if (toRemove.length > 0) {
-        const { error: delErr } = await (supabase
-          .from('officer_company_assignments' as any)
-          .delete()
-          .eq('officer_id', officer.id)
-          .in('company_id', toRemove) as any);
-        if (delErr) throw delErr;
+        const toRemove = [...currentIds].filter(id => !newIds.has(id));
+        if (toRemove.length > 0) {
+          const { error: delErr } = await (supabase
+            .from('officer_company_assignments' as any)
+            .delete()
+            .eq('officer_id', officer.id)
+            .in('company_id', toRemove) as any);
+          if (delErr) throw delErr;
+        }
+
+        const toAdd = [...newIds].filter(id => !currentIds.has(id));
+        if (toAdd.length > 0) {
+          const { error: insErr } = await (supabase
+            .from('officer_company_assignments' as any)
+            .insert(toAdd.map(companyId => ({ officer_id: officer.id, company_id: companyId }))) as any);
+          if (insErr) throw insErr;
+        }
+
+        toast.success(t('admin.officers.saveSuccess'));
+      } else {
+        // Create mode: INSERT officer then assignments
+        const { data: newOfficer, error: insertErr } = await supabase
+          .from('company_officers')
+          .insert({
+            first_name: firstName.trim(),
+            last_name: lastName.trim(),
+            date_of_birth: displayToIso(dateOfBirth),
+            position: position.trim(),
+          })
+          .select('id')
+          .single();
+
+        if (insertErr) throw insertErr;
+
+        if (selectedCompanyIds.length > 0) {
+          const { error: assignErr } = await (supabase
+            .from('officer_company_assignments' as any)
+            .insert(selectedCompanyIds.map(companyId => ({ officer_id: newOfficer.id, company_id: companyId }))) as any);
+          if (assignErr) throw assignErr;
+        }
+
+        toast.success(t('admin.officers.createSuccess'));
       }
 
-      // Insert new assignments
-      const toAdd = [...newIds].filter(id => !currentIds.has(id));
-      if (toAdd.length > 0) {
-        const { error: insErr } = await (supabase
-          .from('officer_company_assignments' as any)
-          .insert(toAdd.map(companyId => ({ officer_id: officer.id, company_id: companyId }))) as any);
-        if (insErr) throw insErr;
-      }
-
-      toast.success(t('admin.officers.saveSuccess'));
       onSuccess();
     } catch (error: any) {
-      console.error('Error updating officer:', error);
+      console.error('Error saving officer:', error);
       toast.error(error.message || t('settings.updateError'));
     } finally {
       setSaving(false);
@@ -121,8 +152,12 @@ export function OfficerFormDialog({ officer, onClose, onSuccess }: OfficerFormDi
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{t('admin.officers.edit')}</DialogTitle>
-          <DialogDescription>{t('admin.officers.editDesc')}</DialogDescription>
+          <DialogTitle>
+            {isEditMode ? t('admin.officers.edit') : t('admin.officers.create')}
+          </DialogTitle>
+          <DialogDescription>
+            {isEditMode ? t('admin.officers.editDesc') : t('admin.officers.createDesc')}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { UserCheck, Pencil, Trash2, Search } from 'lucide-react';
+import { UserCheck, Pencil, Trash2, Search, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +31,7 @@ export default function AdminOfficers() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const [creatingOfficer, setCreatingOfficer] = useState(false);
   const [editingOfficer, setEditingOfficer] = useState<OfficerWithCompanies | null>(null);
   const [deletingOfficer, setDeletingOfficer] = useState<OfficerWithCompanies | null>(null);
 
@@ -86,6 +87,11 @@ export default function AdminOfficers() {
     );
   });
 
+  const handleCreateSuccess = () => {
+    setCreatingOfficer(false);
+    queryClient.invalidateQueries({ queryKey: ['admin-officers'] });
+  };
+
   const handleSuccess = () => {
     setEditingOfficer(null);
     queryClient.invalidateQueries({ queryKey: ['admin-officers'] });
@@ -98,11 +104,15 @@ export default function AdminOfficers() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
           <UserCheck className="h-8 w-8 text-primary" />
           {t('admin.officers.title')}
         </h1>
+        <Button onClick={() => setCreatingOfficer(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          {t('admin.officers.create')}
+        </Button>
       </div>
 
       <div className="relative">
@@ -176,6 +186,13 @@ export default function AdminOfficers() {
           </TableBody>
         </Table>
       </div>
+
+      {creatingOfficer && (
+        <OfficerFormDialog
+          onClose={() => setCreatingOfficer(false)}
+          onSuccess={handleCreateSuccess}
+        />
+      )}
 
       {editingOfficer && (
         <OfficerFormDialog
