@@ -1,90 +1,168 @@
 
-## Ajout de 3 champs documents aux mandataires sociaux
+## Module "Requests" — Kanban pour les administrateurs (plan révisé)
 
-### Vue d'ensemble
-
-Trois nouveaux champs optionnels sont ajoutés aux corporate officers, chacun étant une référence à un document existant (sélectionnable via un dropdown cherchable par `display_name`) :
-
-- **Passport** (`passport_document_id`)
-- **Secondary ID** (`secondary_id_document_id`)
-- **Power of Attorney** (`power_of_attorney_document_id`)
+### Changement par rapport au plan précédent
+Le Realtime est **supprimé**. La notification de changement de statut est désormais un simple toast `sonner` déclenché côté client juste après que le `UPDATE` Supabase a réussi — sans abonnement WebSocket. C'est plus simple et tout aussi efficace pour un usage admin.
 
 ---
 
-### 1. Migration base de données
+### 1. Dépendances à installer
 
-Ajout de 3 colonnes nullable de type `uuid` dans la table `company_officers`, avec contrainte de clé étrangère vers `documents(id)` (suppression en `SET NULL` pour ne pas supprimer l'officier si un document est effacé) :
+`@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`
+
+Ces trois packages sont la référence pour le drag-and-drop en React 18 : accessibilité clavier native, support tactile, léger, sans dépendance externe.
+
+---
+
+### 2. Migration base de données
+
+Nouvelle table `public.requests` :
 
 ```sql
-ALTER TABLE public.company_officers
-  ADD COLUMN passport_document_id uuid REFERENCES public.documents(id) ON DELETE SET NULL,
-  ADD COLUMN secondary_id_document_id uuid REFERENCES public.documents(id) ON DELETE SET NULL,
-  ADD COLUMN power_of_attorney_document_id uuid REFERENCES public.documents(id) ON DELETE SET NULL;
+CREATE TABLE public.requests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text,
+  status text NOT NULL DEFAULT 'new',
+  company_id uuid NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
+  position integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL
+);
 ```
 
-Aucune policy RLS supplémentaire n'est nécessaire : les colonnes existantes sur `company_officers` (admins CRUD, membres SELECT) s'appliquent automatiquement aux nouvelles colonnes.
+Valeurs de `status` (6 colonnes du Kanban) :
+- `new` → Nouvelle demande
+- `quote_pending` → En attente de validation du devis
+- `in_progress` → Travail en cours
+- `client_response` → En attente de réponse client
+- `invoiced` → Facturé
+- `done` → Terminé
+
+La colonne `position` (integer) gère le tri vertical au sein de chaque colonne.
+
+**Trigger `updated_at`** — réutilise la fonction `update_updated_at_column()` existante.
+
+**RLS (admins uniquement)** — 4 policies SELECT/INSERT/UPDATE/DELETE avec `is_admin(auth.uid())`.
+
+**Realtime** — activé sur la table pour les invalidations de query React Query (pas de toast Realtime).
 
 ---
 
-### 2. Nouveau composant `DocumentSelect`
+### 3. Nouveaux fichiers
 
-Fichier : `src/components/admin/DocumentSelect.tsx`
+#### `src/pages/admin/AdminRequests.tsx`
+Page principale :
+- Header avec titre "Requests" + bouton "New request" (icône `Plus`)
+- `useQuery` pour charger toutes les requests + les companies (pour le dropdown)
+- Rendu conditionnel de `RequestFormDialog` (création)
+- Rendu de `KanbanBoard`
 
-Composant de sélection unique cherchable, basé sur `Popover` + `Command` (cmdk, déjà installé). Il reçoit :
+#### `src/components/admin/KanbanBoard.tsx`
+Wrapper `@dnd-kit` :
+- `DndContext` avec `PointerSensor` + `KeyboardSensor`
+- `onDragEnd` distingue deux cas :
+  - **Inter-colonne** : `UPDATE requests SET status = $newStatus, position = $endPosition WHERE id = $id` → toast "Statut mis à jour"
+  - **Intra-colonne** : batch `UPDATE` des positions de toutes les cartes de la colonne réordonnée
+- `DragOverlay` pour l'aperçu visuel pendant le drag
+- 6 `KanbanColumn` en scroll horizontal
 
-- `documents` : liste `{ id: string; display_name: string }[]`
-- `value` : `string | null` (id du document sélectionné)
-- `onChange` : `(id: string | null) => void`
-- `placeholder` : texte affiché quand rien n'est sélectionné
+#### `src/components/admin/KanbanColumn.tsx`
+- Reçoit `status`, `label`, liste des requests filtrées/triées par `position ASC`
+- `useDroppable` pour accepter les drops inter-colonnes
+- `SortableContext` (stratégie `verticalListSortingStrategy`) pour le tri intra-colonne
+- Badge avec le nombre de cartes
 
-Comportement :
-- Affiche le `display_name` du document sélectionné, ou le placeholder
-- Champ de recherche intégré filtrant par `display_name`
-- Option "Clear" pour déselectionner
-- Single-select (pas multi)
+#### `src/components/admin/KanbanCard.tsx`
+- `useSortable` de `@dnd-kit/sortable`
+- Affiche : titre, nom de l'entreprise, description (2 lignes max)
+- **Clic sur la carte** → ouvre `RequestFormDialog` en mode édition
+- Icône `GripVertical` comme poignée de drag
+- Bouton suppression (icône `Trash2`) avec `AlertDialog` de confirmation
 
----
-
-### 3. Mise à jour de `OfficerFormDialog`
-
-Fichier : `src/components/admin/OfficerFormDialog.tsx`
-
-**Interface `OfficerData`** : ajout des 3 nouveaux champs optionnels.
-
-**État** : 3 nouveaux `useState<string | null>(null)` pour les IDs des documents.
-
-**`useEffect`** : chargement de la liste des documents (`supabase.from('documents').select('id, display_name').order('display_name')`) + pré-remplissage des 3 champs en mode édition.
-
-**`handleSave`** : les 3 IDs sont inclus dans le payload `INSERT` et `UPDATE`.
-
-**JSX** : 3 nouvelles sections avec `Label` + `DocumentSelect`, après le champ Position, dans un espace `space-y-4` identique aux autres champs.
-
----
-
-### 4. Mise à jour de `AdminOfficers`
-
-Fichier : `src/pages/admin/AdminOfficers.tsx`
-
-**`OfficerWithCompanies`** : ajout des 3 champs optionnels.
-
-**Query** : sélectionner les 3 nouvelles colonnes dans le `select` initial de `company_officers`.
-
-**Passage des props** : les 3 valeurs sont déjà passées via le spread `...o` dans l'objet officer, donc `setEditingOfficer(officer)` fonctionnera sans modification supplémentaire une fois l'interface mise à jour.
+#### `src/components/admin/RequestFormDialog.tsx`
+Dialog création/édition unifié (même pattern que `OfficerFormDialog`) :
+- `request?: RequestData` optionnel — absent = mode création
+- Champs :
+  - `title` (Input, requis)
+  - `description` (Textarea, optionnel)
+  - `company_id` — combobox searchable (même pattern que `DocumentSelect`) — requis
+  - `status` — Select avec les 6 valeurs, **visible en mode édition uniquement** (à la création, status = `new` automatiquement)
+- Lors du save en mode édition, si le `status` a changé → toast `sonner` "Status updated: [nouveau statut]"
 
 ---
 
-### 5. Traductions i18n
+### 4. Logique de persistance de l'ordre
 
-Fichier : `src/i18n/locales/en.json`
+**Création** d'une request :
+- `position = MAX(position) + 1` dans la colonne `new`, calculé côté client avant l'INSERT
 
-Ajout dans `admin.officers` :
+**Drag intra-colonne** (réordonnement vertical) :
+- `arrayMove` de `@dnd-kit/sortable` pour recalculer l'ordre localement
+- Mise à jour optimiste de l'état local (fluidité visuelle immédiate)
+- Batch UPDATE en base : `UPDATE requests SET position = i WHERE id = id_i` pour chaque carte de la colonne
 
+**Drag inter-colonne** (changement de statut) :
+- UPDATE unique : `status = newStatus` + `position = MAX(position dans colonne cible) + 1`
+- Toast `sonner` : "Status updated → [label de la nouvelle colonne]"
+
+**Affichage** : toujours trié par `position ASC` dans chaque colonne.
+
+---
+
+### 5. Fichiers modifiés
+
+**`src/App.tsx`**
+- Import `AdminRequests`
+- Route `<Route path="requests" element={<AdminRequests />} />` dans le groupe `/admin`
+
+**`src/components/layout/AppSidebar.tsx`**
+- Import `Kanban` depuis `lucide-react`
+- Nouveau `SidebarMenuItem` dans le groupe Admin (après Documents) : route `/admin/requests`, icône `Kanban`, label `t('sidebar.adminRequests')`
+
+**`src/pages/admin/AdminDashboard.tsx`**
+- Nouvelle card "Requests" avec icône `Kanban` et route `/admin/requests`
+
+**`src/i18n/locales/en.json`**
+
+Nouvelles clés :
 ```json
-"passport": "Passport",
-"secondaryId": "Secondary ID",
-"powerOfAttorney": "Power of Attorney",
-"selectDocument": "Search and select a document...",
-"noDocument": "No document selected"
+"sidebar.adminRequests": "Requests"
+
+"admin.requestsCard": "Requests"
+"admin.requestsCardDesc": "Manage and track requests"
+
+"admin.requests": {
+  "title": "Requests",
+  "create": "New request",
+  "createDesc": "Fill in the request details.",
+  "edit": "Edit request",
+  "editDesc": "Update the request.",
+  "titleField": "Title",
+  "titlePlaceholder": "Request title...",
+  "descriptionField": "Description",
+  "descriptionPlaceholder": "Describe the request...",
+  "company": "Company",
+  "companyPlaceholder": "Search and select a company...",
+  "status": "Status",
+  "saveSuccess": "Request saved",
+  "createSuccess": "Request created",
+  "deleteSuccess": "Request deleted",
+  "deleteConfirmTitle": "Delete request",
+  "deleteConfirmDesc": "This action is irreversible. The following request will be permanently deleted:",
+  "deleteConfirmButton": "Delete permanently",
+  "noRequests": "No requests",
+  "statusChanged": "Status updated",
+  "columns": {
+    "new": "New request",
+    "quote_pending": "Awaiting quote validation",
+    "in_progress": "Work in progress",
+    "client_response": "Awaiting client response",
+    "invoiced": "Invoiced",
+    "done": "Done"
+  }
+}
 ```
 
 ---
@@ -92,11 +170,16 @@ Ajout dans `admin.officers` :
 ### Récapitulatif des fichiers
 
 | Fichier | Action |
-|---------|--------|
-| Migration SQL | Ajout de 3 colonnes FK sur `company_officers` |
-| `src/components/admin/DocumentSelect.tsx` | Nouveau composant Combobox single-select |
-| `src/components/admin/OfficerFormDialog.tsx` | +3 états, fetch documents, +3 champs UI |
-| `src/pages/admin/AdminOfficers.tsx` | Mise à jour interface + query select |
-| `src/i18n/locales/en.json` | +5 clés de traduction |
+|---|---|
+| Migration SQL | Table `requests` + trigger + RLS |
+| `src/pages/admin/AdminRequests.tsx` | Nouveau — page principale |
+| `src/components/admin/KanbanBoard.tsx` | Nouveau — DnD context + logique ordre |
+| `src/components/admin/KanbanColumn.tsx` | Nouveau — colonne droppable + sortable |
+| `src/components/admin/KanbanCard.tsx` | Nouveau — carte sortable + clic édition |
+| `src/components/admin/RequestFormDialog.tsx` | Nouveau — dialog création/édition |
+| `src/App.tsx` | +1 route `/admin/requests` |
+| `src/components/layout/AppSidebar.tsx` | +1 item "Requests" |
+| `src/pages/admin/AdminDashboard.tsx` | +1 card "Requests" |
+| `src/i18n/locales/en.json` | Nouvelles clés i18n |
 
-Aucune modification de RLS ou de storage nécessaire. Les documents restent accessibles uniquement aux admins.
+Dépendances à installer : `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`
