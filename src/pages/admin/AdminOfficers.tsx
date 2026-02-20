@@ -19,6 +19,9 @@ interface OfficerWithCompanies {
   date_of_birth: string | null;
   position: string;
   companies: { id: string; name: string }[];
+  passport_document_id: string | null;
+  secondary_id_document_id: string | null;
+  power_of_attorney_document_id: string | null;
 }
 
 function isoToDisplay(iso: string | null): string {
@@ -40,7 +43,7 @@ export default function AdminOfficers() {
     queryFn: async () => {
       const { data: officersData, error: officersError } = await supabase
         .from('company_officers')
-        .select('id, first_name, last_name, date_of_birth, position')
+        .select('id, first_name, last_name, date_of_birth, position, passport_document_id, secondary_id_document_id, power_of_attorney_document_id')
         .order('last_name');
 
       if (officersError) throw officersError;

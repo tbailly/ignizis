@@ -66,7 +66,10 @@ export type Database = {
           first_name: string
           id: string
           last_name: string
+          passport_document_id: string | null
           position: string
+          power_of_attorney_document_id: string | null
+          secondary_id_document_id: string | null
         }
         Insert: {
           created_at?: string
@@ -74,7 +77,10 @@ export type Database = {
           first_name: string
           id?: string
           last_name: string
+          passport_document_id?: string | null
           position: string
+          power_of_attorney_document_id?: string | null
+          secondary_id_document_id?: string | null
         }
         Update: {
           created_at?: string
@@ -82,9 +88,34 @@ export type Database = {
           first_name?: string
           id?: string
           last_name?: string
+          passport_document_id?: string | null
           position?: string
+          power_of_attorney_document_id?: string | null
+          secondary_id_document_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "company_officers_passport_document_id_fkey"
+            columns: ["passport_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_officers_power_of_attorney_document_id_fkey"
+            columns: ["power_of_attorney_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_officers_secondary_id_document_id_fkey"
+            columns: ["secondary_id_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       document_tag_assignments: {
         Row: {
