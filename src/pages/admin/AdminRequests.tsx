@@ -74,8 +74,8 @@ export default function AdminRequests() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col h-[calc(100vh-theme(spacing.14)-theme(spacing.12))] md:h-[calc(100vh-theme(spacing.12))]">
+      <div className="flex items-center justify-between mb-6 shrink-0">
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
             <Kanban className="h-8 w-8 text-primary" />
@@ -91,11 +91,13 @@ export default function AdminRequests() {
       {isLoading ? (
         <div className="text-muted-foreground text-sm">{t('common.loading')}</div>
       ) : (
-        <KanbanBoard
-          requests={requests}
-          onDataChange={invalidate}
-          onEdit={setEditingRequest}
-        />
+        <div className="flex-1 overflow-x-auto overflow-y-hidden min-h-0">
+          <KanbanBoard
+            requests={requests}
+            onDataChange={invalidate}
+            onEdit={setEditingRequest}
+          />
+        </div>
       )}
 
       {isCreating && (
