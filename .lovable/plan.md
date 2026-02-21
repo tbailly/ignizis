@@ -1,60 +1,129 @@
 
 
-## Ajout d'une date d'expiration sur les documents
+## Propriete "compliant" calculee automatiquement pour les corporate officers
 
 ### 1. Migration base de donnees
 
-Ajouter une colonne optionnelle `expires_at` de type `date` sur la table `documents` :
+Ajouter la colonne `is_compliant`, les fonctions de recalcul, et les triggers.
 
 ```sql
-ALTER TABLE public.documents ADD COLUMN expires_at date;
-```
+-- Colonne
+ALTER TABLE public.company_officers
+  ADD COLUMN is_compliant boolean NOT NULL DEFAULT false;
 
-Pas de contrainte, pas de valeur par defaut — le champ est nullable (date optionnelle).
+-- Fonction unitaire
+CREATE OR REPLACE FUNCTION public.recalculate_officer_compliance(p_officer_id uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
+DECLARE
+  v_compliant boolean;
+BEGIN
+  SELECT (
+    o.passport_document_id IS NOT NULL
+    AND o.secondary_id_document_id IS NOT NULL
+    AND o.power_of_attorney_document_id IS NOT NULL
+    AND d1.expires_at IS NOT NULL AND d1.expires_at > CURRENT_DATE
+    AND d2.expires_at IS NOT NULL AND d2.expires_at > CURRENT_DATE
+    AND d3.expires_at IS NOT NULL AND d3.expires_at > CURRENT_DATE
+  ) INTO v_compliant
+  FROM company_officers o
+  LEFT JOIN documents d1 ON d1.id = o.passport_document_id
+  LEFT JOIN documents d2 ON d2.id = o.secondary_id_document_id
+  LEFT JOIN documents d3 ON d3.id = o.power_of_attorney_document_id
+  WHERE o.id = p_officer_id;
+
+  UPDATE company_officers SET is_compliant = COALESCE(v_compliant, false) WHERE id = p_officer_id;
+END;
+$$;
+
+-- Fonction batch (pour le cron)
+CREATE OR REPLACE FUNCTION public.recalculate_all_officer_compliance()
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
+DECLARE
+  r RECORD;
+BEGIN
+  FOR r IN SELECT id FROM company_officers LOOP
+    PERFORM recalculate_officer_compliance(r.id);
+  END LOOP;
+END;
+$$;
+
+-- Trigger sur company_officers (changement de document links)
+CREATE OR REPLACE FUNCTION public.trg_officer_compliance()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
+BEGIN
+  PERFORM recalculate_officer_compliance(NEW.id);
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER officer_compliance_trigger
+  AFTER INSERT OR UPDATE OF passport_document_id, secondary_id_document_id, power_of_attorney_document_id
+  ON public.company_officers
+  FOR EACH ROW
+  EXECUTE FUNCTION public.trg_officer_compliance();
+
+-- Trigger sur documents (changement de expires_at)
+CREATE OR REPLACE FUNCTION public.trg_document_compliance()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
+DECLARE
+  r RECORD;
+BEGIN
+  FOR r IN
+    SELECT id FROM company_officers
+    WHERE passport_document_id = NEW.id
+       OR secondary_id_document_id = NEW.id
+       OR power_of_attorney_document_id = NEW.id
+  LOOP
+    PERFORM recalculate_officer_compliance(r.id);
+  END LOOP;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER document_compliance_trigger
+  AFTER UPDATE OF expires_at
+  ON public.documents
+  FOR EACH ROW
+  EXECUTE FUNCTION public.trg_document_compliance();
+
+-- Recalculer pour les donnees existantes
+SELECT recalculate_all_officer_compliance();
+```
 
 ---
 
-### 2. Fichiers modifies
+### 2. Edge function `recalculate-compliance`
 
-#### `src/pages/admin/AdminDocuments.tsx`
+Nouvelle edge function dans `supabase/functions/recalculate-compliance/index.ts` :
+- Appelle `supabase.rpc('recalculate_all_officer_compliance')` avec le service role key
+- `verify_jwt = false` dans `config.toml`
 
-- Ajouter `expires_at: string | null` a l'interface `DocumentRow`
-- Ajouter une nouvelle colonne "Expiration" dans le `TableHeader` (entre "Date d'import" et "Actions")
-- Dans chaque ligne, afficher :
-  - Si `expires_at` est null : un tiret `-` en texte muted
-  - Si la date est passee : la date formatee DD/MM/YYYY avec un Badge `destructive` ("Expire")
-  - Si la date est dans le futur : la date formatee DD/MM/YYYY avec un Badge `secondary` vert ("Valide")
-- Mettre a jour le `colSpan` des lignes vides/loading de 5 a 6
+---
 
-#### `src/components/admin/DocumentEditDialog.tsx`
+### 3. Cron quotidien
 
-- Ajouter `expires_at: string | null` a l'interface `DocumentData`
-- Ajouter un state `expiresAt` initialise depuis `document.expires_at` (converti du format ISO `YYYY-MM-DD` au format affichage `DD/MM/YYYY` si present, sinon chaine vide)
-- Ajouter un champ de saisie avec le composant `DateMaskInput` existant (masque `DD/MM/YYYY`) + un bouton pour effacer la date
-- Dans `handleSave`, inclure `expires_at` dans l'UPDATE : convertir `DD/MM/YYYY` vers `YYYY-MM-DD` pour le stockage, ou `null` si vide
+Insertion SQL (via insert tool, pas migration) pour programmer un job `pg_cron` a minuit qui appelle l'edge function via `pg_net`.
 
-#### `src/components/admin/DocumentUploadDialog.tsx`
+---
 
-- Ajouter `expiresAt: string` (format `DD/MM/YYYY`, vide par defaut) a l'interface `FileEntry`
-- Ajouter un champ `DateMaskInput` dans le formulaire de chaque fichier
-- Dans `handleUpload`, inclure `expires_at` dans l'INSERT (conversion `DD/MM/YYYY` → `YYYY-MM-DD` ou `null`)
+### 4. Modifications frontend
+
+#### `src/pages/admin/AdminOfficers.tsx`
+
+- Ajouter `is_compliant: boolean` a l'interface et au SELECT
+- Ajouter une colonne "Status" dans le tableau avec un Badge :
+  - Vert (`bg-green-100 text-green-800`) + texte "Compliant" si `true`
+  - Rouge (`destructive`) + texte "Non-compliant" si `false`
+- Mettre a jour les `colSpan` de 5 a 6
 
 #### `src/i18n/locales/en.json`
 
 Nouvelles cles :
-- `"admin.documents.expiresAt"`: `"Expiration"`
-- `"admin.documents.expired"`: `"Expired"`
-- `"admin.documents.valid"`: `"Valid"`
-- `"admin.documents.clearDate"`: `"Clear"`
+- `"admin.officers.status"` : `"Status"`
+- `"admin.officers.compliant"` : `"Compliant"`
+- `"admin.officers.nonCompliant"` : `"Non-compliant"`
 
----
-
-### 3. Logique d'indicateur visuel
-
-La comparaison se fait cote client avec la date du jour :
-- `new Date(expires_at) < new Date()` → Badge rouge "Expire"
-- Sinon → Badge vert "Valide"
-- Pas de date → tiret
+La colonne `is_compliant` n'est **pas** exposee dans le formulaire d'edition (`OfficerFormDialog`) — elle est en lecture seule, calculee uniquement par les triggers et le cron.
 
 ---
 
@@ -62,9 +131,10 @@ La comparaison se fait cote client avec la date du jour :
 
 | Fichier | Action |
 |---------|--------|
-| Migration SQL | +colonne `expires_at` (date, nullable) |
-| `AdminDocuments.tsx` | +colonne tableau avec indicateur visuel |
-| `DocumentEditDialog.tsx` | +champ DateMaskInput pour editer la date |
-| `DocumentUploadDialog.tsx` | +champ DateMaskInput a l'import |
-| `en.json` | +cles i18n expiration |
+| Migration SQL | +colonne `is_compliant`, +fonctions recalcul, +triggers sur `company_officers` et `documents` |
+| `supabase/functions/recalculate-compliance/index.ts` | Edge function pour le cron quotidien |
+| `supabase/config.toml` | +config pour l'edge function |
+| Cron SQL (insert tool) | Job `pg_cron` quotidien |
+| `AdminOfficers.tsx` | +colonne "Status" lecture seule avec Badge |
+| `en.json` | +cles i18n compliance |
 
