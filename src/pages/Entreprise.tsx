@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { format, parseISO } from 'date-fns';
 import { Building2, Copy, Check, Users } from 'lucide-react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useTranslation } from '@/i18n/useTranslation';
@@ -14,6 +15,7 @@ interface Officer {
   first_name: string;
   date_of_birth: string | null;
   position: string;
+  is_compliant: boolean;
 }
 
 const COUNTRY_MAP: Record<string, string> = {
@@ -47,9 +49,8 @@ function CopyButton({ value }: { value: string }) {
   );
 }
 
-function isoToDisplay(iso: string): string {
-  const [y, m, d] = iso.split('-');
-  return `${d}/${m}/${y}`;
+function isoToMonthYear(iso: string): string {
+  return format(parseISO(iso), 'MMMM yyyy');
 }
 
 export default function Entreprise() {
@@ -71,7 +72,7 @@ export default function Entreprise() {
         // Load officers assigned to this company via junction table
         const { data, error } = await (supabase
           .from('officer_company_assignments' as any)
-          .select('officer_id, company_officers:officer_id(id, last_name, first_name, date_of_birth, position)')
+          .select('officer_id, company_officers:officer_id(id, last_name, first_name, date_of_birth, position, is_compliant)')
           .eq('company_id', currentCompany.company_id) as any);
 
         if (error) {
@@ -173,33 +174,26 @@ export default function Entreprise() {
                 {officers.map((officer, idx) => (
                   <div key={officer.id}>
                     {idx > 0 && <Separator className="mb-4" />}
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">
-                          {t('admin.companies.officerLastName')}
+                    <div className="space-y-0.5">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium">
+                          <span className="font-semibold">{officer.last_name.toUpperCase()}</span>{' '}
+                          {officer.first_name}
                         </p>
-                        <p className="text-sm mt-0.5">{officer.last_name}</p>
+                        {officer.is_compliant ? (
+                          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                            {t('admin.officers.compliant')}
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive">
+                            {t('admin.officers.nonCompliant')}
+                          </Badge>
+                        )}
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">
-                          {t('admin.companies.officerFirstName')}
-                        </p>
-                        <p className="text-sm mt-0.5">{officer.first_name}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">
-                          {t('admin.companies.officerDob')}
-                        </p>
-                        <p className="text-sm mt-0.5">
-                          {officer.date_of_birth ? isoToDisplay(officer.date_of_birth) : '—'}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">
-                          {t('admin.companies.officerPosition')}
-                        </p>
-                        <p className="text-sm mt-0.5">{officer.position}</p>
-                      </div>
+                      <p className="text-sm text-muted-foreground">{officer.position}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {officer.date_of_birth ? isoToMonthYear(officer.date_of_birth) : '—'}
+                      </p>
                     </div>
                   </div>
                 ))}
