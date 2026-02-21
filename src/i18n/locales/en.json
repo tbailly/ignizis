@@ -156,7 +156,10 @@
       "secondaryId": "Secondary ID",
       "powerOfAttorney": "Power of Attorney",
       "selectDocument": "Search and select a document...",
-      "noDocument": "No document selected"
+      "noDocument": "No document selected",
+      "status": "Status",
+      "compliant": "Compliant",
+      "nonCompliant": "Non-compliant"
     },
     "documents": {
       "title": "Documents",
