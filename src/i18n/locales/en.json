@@ -189,7 +189,11 @@
       "tagDeleteConfirmTitle": "Delete tag",
       "tagDeleteConfirmDesc": "This action is irreversible. Type the tag name to confirm:",
       "tagDeleteConfirmButton": "Delete permanently",
-      "noTags": "No tags yet"
+      "noTags": "No tags yet",
+      "expiresAt": "Expiration",
+      "expired": "Expired",
+      "valid": "Valid",
+      "clearDate": "Clear"
     },
     "requests": {
       "title": "Requests",
