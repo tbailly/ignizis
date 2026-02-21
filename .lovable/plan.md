@@ -1,80 +1,70 @@
 
 
-## Ajout d'un identifiant 4 chiffres, carte entierement draggable, suppression dans la modale
+## Ajout d'une date d'expiration sur les documents
 
 ### 1. Migration base de donnees
 
-Ajouter une colonne `request_number` (integer, unique, NOT NULL) a la table `requests`. Cette colonne stockera un nombre entre 1000 et 9999 genere aleatoirement a la creation.
+Ajouter une colonne optionnelle `expires_at` de type `date` sur la table `documents` :
 
 ```sql
-ALTER TABLE public.requests
-  ADD COLUMN request_number integer NOT NULL DEFAULT 0
-  CONSTRAINT requests_number_range CHECK (request_number >= 1000 AND request_number <= 9999);
-
-CREATE UNIQUE INDEX requests_number_unique ON public.requests (request_number);
+ALTER TABLE public.documents ADD COLUMN expires_at date;
 ```
+
+Pas de contrainte, pas de valeur par defaut — le champ est nullable (date optionnelle).
 
 ---
 
-### 2. Modifications des fichiers
+### 2. Fichiers modifies
 
-#### `src/components/admin/RequestFormDialog.tsx`
+#### `src/pages/admin/AdminDocuments.tsx`
 
-- Ajouter `request_number` a l'interface `RequestData`
-- A la creation : generer un nombre aleatoire entre 1000 et 9999, verifier son unicite en base (boucle retry), l'inclure dans l'INSERT
-- Afficher le numero en haut de la modale en mode edition (lecture seule, badge ou texte grise)
-- Ajouter un bouton "Supprimer" en bas a gauche du `DialogFooter` (en mode edition uniquement), avec confirmation via `AlertDialog` — meme logique de suppression que celle actuellement dans `KanbanBoard.handleDelete`
-- Le `DialogFooter` aura le bouton Delete a gauche et les boutons Cancel/Save a droite
+- Ajouter `expires_at: string | null` a l'interface `DocumentRow`
+- Ajouter une nouvelle colonne "Expiration" dans le `TableHeader` (entre "Date d'import" et "Actions")
+- Dans chaque ligne, afficher :
+  - Si `expires_at` est null : un tiret `-` en texte muted
+  - Si la date est passee : la date formatee DD/MM/YYYY avec un Badge `destructive` ("Expire")
+  - Si la date est dans le futur : la date formatee DD/MM/YYYY avec un Badge `secondary` vert ("Valide")
+- Mettre a jour le `colSpan` des lignes vides/loading de 5 a 6
 
-#### `src/components/admin/KanbanCard.tsx`
+#### `src/components/admin/DocumentEditDialog.tsx`
 
-- Supprimer l'icone `GripVertical` (poignee de drag) : appliquer `{...attributes} {...listeners}` directement sur le `div` racine de la carte pour la rendre entierement draggable
-- Supprimer le bouton de suppression et tout l'`AlertDialog` associe
-- Afficher le `request_number` (ex: `#1234`) devant le titre sur la carte
-- Ajouter `cursor-grab active:cursor-grabbing` au `div` racine
-- Simplifier l'interface : supprimer `onDelete` des props
+- Ajouter `expires_at: string | null` a l'interface `DocumentData`
+- Ajouter un state `expiresAt` initialise depuis `document.expires_at` (converti du format ISO `YYYY-MM-DD` au format affichage `DD/MM/YYYY` si present, sinon chaine vide)
+- Ajouter un champ de saisie avec le composant `DateMaskInput` existant (masque `DD/MM/YYYY`) + un bouton pour effacer la date
+- Dans `handleSave`, inclure `expires_at` dans l'UPDATE : convertir `DD/MM/YYYY` vers `YYYY-MM-DD` pour le stockage, ou `null` si vide
 
-#### `src/components/admin/KanbanColumn.tsx`
+#### `src/components/admin/DocumentUploadDialog.tsx`
 
-- Retirer `onDelete` des props (plus necessaire)
-
-#### `src/components/admin/KanbanBoard.tsx`
-
-- Retirer `handleDelete` et son passage en props aux colonnes
-- Ajouter une prop `onDelete` recue du parent (`AdminRequests`) pour que la modale d'edition puisse supprimer
-- Mettre a jour le `DragOverlay` (la carte dans l'overlay n'a plus besoin de `onDelete`)
-
-#### `src/pages/admin/AdminRequests.tsx`
-
-- Ajouter `request_number` dans la requete SELECT
-- Inclure `request_number` dans le mapping des donnees
-- Gerer la suppression depuis la modale : passer un callback `onDelete` a `RequestFormDialog`
+- Ajouter `expiresAt: string` (format `DD/MM/YYYY`, vide par defaut) a l'interface `FileEntry`
+- Ajouter un champ `DateMaskInput` dans le formulaire de chaque fichier
+- Dans `handleUpload`, inclure `expires_at` dans l'INSERT (conversion `DD/MM/YYYY` → `YYYY-MM-DD` ou `null`)
 
 #### `src/i18n/locales/en.json`
 
-- Ajouter `"admin.requests.requestNumber": "Request #"` (ou similaire) pour l'affichage dans la modale
+Nouvelles cles :
+- `"admin.documents.expiresAt"`: `"Expiration"`
+- `"admin.documents.expired"`: `"Expired"`
+- `"admin.documents.valid"`: `"Valid"`
+- `"admin.documents.clearDate"`: `"Clear"`
 
 ---
 
-### 3. Logique de generation du numero
+### 3. Logique d'indicateur visuel
 
-A la creation d'une request dans `RequestFormDialog.handleSave` :
-1. Generer `Math.floor(Math.random() * 9000) + 1000`
-2. Verifier qu'il n'existe pas deja via `SELECT id FROM requests WHERE request_number = $n`
-3. Si pris, regenerer (boucle, max 20 tentatives)
-4. Inclure dans l'INSERT
+La comparaison se fait cote client avec la date du jour :
+- `new Date(expires_at) < new Date()` → Badge rouge "Expire"
+- Sinon → Badge vert "Valide"
+- Pas de date → tiret
 
 ---
 
-### Recapitulatif des fichiers
+### Recapitulatif
 
 | Fichier | Action |
 |---------|--------|
-| Migration SQL | +colonne `request_number` (integer, unique, 1000-9999) |
-| `RequestFormDialog.tsx` | +numero auto-genere, +bouton supprimer en mode edition, +affichage numero |
-| `KanbanCard.tsx` | Carte entierement draggable, suppression poignee + bouton delete, affichage `#XXXX` |
-| `KanbanColumn.tsx` | Retrait prop `onDelete` |
-| `KanbanBoard.tsx` | Retrait `handleDelete`, simplification props colonnes |
-| `AdminRequests.tsx` | +`request_number` dans le SELECT, +callback suppression |
-| `en.json` | +cle i18n pour le numero de request |
+| Migration SQL | +colonne `expires_at` (date, nullable) |
+| `AdminDocuments.tsx` | +colonne tableau avec indicateur visuel |
+| `DocumentEditDialog.tsx` | +champ DateMaskInput pour editer la date |
+| `DocumentUploadDialog.tsx` | +champ DateMaskInput a l'import |
+| `en.json` | +cles i18n expiration |
 
