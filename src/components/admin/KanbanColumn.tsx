@@ -9,15 +9,13 @@ interface KanbanColumnProps {
   label: string;
   requests: RequestData[];
   onEdit: (request: RequestData) => void;
-  onDelete: (id: string) => void;
 }
 
-export function KanbanColumn({ status, label, requests, onEdit, onDelete }: KanbanColumnProps) {
+export function KanbanColumn({ status, label, requests, onEdit }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
 
   return (
     <div className="flex flex-col w-64 shrink-0">
-      {/* Column header */}
       <div className="flex items-center justify-between mb-3 px-1">
         <span className="text-sm font-semibold text-foreground truncate">{label}</span>
         <Badge variant="secondary" className="ml-2 shrink-0 text-xs">
@@ -25,7 +23,6 @@ export function KanbanColumn({ status, label, requests, onEdit, onDelete }: Kanb
         </Badge>
       </div>
 
-      {/* Drop zone */}
       <div
         ref={setNodeRef}
         className={`
@@ -42,7 +39,6 @@ export function KanbanColumn({ status, label, requests, onEdit, onDelete }: Kanb
               key={request.id}
               request={request}
               onEdit={onEdit}
-              onDelete={onDelete}
             />
           ))}
         </SortableContext>
