@@ -65,6 +65,7 @@ export type Database = {
           date_of_birth: string | null
           first_name: string
           id: string
+          is_compliant: boolean
           last_name: string
           passport_document_id: string | null
           position: string
@@ -76,6 +77,7 @@ export type Database = {
           date_of_birth?: string | null
           first_name: string
           id?: string
+          is_compliant?: boolean
           last_name: string
           passport_document_id?: string | null
           position: string
@@ -87,6 +89,7 @@ export type Database = {
           date_of_birth?: string | null
           first_name?: string
           id?: string
+          is_compliant?: boolean
           last_name?: string
           passport_document_id?: string | null
           position?: string
@@ -408,6 +411,11 @@ export type Database = {
       is_member_of_company: {
         Args: { target_company_id: string }
         Returns: boolean
+      }
+      recalculate_all_officer_compliance: { Args: never; Returns: undefined }
+      recalculate_officer_compliance: {
+        Args: { p_officer_id: string }
+        Returns: undefined
       }
     }
     Enums: {
