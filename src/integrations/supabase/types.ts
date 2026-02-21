@@ -173,6 +173,7 @@ export type Database = {
           created_at: string
           display_name: string
           document_type: Database["public"]["Enums"]["document_type"]
+          expires_at: string | null
           file_size: number | null
           id: string
           mime_type: string | null
@@ -185,6 +186,7 @@ export type Database = {
           created_at?: string
           display_name: string
           document_type: Database["public"]["Enums"]["document_type"]
+          expires_at?: string | null
           file_size?: number | null
           id?: string
           mime_type?: string | null
@@ -197,6 +199,7 @@ export type Database = {
           created_at?: string
           display_name?: string
           document_type?: Database["public"]["Enums"]["document_type"]
+          expires_at?: string | null
           file_size?: number | null
           id?: string
           mime_type?: string | null

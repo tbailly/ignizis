@@ -15,11 +15,19 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
+import { DateMaskInput } from '@/components/ui/date-mask-input';
+
+function displayToIso(display: string): string | null {
+  if (!display || display.length !== 10) return null;
+  const [d, m, y] = display.split('/');
+  return `${y}-${m}-${d}`;
+}
 
 interface FileEntry {
   file: File;
   displayName: string;
   documentType: 'contract' | 'invoice' | 'other';
+  expiresAt: string;
   selectedTagIds: string[];
 }
 
@@ -50,6 +58,7 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
       file,
       displayName: file.name.replace(/\.[^/.]+$/, ''),
       documentType: 'other',
+      expiresAt: '',
       selectedTagIds: [],
     }));
     setEntries(prev => [...prev, ...newEntries]);
@@ -102,7 +111,8 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
             file_size: entry.file.size,
             mime_type: entry.file.type || null,
             uploaded_by: profile.id,
-          })
+            expires_at: displayToIso(entry.expiresAt),
+          } as any)
           .select('id')
           .single();
 
@@ -182,6 +192,14 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
                     <SelectItem value="other">{t('admin.documents.typeOther')}</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t('admin.documents.expiresAt')}</Label>
+                <DateMaskInput
+                  value={entry.expiresAt}
+                  onChange={(v) => updateEntry(index, { expiresAt: v })}
+                />
               </div>
 
               <div className="space-y-2">

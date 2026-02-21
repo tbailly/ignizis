@@ -27,6 +27,7 @@ interface DocumentRow {
   mime_type: string | null;
   uploaded_by: string;
   created_at: string;
+  expires_at: string | null;
   tags: { id: string; name: string }[];
 }
 
@@ -151,19 +152,20 @@ export default function AdminDocuments() {
               <TableHead>{t('admin.documents.documentType')}</TableHead>
               <TableHead>{t('admin.documents.tags')}</TableHead>
               <TableHead>{t('admin.documents.uploadDate')}</TableHead>
+              <TableHead>{t('admin.documents.expiresAt')}</TableHead>
               <TableHead className="w-[100px]">{t('admin.documents.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                 <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                   {t('common.loading')}
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                   {t('admin.documents.noDocuments')}
                 </TableCell>
               </TableRow>
@@ -184,6 +186,18 @@ export default function AdminDocuments() {
                     </div>
                   </TableCell>
                   <TableCell>{formatDate(doc.created_at)}</TableCell>
+                  <TableCell>
+                    {doc.expires_at ? (
+                      <div className="flex items-center gap-2">
+                        <span>{formatDate(doc.expires_at)}</span>
+                        <Badge variant={new Date(doc.expires_at) < new Date() ? 'destructive' : 'secondary'} className={new Date(doc.expires_at) >= new Date() ? 'bg-green-600 text-white hover:bg-green-700' : ''}>
+                          {new Date(doc.expires_at) < new Date() ? t('admin.documents.expired') : t('admin.documents.valid')}
+                        </Badge>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       {isPdf(doc) && (

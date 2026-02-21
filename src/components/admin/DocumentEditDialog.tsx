@@ -13,12 +13,27 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { DateMaskInput } from '@/components/ui/date-mask-input';
+import { X } from 'lucide-react';
+
+function isoToDisplay(iso: string | null): string {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function displayToIso(display: string): string | null {
+  if (!display || display.length !== 10) return null;
+  const [d, m, y] = display.split('/');
+  return `${y}-${m}-${d}`;
+}
 
 interface DocumentData {
   id: string;
   display_name: string;
   document_type: 'contract' | 'invoice' | 'other';
   original_filename: string;
+  expires_at: string | null;
   tags: { id: string; name: string }[];
 }
 
@@ -33,6 +48,7 @@ export function DocumentEditDialog({ document, onClose, onSuccess }: DocumentEdi
   const [displayName, setDisplayName] = useState(document.display_name);
   const [documentType, setDocumentType] = useState(document.document_type);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(document.tags.map(t => t.id));
+  const [expiresAt, setExpiresAt] = useState(isoToDisplay(document.expires_at));
   const [saving, setSaving] = useState(false);
 
   const { data: availableTags = [] } = useQuery({
@@ -60,7 +76,8 @@ export function DocumentEditDialog({ document, onClose, onSuccess }: DocumentEdi
         .update({
           display_name: displayName.trim(),
           document_type: documentType,
-        })
+          expires_at: displayToIso(expiresAt),
+        } as any)
         .eq('id', document.id);
 
       if (updateError) throw updateError;
@@ -134,6 +151,22 @@ export function DocumentEditDialog({ document, onClose, onSuccess }: DocumentEdi
                 <SelectItem value="other">{t('admin.documents.typeOther')}</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t('admin.documents.expiresAt')}</Label>
+            <div className="flex items-center gap-2">
+              <DateMaskInput
+                value={expiresAt}
+                onChange={setExpiresAt}
+                className="flex-1"
+              />
+              {expiresAt && (
+                <Button type="button" variant="ghost" size="icon" onClick={() => setExpiresAt('')}>
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">
