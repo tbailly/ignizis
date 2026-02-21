@@ -70,8 +70,6 @@ export function KanbanBoard({ requests: initialRequests, onDataChange, onEdit }:
     const activeReq = localRequests.find(r => r.id === activeId);
     if (!activeReq) return;
 
-    // Determine destination status:
-    // `over` can be a column (status string) or a card (uuid)
     const isOverColumn = (STATUSES as readonly string[]).includes(overId);
     const destStatus = isOverColumn
       ? overId
@@ -80,7 +78,6 @@ export function KanbanBoard({ requests: initialRequests, onDataChange, onEdit }:
     const sourceStatus = activeReq.status;
 
     if (sourceStatus === destStatus) {
-      // --- Intra-column reorder ---
       const colItems = getColumnRequests(sourceStatus);
       const oldIndex = colItems.findIndex(r => r.id === activeId);
       const newIndex = colItems.findIndex(r => r.id === overId);
@@ -92,13 +89,11 @@ export function KanbanBoard({ requests: initialRequests, onDataChange, onEdit }:
         position: i,
       }));
 
-      // Optimistic update
       setLocalRequests(prev => {
         const others = prev.filter(r => r.status !== sourceStatus);
         return [...others, ...reordered];
       });
 
-      // Batch persist
       try {
         await Promise.all(
           reordered.map(r =>
@@ -108,14 +103,12 @@ export function KanbanBoard({ requests: initialRequests, onDataChange, onEdit }:
         onDataChange();
       } catch (err: any) {
         toast.error(err.message);
-        onDataChange(); // Revert
+        onDataChange();
       }
     } else {
-      // --- Inter-column move ---
       const destColItems = getColumnRequests(destStatus);
-      const newPosition = destColItems.length; // append at end
+      const newPosition = destColItems.length;
 
-      // Optimistic update
       setLocalRequests(prev =>
         prev.map(r =>
           r.id === activeId
@@ -137,23 +130,8 @@ export function KanbanBoard({ requests: initialRequests, onDataChange, onEdit }:
         onDataChange();
       } catch (err: any) {
         toast.error(err.message);
-        onDataChange(); // Revert
+        onDataChange();
       }
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('requests' as any)
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      toast.success(t('admin.requests.deleteSuccess'));
-      onDataChange();
-    } catch (err: any) {
-      toast.error(err.message);
     }
   };
 
@@ -172,7 +150,6 @@ export function KanbanBoard({ requests: initialRequests, onDataChange, onEdit }:
             label={t(`admin.requests.columns.${status}`)}
             requests={getColumnRequests(status)}
             onEdit={onEdit}
-            onDelete={handleDelete}
           />
         ))}
       </div>
@@ -183,7 +160,6 @@ export function KanbanBoard({ requests: initialRequests, onDataChange, onEdit }:
             <KanbanCard
               request={activeRequest}
               onEdit={() => {}}
-              onDelete={() => {}}
             />
           </div>
         ) : null}

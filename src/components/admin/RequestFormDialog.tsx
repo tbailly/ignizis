@@ -5,14 +5,20 @@ import { toast } from 'sonner';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { Check, ChevronsUpDown, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Popover, PopoverContent, PopoverTrigger,
@@ -28,6 +34,7 @@ export interface RequestData {
   status: string;
   company_id: string;
   position: number;
+  request_number: number;
   company?: { id: string; name: string };
 }
 
@@ -41,6 +48,7 @@ interface RequestFormDialogProps {
   companies: Company[];
   onClose: () => void;
   onSuccess: () => void;
+  onDelete?: (id: string) => Promise<void>;
 }
 
 const STATUS_VALUES = [
@@ -52,7 +60,20 @@ const STATUS_VALUES = [
   'done',
 ] as const;
 
-export function RequestFormDialog({ request, companies, onClose, onSuccess }: RequestFormDialogProps) {
+async function generateUniqueRequestNumber(): Promise<number> {
+  for (let i = 0; i < 20; i++) {
+    const num = Math.floor(Math.random() * 9000) + 1000;
+    const { data } = await supabase
+      .from('requests' as any)
+      .select('id')
+      .eq('request_number', num)
+      .limit(1);
+    if (!data || (data as any[]).length === 0) return num;
+  }
+  throw new Error('Could not generate a unique request number');
+}
+
+export function RequestFormDialog({ request, companies, onClose, onSuccess, onDelete }: RequestFormDialogProps) {
   const { t } = useTranslation();
   const isEditMode = !!request;
 
@@ -62,6 +83,7 @@ export function RequestFormDialog({ request, companies, onClose, onSuccess }: Re
   const [status, setStatus] = useState<string>('new');
   const [companyOpen, setCompanyOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (request) {
@@ -106,7 +128,8 @@ export function RequestFormDialog({ request, companies, onClose, onSuccess }: Re
           toast.success(t('admin.requests.saveSuccess'));
         }
       } else {
-        // Compute max position in 'new' column
+        const requestNumber = await generateUniqueRequestNumber();
+
         const { data: maxData } = await supabase
           .from('requests' as any)
           .select('position')
@@ -125,6 +148,7 @@ export function RequestFormDialog({ request, companies, onClose, onSuccess }: Re
             company_id: companyId,
             status: 'new',
             position: maxPos + 1,
+            request_number: requestNumber,
           });
 
         if (error) throw error;
@@ -137,6 +161,16 @@ export function RequestFormDialog({ request, companies, onClose, onSuccess }: Re
       toast.error(error.message || t('settings.updateError'));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!request || !onDelete) return;
+    setDeleting(true);
+    try {
+      await onDelete(request.id);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -153,6 +187,13 @@ export function RequestFormDialog({ request, companies, onClose, onSuccess }: Re
             {isEditMode ? t('admin.requests.editDesc') : t('admin.requests.createDesc')}
           </DialogDescription>
         </DialogHeader>
+
+        {/* Request number badge in edit mode */}
+        {isEditMode && request && (
+          <Badge variant="outline" className="w-fit font-mono text-sm">
+            #{request.request_number}
+          </Badge>
+        )}
 
         <div className="space-y-4 py-2">
           {/* Company */}
@@ -243,13 +284,45 @@ export function RequestFormDialog({ request, companies, onClose, onSuccess }: Re
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={saving}>
-            {t('common.cancel')}
-          </Button>
-          <Button onClick={handleSave} disabled={saving || !canSave}>
-            {saving ? t('common.saving') : t('common.save')}
-          </Button>
+        <DialogFooter className="flex !justify-between gap-2">
+          {/* Delete button — edit mode only */}
+          {isEditMode && onDelete ? (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" disabled={saving || deleting} className="gap-1.5">
+                  <Trash2 className="h-4 w-4" />
+                  {t('admin.companies.delete')}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t('admin.requests.deleteConfirmTitle')}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t('admin.requests.deleteConfirmDesc')}
+                    <span className="block font-medium text-foreground mt-1">{request!.title}</span>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDelete}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {t('admin.requests.deleteConfirmButton')}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          ) : <div />}
+
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose} disabled={saving || deleting}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleSave} disabled={saving || !canSave || deleting}>
+              {saving ? t('common.saving') : t('common.save')}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

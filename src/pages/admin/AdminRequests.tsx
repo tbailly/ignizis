@@ -3,6 +3,7 @@ import { Plus, Kanban } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTranslation } from '@/i18n/useTranslation';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { KanbanBoard } from '@/components/admin/KanbanBoard';
 import { RequestFormDialog, type RequestData } from '@/components/admin/RequestFormDialog';
@@ -19,13 +20,12 @@ export default function AdminRequests() {
   const [isCreating, setIsCreating] = useState(false);
   const [editingRequest, setEditingRequest] = useState<RequestData | null>(null);
 
-  // Load all requests with company name
   const { data: requests = [], isLoading } = useQuery({
     queryKey: ['admin-requests'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('requests' as any)
-        .select('id, title, description, status, company_id, position, companies(id, name)')
+        .select('id, title, description, status, company_id, position, request_number, companies(id, name)')
         .order('position', { ascending: true });
 
       if (error) throw error;
@@ -37,12 +37,12 @@ export default function AdminRequests() {
         status: row.status,
         company_id: row.company_id,
         position: row.position,
+        request_number: row.request_number,
         company: row.companies ?? undefined,
       })) as RequestData[];
     },
   });
 
-  // Load companies for the form dropdown
   const { data: companies = [] } = useQuery({
     queryKey: ['admin-companies-list'],
     queryFn: async () => {
@@ -57,9 +57,24 @@ export default function AdminRequests() {
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['admin-requests'] });
 
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('requests' as any)
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      toast.success(t('admin.requests.deleteSuccess'));
+      setEditingRequest(null);
+      invalidate();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
@@ -73,7 +88,6 @@ export default function AdminRequests() {
         </Button>
       </div>
 
-      {/* Board */}
       {isLoading ? (
         <div className="text-muted-foreground text-sm">{t('common.loading')}</div>
       ) : (
@@ -84,7 +98,6 @@ export default function AdminRequests() {
         />
       )}
 
-      {/* Create dialog */}
       {isCreating && (
         <RequestFormDialog
           companies={companies}
@@ -96,7 +109,6 @@ export default function AdminRequests() {
         />
       )}
 
-      {/* Edit dialog */}
       {editingRequest && (
         <RequestFormDialog
           request={editingRequest}
@@ -106,6 +118,7 @@ export default function AdminRequests() {
             setEditingRequest(null);
             invalidate();
           }}
+          onDelete={handleDelete}
         />
       )}
     </div>

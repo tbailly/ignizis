@@ -251,6 +251,7 @@ export type Database = {
           description: string | null
           id: string
           position: number
+          request_number: number
           status: string
           title: string
           updated_at: string
@@ -262,6 +263,7 @@ export type Database = {
           description?: string | null
           id?: string
           position?: number
+          request_number: number
           status?: string
           title: string
           updated_at?: string
@@ -273,6 +275,7 @@ export type Database = {
           description?: string | null
           id?: string
           position?: number
+          request_number?: number
           status?: string
           title?: string
           updated_at?: string
