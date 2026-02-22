@@ -1,41 +1,100 @@
 
 
-## Affichage compact des corporate officers + indicateur de compliance
+## Documents : appartenance entreprise + page utilisateur "Contracts and Invoices"
 
-### Modifications
+### 1. Migration base de donnees
 
-**Fichier : `src/pages/Entreprise.tsx`**
+Ajouter une colonne `company_id` (nullable, FK vers `companies.id ON DELETE SET NULL`) a la table `documents`.
 
-1. Ajouter `is_compliant` a l'interface `Officer` et au SELECT de la query
-2. Remplacer l'affichage en grille 2x2 (avec labels) par un format compact sur 3 lignes :
-   - Ligne 1 : **LAST_NAME** First_name (nom en majuscules, prenom en casse normale)
-   - Ligne 2 : Position
-   - Ligne 3 : Date de naissance au format "September 1990" (mois en anglais + annee, via `date-fns` `format(date, 'MMMM yyyy')`)
-3. Ajouter un indicateur de compliance a cote du nom :
-   - Badge vert "Compliant" si `is_compliant === true`
-   - Badge rouge "Non-compliant" si `is_compliant === false`
-4. Remplacer la fonction `isoToDisplay` par une fonction `isoToMonthYear` qui utilise `date-fns` pour formater en "MMMM yyyy"
+Ajouter une politique RLS SELECT pour les membres de l'entreprise :
 
-### Rendu visuel cible
+```sql
+ALTER TABLE public.documents
+  ADD COLUMN company_id uuid REFERENCES public.companies(id) ON DELETE SET NULL;
 
-```text
-+----------------------------------------------+
-| DUPONT Jean              [Compliant]         |
-| Director                                      |
-| September 1990                                |
-+----------------------------------------------+
-| MARTIN Sophie            [Non-compliant]     |
-| Secretary                                     |
-| March 1985                                    |
-+----------------------------------------------+
+CREATE POLICY "Members can view company documents"
+  ON public.documents FOR SELECT
+  TO authenticated
+  USING (company_id IS NOT NULL AND is_member_of_company(company_id));
 ```
 
-### Detail technique
+### 2. Admin : colonne "Company" dans la table des documents
 
-- Import `format` et `parseISO` depuis `date-fns`
-- Import `Badge` depuis `@/components/ui/badge` (deja importe)
-- Import des cles i18n existantes : `admin.officers.compliant` / `admin.officers.nonCompliant`
-- Le `last_name` sera affiche en `.toUpperCase()`
-- Le `first_name` garde sa casse d'origine (premiere lettre majuscule)
-- Les separateurs entre officers sont conserves
+**Fichier : `src/pages/admin/AdminDocuments.tsx`**
+
+- Ajouter `company_id` et `company_name` au `DocumentRow` interface
+- Dans la query, faire un join sur `companies` pour recuperer le nom : `select('*, companies:company_id(name)')`
+- Ajouter une colonne "Company" dans le tableau entre "Tags" et "Upload date", affichant le nom de l'entreprise ou "-"
+- Mettre a jour les `colSpan` de 6 a 7
+
+### 3. Admin : champ "Company" dans les dialogues d'edition et d'upload
+
+**Fichier : `src/components/admin/DocumentEditDialog.tsx`**
+
+- Ajouter un champ `company_id` a l'interface `DocumentData`
+- Ajouter un state `companyId` initialise depuis `document.company_id`
+- Charger la liste des entreprises via une query sur `companies` (id, name)
+- Afficher un dropdown searchable (reutiliser le pattern Combobox/Popover existant comme dans `DocumentSelect`) avec :
+  - Recherche par nom d'entreprise
+  - Option pour effacer la selection (bouton X)
+- Inclure `company_id` dans l'update
+
+**Fichier : `src/components/admin/DocumentUploadDialog.tsx`**
+
+- Ajouter `companyId` au `FileEntry` interface
+- Ajouter le meme dropdown searchable dans chaque fiche de document
+- Inclure `company_id` dans l'insert
+
+### 4. Page utilisateur "Contrats" (My contracts and invoices)
+
+**Fichier : `src/pages/Contrats.tsx`**
+
+Remplacer le placeholder actuel par une page complete :
+
+- Charger les documents lies a `currentCompany.company_id` via `supabase.from('documents').select('*').eq('company_id', companyId).order('created_at', { ascending: false })`
+- Diviser en 2 sections avec des Card + CardHeader :
+  - **Invoices** : filtrer `document_type === 'invoice'`
+  - **Contracts** : filtrer `document_type === 'contract'`
+- Chaque section affiche un tableau avec les colonnes : Display name, Upload date, Actions
+- Actions :
+  - Bouton Eye (preview PDF dans une modale avec iframe + URL signee) — visible uniquement si le document est un PDF
+  - Bouton Download (URL signee avec nom d'origine) — toujours visible
+- Si aucun document dans une section, afficher un message "No invoices" / "No contracts"
+
+### 5. Traductions (en.json)
+
+Nouvelles cles :
+
+```json
+"contracts": {
+  "title": "My contracts and invoices",
+  "invoices": "Invoices",
+  "contracts": "Contracts",
+  "noInvoices": "No invoices",
+  "noContracts": "No contracts",
+  "displayName": "Name",
+  "uploadDate": "Upload date",
+  "actions": "Actions"
+}
+```
+
+Et pour l'admin :
+```json
+"admin.documents.company": "Company",
+"admin.documents.noCompany": "No company",
+"admin.documents.selectCompany": "Search and select a company..."
+```
+
+---
+
+### Recapitulatif
+
+| Element | Action |
+|---------|--------|
+| Migration SQL | +colonne `company_id` sur `documents`, +RLS policy lecture membres |
+| `AdminDocuments.tsx` | +colonne "Company" dans le tableau |
+| `DocumentEditDialog.tsx` | +dropdown searchable entreprise |
+| `DocumentUploadDialog.tsx` | +dropdown searchable entreprise |
+| `Contrats.tsx` | Page complete avec 2 sections (Invoices / Contracts) + preview PDF + download |
+| `en.json` | +cles i18n |
 
