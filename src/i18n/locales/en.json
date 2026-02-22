@@ -196,7 +196,10 @@
       "expiresAt": "Expiration",
       "expired": "Expired",
       "valid": "Valid",
-      "clearDate": "Clear"
+      "clearDate": "Clear",
+      "company": "Company",
+      "noCompany": "No company found",
+      "selectCompany": "Search and select a company..."
     },
     "requests": {
       "title": "Requests",
@@ -289,7 +292,16 @@
   "contracts": {
     "title": "My contracts and invoices",
     "sectionTitle": "Contracts and invoices section",
-    "sectionDescription": "This section will contain your contracts and invoices."
+    "sectionDescription": "This section will contain your contracts and invoices.",
+    "invoices": "Invoices",
+    "contracts": "Contracts",
+    "noInvoices": "No invoices",
+    "noContracts": "No contracts",
+    "displayName": "Name",
+    "uploadDate": "Upload date",
+    "actions": "Actions",
+    "preview": "Preview",
+    "download": "Download"
   },
   "legal": {
     "title": "Legal",

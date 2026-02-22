@@ -173,6 +173,7 @@ export type Database = {
       }
       documents: {
         Row: {
+          company_id: string | null
           created_at: string
           display_name: string
           document_type: Database["public"]["Enums"]["document_type"]
@@ -186,6 +187,7 @@ export type Database = {
           uploaded_by: string
         }
         Insert: {
+          company_id?: string | null
           created_at?: string
           display_name: string
           document_type: Database["public"]["Enums"]["document_type"]
@@ -199,6 +201,7 @@ export type Database = {
           uploaded_by: string
         }
         Update: {
+          company_id?: string | null
           created_at?: string
           display_name?: string
           document_type?: Database["public"]["Enums"]["document_type"]
@@ -211,7 +214,15 @@ export type Database = {
           updated_at?: string
           uploaded_by?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "documents_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       officer_company_assignments: {
         Row: {

@@ -28,6 +28,8 @@ interface DocumentRow {
   uploaded_by: string;
   created_at: string;
   expires_at: string | null;
+  company_id: string | null;
+  company_name: string | null;
   tags: { id: string; name: string }[];
 }
 
@@ -57,7 +59,7 @@ export default function AdminDocuments() {
     queryFn: async () => {
       const { data: docs, error: docsError } = await supabase
         .from('documents')
-        .select('*')
+        .select('*, companies:company_id(name)')
         .order('created_at', { ascending: false });
 
       if (docsError) throw docsError;
@@ -78,6 +80,7 @@ export default function AdminDocuments() {
 
       return (docs || []).map(doc => ({
         ...doc,
+        company_name: (doc as any).companies?.name || null,
         tags: (assignments || [])
           .filter(a => a.document_id === doc.id)
           .map(a => ({ id: a.tag_id, name: tagsById.get(a.tag_id) || '' }))
@@ -151,6 +154,7 @@ export default function AdminDocuments() {
               <TableHead>{t('admin.documents.displayName')}</TableHead>
               <TableHead>{t('admin.documents.documentType')}</TableHead>
               <TableHead>{t('admin.documents.tags')}</TableHead>
+              <TableHead>{t('admin.documents.company')}</TableHead>
               <TableHead>{t('admin.documents.uploadDate')}</TableHead>
               <TableHead>{t('admin.documents.expiresAt')}</TableHead>
               <TableHead className="w-[100px]">{t('admin.documents.actions')}</TableHead>
@@ -159,13 +163,13 @@ export default function AdminDocuments() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                 <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                 <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   {t('common.loading')}
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   {t('admin.documents.noDocuments')}
                 </TableCell>
               </TableRow>
@@ -184,6 +188,13 @@ export default function AdminDocuments() {
                         </Badge>
                       ))}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    {doc.company_name ? (
+                      <span>{doc.company_name}</span>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
                   </TableCell>
                   <TableCell>{formatDate(doc.created_at)}</TableCell>
                   <TableCell>
