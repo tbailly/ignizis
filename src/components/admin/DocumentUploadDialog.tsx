@@ -16,6 +16,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 import { DateMaskInput } from '@/components/ui/date-mask-input';
+import { CompanySelect } from '@/components/admin/CompanySelect';
 
 function displayToIso(display: string): string | null {
   if (!display || display.length !== 10) return null;
@@ -28,6 +29,7 @@ interface FileEntry {
   displayName: string;
   documentType: 'contract' | 'invoice' | 'other';
   expiresAt: string;
+  companyId: string | null;
   selectedTagIds: string[];
 }
 
@@ -52,6 +54,15 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
     },
   });
 
+  const { data: companies = [] } = useQuery({
+    queryKey: ['companies-list'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('companies').select('id, name').order('name');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const newEntries: FileEntry[] = files.map(file => ({
@@ -59,6 +70,7 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
       displayName: file.name.replace(/\.[^/.]+$/, ''),
       documentType: 'other',
       expiresAt: '',
+      companyId: null,
       selectedTagIds: [],
     }));
     setEntries(prev => [...prev, ...newEntries]);
@@ -112,6 +124,7 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
             mime_type: entry.file.type || null,
             uploaded_by: profile.id,
             expires_at: displayToIso(entry.expiresAt),
+            company_id: entry.companyId,
           } as any)
           .select('id')
           .single();
@@ -199,6 +212,15 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
                 <DateMaskInput
                   value={entry.expiresAt}
                   onChange={(v) => updateEntry(index, { expiresAt: v })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t('admin.documents.company')}</Label>
+                <CompanySelect
+                  companies={companies}
+                  value={entry.companyId}
+                  onChange={(v) => updateEntry(index, { companyId: v })}
                 />
               </div>
 

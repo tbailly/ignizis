@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTranslation } from '@/i18n/useTranslation';
@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { DateMaskInput } from '@/components/ui/date-mask-input';
+import { CompanySelect } from '@/components/admin/CompanySelect';
 import { X } from 'lucide-react';
 
 function isoToDisplay(iso: string | null): string {
@@ -34,6 +35,7 @@ interface DocumentData {
   document_type: 'contract' | 'invoice' | 'other';
   original_filename: string;
   expires_at: string | null;
+  company_id: string | null;
   tags: { id: string; name: string }[];
 }
 
@@ -48,6 +50,7 @@ export function DocumentEditDialog({ document, onClose, onSuccess }: DocumentEdi
   const [displayName, setDisplayName] = useState(document.display_name);
   const [documentType, setDocumentType] = useState(document.document_type);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(document.tags.map(t => t.id));
+  const [companyId, setCompanyId] = useState<string | null>(document.company_id);
   const [expiresAt, setExpiresAt] = useState(isoToDisplay(document.expires_at));
   const [saving, setSaving] = useState(false);
 
@@ -55,6 +58,15 @@ export function DocumentEditDialog({ document, onClose, onSuccess }: DocumentEdi
     queryKey: ['document-tags'],
     queryFn: async () => {
       const { data, error } = await supabase.from('document_tags').select('id, name').order('name');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: companies = [] } = useQuery({
+    queryKey: ['companies-list'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('companies').select('id, name').order('name');
       if (error) throw error;
       return data || [];
     },
@@ -77,6 +89,7 @@ export function DocumentEditDialog({ document, onClose, onSuccess }: DocumentEdi
           display_name: displayName.trim(),
           document_type: documentType,
           expires_at: displayToIso(expiresAt),
+          company_id: companyId,
         } as any)
         .eq('id', document.id);
 
@@ -167,6 +180,15 @@ export function DocumentEditDialog({ document, onClose, onSuccess }: DocumentEdi
                 </Button>
               )}
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t('admin.documents.company')}</Label>
+            <CompanySelect
+              companies={companies}
+              value={companyId}
+              onChange={setCompanyId}
+            />
           </div>
 
           <div className="space-y-2">
