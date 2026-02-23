@@ -312,7 +312,14 @@
   "legal": {
     "title": "Legal",
     "sectionTitle": "Legal section",
-    "sectionDescription": "This section will contain legal documents and information."
+    "sectionDescription": "This section will contain legal documents and information.",
+    "activateButton": "Activate this option",
+    "activateTitle": "Activate Legal option",
+    "activateDescription": "You are about to activate the Legal option for this company.",
+    "activateDisclaimer": "By activating this option, you will gain access to the legal section including document management and compliance features for this company. This action can be reversed by an administrator at any time.",
+    "activateCheckbox": "I understand and wish to activate the Legal option for this company.",
+    "activateConfirm": "Activate",
+    "activateSuccess": "Legal option activated successfully."
   },
   "accounting": {
     "title": "Accounting",
