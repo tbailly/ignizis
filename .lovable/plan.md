@@ -1,62 +1,88 @@
 
-## Affichage des demandes utilisateur sur la page Legal
+## Notification email via template Resend a la creation d'une request
 
-### 1. Migration SQL : politiques RLS pour les utilisateurs
+### Vue d'ensemble
 
-Actuellement, seuls les admins peuvent lire/creer des requests. Il faut ajouter deux politiques RLS :
+Creer une edge function `notify-new-request` qui envoie un email via l'API Resend en utilisant le **template existant** `admin-new-request` du compte Resend (pas de template React Email en local). L'email est envoye a une adresse fixe configurable a chaque creation de request (admin ou utilisateur).
 
-- **SELECT** : les membres d'une entreprise peuvent voir les requests de leur entreprise
-- **INSERT** : les membres d'une entreprise peuvent creer des requests pour leur entreprise
+### Variables du template Resend
 
-```sql
-CREATE POLICY "Members can view company requests"
-  ON public.requests FOR SELECT
-  USING (is_member_of_company(company_id));
+Le template `admin-new-request` attend ces variables :
+- `REQUESTER_EMAIL` -- email du demandeur
+- `REQUEST_ID` -- numero de la demande (ex: "1234")
+- `REQUEST_TITLE` -- titre de la demande
+- `COMPANY_NAME` -- nom de l'entreprise
+- `REQUEST_MESSAGE` -- description / message de la demande
 
-CREATE POLICY "Members can insert company requests"
-  ON public.requests FOR INSERT
-  WITH CHECK (is_member_of_company(company_id));
+### 1. Edge function `supabase/functions/notify-new-request/index.ts`
+
+- Endpoint POST avec CORS
+- Pas de verification JWT (endpoint interne, fire-and-forget)
+- Adresse destinataire configurable via constante :
+
+```typescript
+const NOTIFICATION_EMAIL = "thomasbaillysalins01+legal@gmail.com";
 ```
 
-### 2. Page `Juridique.tsx`
+- Utilise l'API Resend avec `resend.emails.send()` en mode **template** :
+  - `from`: "Portail Entreprises <noreply@liste-naissance.thomasbs.fr>"
+  - `to`: NOTIFICATION_EMAIL
+  - `subject`: pas necessaire (defini dans le template Resend)
+  - Passe les 5 variables au template via le champ Resend adequat
 
-Remplacer le placeholder actuel (icone Scale + texte vide) par :
+- Body attendu :
+  - `request_number` (number)
+  - `title` (string)
+  - `description` (string | null)
+  - `company_name` (string)
+  - `requester_email` (string | null)
 
-- **Banniere disclaimer** : un composant `Alert` en haut de page expliquant que les demandes sont suivies ici mais que les echanges ont lieu par email
-- **Bouton "Nouvelle demande"** : ouvre une modale simplifiee (titre + description uniquement ; l'entreprise et l'email du demandeur sont deduits automatiquement)
-- **DataTable compacte** des requests de l'entreprise en cours, avec colonnes :
-  - Numero unique (`#1234`)
-  - Statut (badge colore)
-  - Titre
-  - Description (tronquee)
+### 2. Configuration `supabase/config.toml`
 
-La modale de creation :
-- Champs : titre (obligatoire), description (optionnel)
-- A la soumission : genere un `request_number` unique, insere la request avec `company_id` = entreprise en cours, `requester_email` = email de l'utilisateur connecte, `status` = `new`
+Ajouter :
+```toml
+[functions.notify-new-request]
+verify_jwt = false
+```
 
-### 3. Traductions (`en.json`)
+### 3. Appels depuis le frontend
 
-Ajout de cles dans la section `legal` :
+**`src/components/admin/RequestFormDialog.tsx`** (creation admin, apres ligne 179) :
+- Apres l'insert reussi (uniquement en mode creation, pas edition), appeler :
+```typescript
+supabase.functions.invoke('notify-new-request', {
+  body: {
+    request_number: requestNumber,
+    title: title.trim(),
+    description: description.trim() || null,
+    company_name: selectedCompany?.name || '',
+    requester_email: requesterEmail.trim() || null,
+  }
+}).catch(err => console.error('Notification error:', err));
+```
+- Fire-and-forget : ne bloque pas le flux utilisateur
 
-| Cle | Valeur |
-|-----|--------|
-| `legal.disclaimer` | `You can track your requests here. All exchanges take place by email.` |
-| `legal.newRequest` | `New request` |
-| `legal.createTitle` | `Create a request` |
-| `legal.createDesc` | `Describe your request. We will get back to you by email.` |
-| `legal.createSuccess` | `Request created successfully.` |
-| `legal.noRequests` | `No requests yet.` |
-| `legal.columns.number` | `#` |
-| `legal.columns.status` | `Status` |
-| `legal.columns.title` | `Title` |
-| `legal.columns.description` | `Description` |
+**`src/pages/Juridique.tsx`** (creation utilisateur, apres ligne 137) :
+- Meme logique apres l'insert reussi :
+```typescript
+supabase.functions.invoke('notify-new-request', {
+  body: {
+    request_number: requestNumber,
+    title: newTitle.trim(),
+    description: newDescription.trim() || null,
+    company_name: currentCompany?.company?.name || '',
+    requester_email: profile?.email || null,
+  }
+}).catch(err => console.error('Notification error:', err));
+```
 
-### 4. Resume technique
+### 4. Resume
 
-| Element | Modification |
-|---------|-------------|
-| Migration SQL | 2 nouvelles politiques RLS sur `requests` (SELECT + INSERT pour les membres) |
-| `Juridique.tsx` | Banniere disclaimer, datatable des requests, modale de creation |
-| `en.json` | Nouvelles cles de traduction `legal.*` |
+| Element | Action |
+|---------|--------|
+| `supabase/functions/notify-new-request/index.ts` | Nouvelle edge function utilisant le template Resend `admin-new-request` |
+| `supabase/config.toml` | Ajout `verify_jwt = false` |
+| `RequestFormDialog.tsx` | Appel fire-and-forget apres creation admin |
+| `Juridique.tsx` | Appel fire-and-forget apres creation utilisateur |
 
-Aucun nouveau fichier cree en dehors de la migration. La logique de generation du `request_number` reutilise la fonction existante dans `RequestFormDialog.tsx`.
+Pas de template React Email local -- on utilise directement le template configure dans le compte Resend.
