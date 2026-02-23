@@ -216,6 +216,8 @@
       "descriptionPlaceholder": "Describe the request...",
       "company": "Company",
       "companyPlaceholder": "Search and select a company...",
+      "requesterEmail": "Requester email",
+      "requesterEmailPlaceholder": "Enter or select an email...",
       "status": "Status",
       "saveSuccess": "Request saved",
       "createSuccess": "Request created",
