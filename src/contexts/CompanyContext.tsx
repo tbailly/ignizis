@@ -32,6 +32,7 @@ interface CompanyContextType {
   switching: boolean;
   hasPermission: (section: PermissionKey) => boolean;
   companyPath: (path: string) => string;
+  refreshCompanies: () => void;
 }
 
 const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
@@ -177,6 +178,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       switching,
       hasPermission,
       companyPath,
+      refreshCompanies: fetchCompanies,
     }}>
       {children}
     </CompanyContext.Provider>
