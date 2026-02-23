@@ -27,6 +27,7 @@ interface CompanyData {
   perm_legal: boolean;
   perm_accounting: boolean;
   perm_finance: boolean;
+  accounting_software_url: string | null;
 }
 
 interface CompanyFormDialogProps {
@@ -75,6 +76,7 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
   const [permLegal, setPermLegal] = useState(true);
   const [permAccounting, setPermAccounting] = useState(true);
   const [permFinance, setPermFinance] = useState(true);
+  const [accountingSoftwareUrl, setAccountingSoftwareUrl] = useState('');
   const [officers, setOfficers] = useState<Officer[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -91,6 +93,7 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
         setPermLegal(company.perm_legal !== false);
         setPermAccounting(company.perm_accounting !== false);
         setPermFinance(company.perm_finance !== false);
+        setAccountingSoftwareUrl(company.accounting_software_url || '');
         // Load officers from DB
         loadOfficers(company.id);
       } else {
@@ -104,6 +107,7 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
         setPermLegal(true);
         setPermAccounting(true);
         setPermFinance(true);
+        setAccountingSoftwareUrl('');
         setOfficers([]);
       }
     }
@@ -250,6 +254,7 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
         perm_legal: permLegal,
         perm_accounting: permAccounting,
         perm_finance: permFinance,
+        accounting_software_url: accountingSoftwareUrl.trim() || null,
       };
 
       let companyId: string;
@@ -388,6 +393,19 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
               <span className="text-sm">{t('admin.companies.accounting')}</span>
               <Switch checked={permAccounting} onCheckedChange={setPermAccounting} />
             </div>
+
+            {permAccounting && (
+              <div className="space-y-2 pl-4">
+                <Label htmlFor="accounting-url">{t('admin.companies.accountingSoftwareUrl')}</Label>
+                <Input
+                  id="accounting-url"
+                  type="url"
+                  value={accountingSoftwareUrl}
+                  onChange={(e) => setAccountingSoftwareUrl(e.target.value)}
+                  placeholder={t('admin.companies.accountingSoftwareUrlPlaceholder')}
+                />
+              </div>
+            )}
 
             <div className="flex items-center justify-between">
               <span className="text-sm">{t('admin.companies.finance')}</span>

@@ -15,6 +15,7 @@ interface Company {
   perm_legal: boolean;
   perm_accounting: boolean;
   perm_finance: boolean;
+  accounting_software_url: string | null;
 }
 
 interface UserCompany {
@@ -65,7 +66,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         // Admins see ALL companies (including inactive, unassigned)
         const { data, error } = await supabase
           .from('companies')
-          .select('id, name, slug, address, company_number, country, status, perm_legal, perm_accounting, perm_finance')
+          .select('id, name, slug, address, company_number, country, status, perm_legal, perm_accounting, perm_finance, accounting_software_url')
           .order('name');
 
         if (error) {
@@ -95,7 +96,8 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
               status,
               perm_legal,
               perm_accounting,
-              perm_finance
+              perm_finance,
+              accounting_software_url
             )
           `);
 

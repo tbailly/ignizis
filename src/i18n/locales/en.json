@@ -74,8 +74,10 @@
       "inactive": "Inactive",
       "permissions": "Enabled options",
       "legal": "Legal",
-      "accounting": "Accounting",
-      "finance": "Finance",
+    "accounting": "Accounting",
+    "accountingSoftwareUrl": "Accounting software URL",
+    "accountingSoftwareUrlPlaceholder": "https://...",
+    "finance": "Finance",
       "companyNumber": "Company number",
       "address": "Address",
       "addressPlaceholder": "Enter company address...",
@@ -313,7 +315,10 @@
   "accounting": {
     "title": "Accounting",
     "sectionTitle": "Accounting section",
-    "sectionDescription": "This section will contain accounting documents and information."
+    "sectionDescription": "This section will contain accounting documents and information.",
+    "softwareDescription": "Access your company's accounting software to manage your finances.",
+    "openSoftware": "Open accounting software",
+    "noSoftwareUrl": "No accounting software has been configured for this company."
   },
   "finance": {
     "title": "Finance",
