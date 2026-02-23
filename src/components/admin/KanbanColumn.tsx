@@ -9,10 +9,31 @@ interface KanbanColumnProps {
   label: string;
   requests: RequestData[];
   onEdit: (request: RequestData) => void;
+  dropZoneMode?: boolean;
 }
 
-export function KanbanColumn({ status, label, requests, onEdit }: KanbanColumnProps) {
+export function KanbanColumn({ status, label, requests, onEdit, dropZoneMode = false }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
+
+  if (dropZoneMode) {
+    return (
+      <div className="flex flex-col w-64 shrink-0">
+        <div
+          ref={setNodeRef}
+          className={`
+            flex-1 rounded-lg flex items-center justify-center min-h-[200px] transition-all duration-200
+            ${isOver
+              ? 'bg-accent/50 border-2 border-solid border-primary'
+              : 'bg-accent/20 border-2 border-dashed border-accent/40'}
+          `}
+        >
+          <span className={`text-lg font-bold transition-colors duration-200 ${isOver ? 'text-primary' : 'text-muted-foreground'}`}>
+            {label}
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col w-64 shrink-0">
