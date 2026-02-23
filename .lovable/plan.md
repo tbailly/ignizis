@@ -1,55 +1,62 @@
-## Ajout de l'email du demandeur sur les requests
 
-### 1. Migration base de donnees
+## Affichage des demandes utilisateur sur la page Legal
 
-Ajouter une colonne `requester_email` (text, nullable) a la table `requests` :
+### 1. Migration SQL : politiques RLS pour les utilisateurs
 
-```sql
-ALTER TABLE public.requests ADD COLUMN requester_email text;
-```
+Actuellement, seuls les admins peuvent lire/creer des requests. Il faut ajouter deux politiques RLS :
 
-### 2. `RequestFormDialog.tsx`
-
-- Ajouter un state `requesterEmail`
-- Ajouter un state `suggestedEmails` alimente par une requete quand `companyId` change : fetcher les emails des utilisateurs lies a l'entreprise via `user_companies` + `users`
-- Apres le champ entreprise, afficher un champ email avec un Combobox (meme pattern que le selecteur d'entreprise) :
-  - Les emails des utilisateurs de l'entreprise sont suggeres dans la liste
-  - L'utilisateur peut taper un email libre (le champ accepte la saisie directe)
-  - Le champ n'apparait que si `companyId` est renseigne
-- Inclure `requester_email` dans l'appel `insert` uniquement, pas dans `update`
-- Ajouter `requester_email` a la validation (`canSave` : email optionnel ou obligatoire selon le besoin -- ici optionnel)
-
-Requete pour les suggestions :
+- **SELECT** : les membres d'une entreprise peuvent voir les requests de leur entreprise
+- **INSERT** : les membres d'une entreprise peuvent creer des requests pour leur entreprise
 
 ```sql
-SELECT u.email FROM users u
-JOIN user_companies uc ON uc.user_id = u.id
-WHERE uc.company_id = :companyId
+CREATE POLICY "Members can view company requests"
+  ON public.requests FOR SELECT
+  USING (is_member_of_company(company_id));
+
+CREATE POLICY "Members can insert company requests"
+  ON public.requests FOR INSERT
+  WITH CHECK (is_member_of_company(company_id));
 ```
 
-- En mode edition, pre-remplir le champ avec `request.requester_email`  et le rendre `disabled`  en permanence
+### 2. Page `Juridique.tsx`
 
-### 3. `RequestData` (interface)
+Remplacer le placeholder actuel (icone Scale + texte vide) par :
 
-Ajouter `requester_email: string | null` a l'interface `RequestData`.
+- **Banniere disclaimer** : un composant `Alert` en haut de page expliquant que les demandes sont suivies ici mais que les echanges ont lieu par email
+- **Bouton "Nouvelle demande"** : ouvre une modale simplifiee (titre + description uniquement ; l'entreprise et l'email du demandeur sont deduits automatiquement)
+- **DataTable compacte** des requests de l'entreprise en cours, avec colonnes :
+  - Numero unique (`#1234`)
+  - Statut (badge colore)
+  - Titre
+  - Description (tronquee)
 
-### 4. `AdminRequests.tsx`
+La modale de creation :
+- Champs : titre (obligatoire), description (optionnel)
+- A la soumission : genere un `request_number` unique, insere la request avec `company_id` = entreprise en cours, `requester_email` = email de l'utilisateur connecte, `status` = `new`
 
-Ajouter `requester_email` au `select` de la query pour le charger depuis la base.
+### 3. Traductions (`en.json`)
 
-### 5. `KanbanCard.tsx`
+Ajout de cles dans la section `legal` :
 
-Optionnel : afficher l'email du demandeur sur la carte si present.
+| Cle | Valeur |
+|-----|--------|
+| `legal.disclaimer` | `You can track your requests here. All exchanges take place by email.` |
+| `legal.newRequest` | `New request` |
+| `legal.createTitle` | `Create a request` |
+| `legal.createDesc` | `Describe your request. We will get back to you by email.` |
+| `legal.createSuccess` | `Request created successfully.` |
+| `legal.noRequests` | `No requests yet.` |
+| `legal.columns.number` | `#` |
+| `legal.columns.status` | `Status` |
+| `legal.columns.title` | `Title` |
+| `legal.columns.description` | `Description` |
 
----
+### 4. Resume technique
 
-### Resume technique
+| Element | Modification |
+|---------|-------------|
+| Migration SQL | 2 nouvelles politiques RLS sur `requests` (SELECT + INSERT pour les membres) |
+| `Juridique.tsx` | Banniere disclaimer, datatable des requests, modale de creation |
+| `en.json` | Nouvelles cles de traduction `legal.*` |
 
-
-| Element                 | Modification                                                                                                 |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Migration SQL           | `ALTER TABLE requests ADD COLUMN requester_email text`                                                       |
-| `RequestData` interface | Ajouter `requester_email: string / null`                                                                     |
-| `AdminRequests.tsx`     | Ajouter `requester_email` au select                                                                          |
-| `RequestFormDialog.tsx` | Nouveau champ email avec suggestions basees sur les utilisateurs de l'entreprise ; inclus dans insert/update |
-| `KanbanCard.tsx`        | (optionnel) Afficher l'email sur la carte                                                                    |
+Aucun nouveau fichier cree en dehors de la migration. La logique de generation du `request_number` reutilise la fonction existante dans `RequestFormDialog.tsx`.
