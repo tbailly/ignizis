@@ -6,7 +6,7 @@ import {
   DragStartEvent,
   PointerSensor,
   KeyboardSensor,
-  closestCorners,
+  pointerWithin,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
@@ -138,7 +138,7 @@ export function KanbanBoard({ requests: initialRequests, onDataChange, onEdit }:
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={pointerWithin}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
