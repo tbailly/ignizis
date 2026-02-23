@@ -18,16 +18,23 @@ export function KanbanColumn({ status, label, requests, onEdit, dropZoneMode = f
   if (dropZoneMode) {
     return (
       <div className="flex flex-col w-64 shrink-0">
+        <div className="flex items-center justify-between mb-3 px-1">
+          <span className="text-sm font-semibold text-foreground truncate">{label}</span>
+          <Badge variant="secondary" className="ml-2 shrink-0 text-xs">
+            {requests.length}
+          </Badge>
+        </div>
+
         <div
           ref={setNodeRef}
           className={`
-            flex-1 rounded-lg flex items-center justify-center min-h-[200px] transition-all duration-200
+            flex-1 rounded-lg flex items-center justify-center min-h-[200px] border-2
             ${isOver
-              ? 'bg-accent/50 border-2 border-solid border-primary'
-              : 'bg-accent/20 border-2 border-dashed border-accent/40'}
+              ? 'bg-accent/50 border-solid border-primary'
+              : 'bg-accent/20 border-dashed border-accent/40'}
           `}
         >
-          <span className={`text-lg font-bold transition-colors duration-200 ${isOver ? 'text-primary' : 'text-muted-foreground'}`}>
+          <span className={`text-lg font-bold ${isOver ? 'text-primary' : 'text-muted-foreground'}`}>
             {label}
           </span>
         </div>
