@@ -1,52 +1,58 @@
-## Ajout de la ville de naissance des mandataires sociaux
+## Ajout de l'URL du logiciel de comptabilite
 
 ### 1. Migration base de donnees
 
-Ajouter une colonne `birth_city` (TEXT, NOT NULL) a la table `company_officers`. La valeur par defaut `' '` est appliquee a toutes les lignes existantes.
+Ajouter une colonne `accounting_software_url` (TEXT, nullable) a la table `companies`.
 
 ```sql
-ALTER TABLE public.company_officers
-  ADD COLUMN birth_city text NOT NULL;
+ALTER TABLE public.companies
+  ADD COLUMN accounting_software_url text;
 ```
 
-### 2. Table admin des mandataires (`src/pages/admin/AdminOfficers.tsx`)
+### 2. Contexte entreprise (`src/contexts/CompanyContext.tsx`)
 
-- Ajouter `birth_city` a l'interface `OfficerWithCompanies`
-- Ajouter une colonne "Birth city" dans le tableau, apres "Date of birth"
-- Mettre a jour le `colSpan` de 6 a 7
-- Ajouter la cle i18n `admin.officers.birthCity`
+- Ajouter `accounting_software_url: string | null` a l'interface `Company`
+- L'inclure dans le SELECT de la query existante
 
-### 3. Formulaire de creation/modification (`src/components/admin/OfficerFormDialog.tsx`)
+### 3. Formulaire admin (`src/components/admin/CompanyFormDialog.tsx`)
 
-- Ajouter un state `birthCity` initialise depuis `officer.birth_city` ou vide
-- Ajouter un champ Input apres la date de naissance avec le label "Birth city"
-- Inclure `birth_city` dans les operations INSERT et UPDATE
-- Ajouter `birth_city` a la validation (champ obligatoire, non vide)
+- Ajouter `accounting_software_url` a l'interface `CompanyData`
+- Ajouter un state `accountingSoftwareUrl` initialise depuis `company.accounting_software_url`
+- Ajouter un champ Input de type URL apres la section "Permissions > Accounting", avec le label "Accounting software URL"
+- Inclure `accounting_software_url` dans le payload de sauvegarde
 
-### 4. Page entreprise (`src/pages/Entreprise.tsx`)
+### 4. Page admin companies (`src/pages/admin/AdminCompanies.tsx`)
 
-- Ajouter `birth_city` a l'interface `Officer` et au SELECT de la query
-- Remplacer la ligne date de naissance par le format : `Born on {month} {year} in {city}`
-  - Exemple : "Born on January 1990 in Paris"
-  - Si pas de date : afficher uniquement "Born in {city}" ou "—"
-- Ajouter la cle i18n `company.bornOnIn` avec la valeur `"Born on {date} in {city}"`
+- Ajouter `accounting_software_url` a l'interface `CompanyWithUsers` et au SELECT
 
-### 5. Traductions (`src/i18n/locales/en.json`)
+### 5. Page Comptabilite (`src/pages/Comptabilite.tsx`)
+
+Quand `hasPermission('accounting')` est vrai, remplacer le placeholder actuel par :
+
+- Un texte explicatif invitant l'utilisateur a acceder a son logiciel de comptabilite
+- Un gros bouton (taille `lg`) avec une icone `ExternalLink` qui ouvre `currentCompany.company.accounting_software_url` dans un nouvel onglet (`window.open` ou `<a target="_blank">`)
+- Si l'URL n'est pas definie, afficher le placeholder actuel (icone Calculator + message generique)
+
+### 6. Traductions (`src/i18n/locales/en.json`)
 
 Nouvelles cles :
 
 ```json
-"admin.officers.birthCity": "Birth city"
-"company.bornOnIn": "Born on {date} in {city}"
+"admin.companies.accountingSoftwareUrl": "Accounting software URL",
+"admin.companies.accountingSoftwareUrlPlaceholder": "https://...",
+"accounting.softwareDescription": "Access your company's accounting software to manage your finances.",
+"accounting.openSoftware": "Open accounting software",
+"accounting.noSoftwareUrl": "No accounting software has been configured for this company."
 ```
 
 ### Recapitulatif
 
 
-| Element                 | Action                                            |
-| ----------------------- | ------------------------------------------------- |
-| Migration SQL           | +colonne `birth_city` TEXT NOT NULL               |
-| `AdminOfficers.tsx`     | +colonne "Birth city" dans le tableau             |
-| `OfficerFormDialog.tsx` | +champ Input "Birth city" apres date de naissance |
-| `Entreprise.tsx`        | Format "Born on January 1990 in Paris"            |
-| `en.json`               | +cles i18n                                        |
+| Element                 | Action                                              |
+| ----------------------- | --------------------------------------------------- |
+| Migration SQL           | +colonne `accounting_software_url` TEXT nullable    |
+| `CompanyContext.tsx`    | +champ dans l'interface Company + SELECT            |
+| `CompanyFormDialog.tsx` | +champ Input URL dans le formulaire                 |
+| `AdminCompanies.tsx`    | +champ dans l'interface + SELECT                    |
+| `Comptabilite.tsx`      | Affichage conditionnel avec bouton vers le logiciel |
+| `en.json`               | +cles i18n                                          |
