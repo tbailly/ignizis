@@ -135,6 +135,18 @@ export default function Juridique() {
         });
 
       if (error) throw error;
+
+      // Fire-and-forget notification email
+      supabase.functions.invoke('notify-new-request', {
+        body: {
+          request_number: requestNumber,
+          title: newTitle.trim(),
+          description: newDescription.trim() || null,
+          company_name: currentCompany?.company?.name || '',
+          requester_email: profile?.email || null,
+        },
+      }).catch((err) => console.error('Notification error:', err));
+
       toast.success(t('legal.createSuccess'));
       setCreateOpen(false);
       setNewTitle('');
