@@ -29,13 +29,16 @@ serve(async (req) => {
       body: JSON.stringify({
         from: "Portail Entreprises <noreply@liste-naissance.thomasbs.fr>",
         to: [NOTIFICATION_EMAIL],
-        template_id: "admin-new-request",
-        data: {
-          REQUESTER_EMAIL: requester_email || "Non renseigné",
-          REQUEST_ID: String(request_number),
-          REQUEST_TITLE: title || "",
-          COMPANY_NAME: company_name || "",
-          REQUEST_MESSAGE: description || "Aucune description",
+        reply_to: requester_email || NOTIFICATION_EMAIL,
+        template: {
+          id: "bb34b22d-bee5-4773-9299-01a4af82ab88",
+          variables: {
+            REQUESTER_EMAIL: requester_email || "Non renseigné",
+            REQUEST_ID: String(request_number),
+            REQUEST_TITLE: title || "",
+            COMPANY_NAME: company_name || "",
+            REQUEST_MESSAGE: description || "Aucune description",
+          },
         },
       }),
     });
