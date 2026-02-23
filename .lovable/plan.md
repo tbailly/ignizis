@@ -1,58 +1,59 @@
-## Ajout de l'URL du logiciel de comptabilite
 
-### 1. Migration base de donnees
 
-Ajouter une colonne `accounting_software_url` (TEXT, nullable) a la table `companies`.
+## Drag & Drop : colonnes en mode "drop zone" (sauf colonne d'origine)
 
-```sql
-ALTER TABLE public.companies
-  ADD COLUMN accounting_software_url text;
+### Comportement
+
+Pendant un drag, toutes les colonnes **sauf celle d'origine** de la carte se transforment en zones de drop visuelles. La colonne d'origine garde son affichage normal (cartes visibles, reordonnement possible).
+
+### Modifications
+
+**1. `KanbanBoard.tsx`** : passer le statut d'origine aux colonnes
+
+- Deriver `draggingFromStatus` depuis `activeRequest?.status ?? null`
+- Passer a chaque `KanbanColumn` une prop `dropZoneMode` : `true` si un drag est actif ET que le statut de la colonne est different du statut d'origine, `false` sinon
+
+```text
+dropZoneMode={!!activeRequest && status !== activeRequest.status}
 ```
 
-### 2. Contexte entreprise (`src/contexts/CompanyContext.tsx`)
+**2. `KanbanColumn.tsx`** : double mode d'affichage
 
-- Ajouter `accounting_software_url: string | null` a l'interface `Company`
-- L'inclure dans le SELECT de la query existante
+Ajouter une prop `dropZoneMode?: boolean` (defaut `false`).
 
-### 3. Formulaire admin (`src/components/admin/CompanyFormDialog.tsx`)
+Quand `dropZoneMode` est `true` :
+- Masquer le header (label + badge) et les cartes
+- Afficher a la place une grande zone centree occupant toute la hauteur avec :
+  - Le label du statut en gros (`text-lg font-bold text-muted-foreground`)
+  - Fond `bg-accent/20` et bordure en pointilles (`border-2 border-dashed border-accent/40`)
+  - Au hover (`isOver`) : fond `bg-accent/50`, bordure pleine et coloree (`border-solid border-primary`), texte en `text-primary`
+  - Transition fluide (`transition-all duration-200`)
 
-- Ajouter `accounting_software_url` a l'interface `CompanyData`
-- Ajouter un state `accountingSoftwareUrl` initialise depuis `company.accounting_software_url`
-- Ajouter un champ Input de type URL apres la section "Permissions > Accounting", avec le label "Accounting software URL"
-- Inclure `accounting_software_url` dans le payload de sauvegarde
+Quand `dropZoneMode` est `false` : comportement actuel inchange (header, cartes, SortableContext).
 
-### 4. Page admin companies (`src/pages/admin/AdminCompanies.tsx`)
+### Rendu visuel
 
-- Ajouter `accounting_software_url` a l'interface `CompanyWithUsers` et au SELECT
+```text
+  Drag depuis "New Request" :
 
-### 5. Page Comptabilite (`src/pages/Comptabilite.tsx`)
-
-Quand `hasPermission('accounting')` est vrai, remplacer le placeholder actuel par :
-
-- Un texte explicatif invitant l'utilisateur a acceder a son logiciel de comptabilite
-- Un gros bouton (taille `lg`) avec une icone `ExternalLink` qui ouvre `currentCompany.company.accounting_software_url` dans un nouvel onglet (`window.open` ou `<a target="_blank">`)
-- Si l'URL n'est pas definie, afficher le placeholder actuel (icone Calculator + message generique)
-
-### 6. Traductions (`src/i18n/locales/en.json`)
-
-Nouvelles cles :
-
-```json
-"admin.companies.accountingSoftwareUrl": "Accounting software URL",
-"admin.companies.accountingSoftwareUrlPlaceholder": "https://...",
-"accounting.softwareDescription": "Access your company's accounting software to manage your finances.",
-"accounting.openSoftware": "Open accounting software",
-"accounting.noSoftwareUrl": "No accounting software has been configured for this company."
+  +-----------+  +----------+  +----------+
+  | New Req [2]| | ........ |  | ........ |
+  |-----------|  | .      . |  | .      . |
+  | Card B    |  | . Quote. |  | . In   . |
+  |           |  | . Pend . |  | . Prog . |
+  |           |  | .      . |  | .      . |
+  +-----------+  | ........ |  | ........ |
+       ^         +----------+  +----------+
+  colonne             ^             ^
+  d'origine      drop zones (border-dashed)
+  inchangee      hover => bg-accent/50 + border-solid
 ```
 
-### Recapitulatif
+### Resume technique
 
+| Fichier | Changement |
+|---------|-----------|
+| `KanbanBoard.tsx` | Passer `dropZoneMode={!!activeRequest && status !== activeRequest.status}` a chaque colonne |
+| `KanbanColumn.tsx` | Prop `dropZoneMode` : si true, afficher zone de drop centree avec label ; sinon affichage normal |
+| `KanbanCard.tsx` | Aucun changement |
 
-| Element                 | Action                                              |
-| ----------------------- | --------------------------------------------------- |
-| Migration SQL           | +colonne `accounting_software_url` TEXT nullable    |
-| `CompanyContext.tsx`    | +champ dans l'interface Company + SELECT            |
-| `CompanyFormDialog.tsx` | +champ Input URL dans le formulaire                 |
-| `AdminCompanies.tsx`    | +champ dans l'interface + SELECT                    |
-| `Comptabilite.tsx`      | Affichage conditionnel avec bouton vers le logiciel |
-| `en.json`               | +cles i18n                                          |
