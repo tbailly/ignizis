@@ -150,6 +150,7 @@ export function KanbanBoard({ requests: initialRequests, onDataChange, onEdit }:
             label={t(`admin.requests.columns.${status}`)}
             requests={getColumnRequests(status)}
             onEdit={onEdit}
+            dropZoneMode={!!activeRequest && status !== activeRequest.status}
           />
         ))}
       </div>
