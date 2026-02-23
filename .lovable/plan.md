@@ -1,59 +1,25 @@
 
 
-## Drag & Drop : colonnes en mode "drop zone" (sauf colonne d'origine)
+## Fix : detection de drop zone au curseur
 
-### Comportement
+### Probleme
 
-Pendant un drag, toutes les colonnes **sauf celle d'origine** de la carte se transforment en zones de drop visuelles. La colonne d'origine garde son affichage normal (cartes visibles, reordonnement possible).
+L'algorithme de collision `closestCorners` calcule la distance entre les coins du draggable et les coins des droppables. Quand la colonne d'origine contient encore des items sortables, ceux-ci "captent" la collision et empechent les colonnes adjacentes d'etre detectees facilement.
 
-### Modifications
+### Solution
 
-**1. `KanbanBoard.tsx`** : passer le statut d'origine aux colonnes
+Remplacer `closestCorners` par `pointerWithin` dans `KanbanBoard.tsx`. Cet algorithme detecte le droppable **sous le pointeur**, ce qui fait que des que le curseur entre dans une colonne, elle est immediatement selectionnee.
 
-- Deriver `draggingFromStatus` depuis `activeRequest?.status ?? null`
-- Passer a chaque `KanbanColumn` une prop `dropZoneMode` : `true` si un drag est actif ET que le statut de la colonne est different du statut d'origine, `false` sinon
+### Modification
 
-```text
-dropZoneMode={!!activeRequest && status !== activeRequest.status}
-```
+**`src/components/admin/KanbanBoard.tsx`** :
 
-**2. `KanbanColumn.tsx`** : double mode d'affichage
-
-Ajouter une prop `dropZoneMode?: boolean` (defaut `false`).
-
-Quand `dropZoneMode` est `true` :
-- Masquer le header (label + badge) et les cartes
-- Afficher a la place une grande zone centree occupant toute la hauteur avec :
-  - Le label du statut en gros (`text-lg font-bold text-muted-foreground`)
-  - Fond `bg-accent/20` et bordure en pointilles (`border-2 border-dashed border-accent/40`)
-  - Au hover (`isOver`) : fond `bg-accent/50`, bordure pleine et coloree (`border-solid border-primary`), texte en `text-primary`
-  - Transition fluide (`transition-all duration-200`)
-
-Quand `dropZoneMode` est `false` : comportement actuel inchange (header, cartes, SortableContext).
-
-### Rendu visuel
-
-```text
-  Drag depuis "New Request" :
-
-  +-----------+  +----------+  +----------+
-  | New Req [2]| | ........ |  | ........ |
-  |-----------|  | .      . |  | .      . |
-  | Card B    |  | . Quote. |  | . In   . |
-  |           |  | . Pend . |  | . Prog . |
-  |           |  | .      . |  | .      . |
-  +-----------+  | ........ |  | ........ |
-       ^         +----------+  +----------+
-  colonne             ^             ^
-  d'origine      drop zones (border-dashed)
-  inchangee      hover => bg-accent/50 + border-solid
-```
-
-### Resume technique
+- Remplacer l'import `closestCorners` par `pointerWithin`
+- Mettre a jour la prop `collisionDetection` du `DndContext`
 
 | Fichier | Changement |
 |---------|-----------|
-| `KanbanBoard.tsx` | Passer `dropZoneMode={!!activeRequest && status !== activeRequest.status}` a chaque colonne |
-| `KanbanColumn.tsx` | Prop `dropZoneMode` : si true, afficher zone de drop centree avec label ; sinon affichage normal |
-| `KanbanCard.tsx` | Aucun changement |
+| `KanbanBoard.tsx` | `closestCorners` remplace par `pointerWithin` (import + usage) |
+
+Aucun autre fichier modifie. Le comportement de reordonnement dans la colonne d'origine reste fonctionnel car `pointerWithin` detecte aussi les items sortables quand le curseur est dessus.
 
