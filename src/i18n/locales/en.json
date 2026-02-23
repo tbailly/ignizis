@@ -319,7 +319,19 @@
     "activateDisclaimer": "By activating this option, you will gain access to the legal section including document management and compliance features for this company. This action can be reversed by an administrator at any time.",
     "activateCheckbox": "I understand and wish to activate the Legal option for this company.",
     "activateConfirm": "Activate",
-    "activateSuccess": "Legal option activated successfully."
+    "activateSuccess": "Legal option activated successfully.",
+    "disclaimer": "You can track your requests here. All exchanges take place by email.",
+    "newRequest": "New request",
+    "createTitle": "Create a request",
+    "createDesc": "Describe your request. We will get back to you by email.",
+    "createSuccess": "Request created successfully.",
+    "noRequests": "No requests yet.",
+    "columns": {
+      "number": "#",
+      "status": "Status",
+      "title": "Title",
+      "description": "Description"
+    }
   },
   "accounting": {
     "title": "Accounting",
