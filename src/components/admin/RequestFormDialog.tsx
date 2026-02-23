@@ -224,46 +224,54 @@ export function RequestFormDialog({ request, companies, onClose, onSuccess, onDe
           {/* Company */}
           <div className="space-y-2">
             <Label>{t('admin.requests.company')}</Label>
-            <Popover open={companyOpen} onOpenChange={setCompanyOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={companyOpen}
-                  className="w-full justify-between font-normal"
-                >
-                  <span className={cn('truncate', !selectedCompany && 'text-muted-foreground')}>
-                    {selectedCompany ? selectedCompany.name : t('admin.requests.companyPlaceholder')}
-                  </span>
-                  <ChevronsUpDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                <Command>
-                  <CommandInput placeholder="Search..." />
-                  <CommandList>
-                    <CommandEmpty>No company found.</CommandEmpty>
-                    <CommandGroup>
-                      {companies.map((c) => (
-                        <CommandItem
-                          key={c.id}
-                          value={c.name}
-                          onSelect={() => {
-                            setCompanyId(c.id);
-                            setCompanyOpen(false);
-                          }}
-                        >
-                          <Check
-                            className={cn('mr-2 h-4 w-4 shrink-0', companyId === c.id ? 'opacity-100' : 'opacity-0')}
-                          />
-                          <span className="truncate">{c.name}</span>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
+            {isEditMode ? (
+              <Input
+                value={selectedCompany?.name ?? ''}
+                disabled
+                className="opacity-70"
+              />
+            ) : (
+              <Popover open={companyOpen} onOpenChange={setCompanyOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={companyOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    <span className={cn('truncate', !selectedCompany && 'text-muted-foreground')}>
+                      {selectedCompany ? selectedCompany.name : t('admin.requests.companyPlaceholder')}
+                    </span>
+                    <ChevronsUpDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search..." />
+                    <CommandList>
+                      <CommandEmpty>No company found.</CommandEmpty>
+                      <CommandGroup>
+                        {companies.map((c) => (
+                          <CommandItem
+                            key={c.id}
+                            value={c.name}
+                            onSelect={() => {
+                              setCompanyId(c.id);
+                              setCompanyOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn('mr-2 h-4 w-4 shrink-0', companyId === c.id ? 'opacity-100' : 'opacity-0')}
+                            />
+                            <span className="truncate">{c.name}</span>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            )}
           </div>
 
           {/* Requester email — visible when company is selected */}
