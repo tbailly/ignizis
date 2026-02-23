@@ -61,6 +61,7 @@ export type Database = {
       }
       company_officers: {
         Row: {
+          birth_city: string
           created_at: string
           date_of_birth: string | null
           first_name: string
@@ -73,6 +74,7 @@ export type Database = {
           secondary_id_document_id: string | null
         }
         Insert: {
+          birth_city?: string
           created_at?: string
           date_of_birth?: string | null
           first_name: string
@@ -85,6 +87,7 @@ export type Database = {
           secondary_id_document_id?: string | null
         }
         Update: {
+          birth_city?: string
           created_at?: string
           date_of_birth?: string | null
           first_name?: string

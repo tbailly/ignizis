@@ -52,6 +52,7 @@ export function OfficerFormDialog({ officer, onClose, onSuccess }: OfficerFormDi
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
+  const [birthCity, setBirthCity] = useState('');
   const [position, setPosition] = useState('');
   const [selectedCompanyIds, setSelectedCompanyIds] = useState<string[]>([]);
   const [allCompanies, setAllCompanies] = useState<{ id: string; name: string }[]>([]);
@@ -66,6 +67,7 @@ export function OfficerFormDialog({ officer, onClose, onSuccess }: OfficerFormDi
       setFirstName(officer.first_name);
       setLastName(officer.last_name);
       setDateOfBirth(isoToDisplay(officer.date_of_birth));
+      setBirthCity((officer as any).birth_city || '');
       setPosition(officer.position);
       setSelectedCompanyIds(officer.companies.map(c => c.id));
       setPassportDocId(officer.passport_document_id ?? null);
@@ -75,6 +77,7 @@ export function OfficerFormDialog({ officer, onClose, onSuccess }: OfficerFormDi
       setFirstName('');
       setLastName('');
       setDateOfBirth('');
+      setBirthCity('');
       setPosition('');
       setSelectedCompanyIds([]);
       setPassportDocId(null);
@@ -92,7 +95,7 @@ export function OfficerFormDialog({ officer, onClose, onSuccess }: OfficerFormDi
   }, [officer]);
 
   const handleSave = async () => {
-    if (!firstName.trim() || !lastName.trim() || !position.trim()) return;
+    if (!firstName.trim() || !lastName.trim() || !position.trim() || !birthCity.trim()) return;
     setSaving(true);
 
     try {
@@ -110,9 +113,10 @@ export function OfficerFormDialog({ officer, onClose, onSuccess }: OfficerFormDi
             first_name: firstName.trim(),
             last_name: lastName.trim(),
             date_of_birth: displayToIso(dateOfBirth),
+            birth_city: birthCity.trim(),
             position: position.trim(),
             ...docFields,
-          })
+          } as any)
           .eq('id', officer.id);
 
         if (error) throw error;
@@ -147,9 +151,10 @@ export function OfficerFormDialog({ officer, onClose, onSuccess }: OfficerFormDi
             first_name: firstName.trim(),
             last_name: lastName.trim(),
             date_of_birth: displayToIso(dateOfBirth),
+            birth_city: birthCity.trim(),
             position: position.trim(),
             ...docFields,
-          })
+          } as any)
           .select('id')
           .single();
 
@@ -225,6 +230,15 @@ export function OfficerFormDialog({ officer, onClose, onSuccess }: OfficerFormDi
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="officer-birth-city">{t('admin.officers.birthCity')}</Label>
+            <Input
+              id="officer-birth-city"
+              value={birthCity}
+              onChange={(e) => setBirthCity(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="officer-position">{t('admin.officers.position')}</Label>
             <Input
               id="officer-position"
@@ -268,7 +282,7 @@ export function OfficerFormDialog({ officer, onClose, onSuccess }: OfficerFormDi
           <Button variant="outline" onClick={onClose} disabled={saving}>
             {t('common.cancel')}
           </Button>
-          <Button onClick={handleSave} disabled={saving || !firstName.trim() || !lastName.trim() || !position.trim()}>
+          <Button onClick={handleSave} disabled={saving || !firstName.trim() || !lastName.trim() || !position.trim() || !birthCity.trim()}>
             {saving ? t('common.saving') : t('common.save')}
           </Button>
         </DialogFooter>

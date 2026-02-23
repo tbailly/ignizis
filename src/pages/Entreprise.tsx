@@ -14,6 +14,7 @@ interface Officer {
   last_name: string;
   first_name: string;
   date_of_birth: string | null;
+  birth_city: string;
   position: string;
   is_compliant: boolean;
 }
@@ -72,7 +73,7 @@ export default function Entreprise() {
         // Load officers assigned to this company via junction table
         const { data, error } = await (supabase
           .from('officer_company_assignments' as any)
-          .select('officer_id, company_officers:officer_id(id, last_name, first_name, date_of_birth, position, is_compliant)')
+          .select('officer_id, company_officers:officer_id(id, last_name, first_name, date_of_birth, birth_city, position, is_compliant)')
           .eq('company_id', currentCompany.company_id) as any);
 
         if (error) {
@@ -192,7 +193,13 @@ export default function Entreprise() {
                       </div>
                       <p className="text-sm text-muted-foreground">{officer.position}</p>
                       <p className="text-sm text-muted-foreground">
-                        {officer.date_of_birth ? isoToMonthYear(officer.date_of_birth) : '—'}
+                        {officer.date_of_birth && officer.birth_city?.trim()
+                          ? `Born on ${isoToMonthYear(officer.date_of_birth)} in ${officer.birth_city.trim()}`
+                          : officer.date_of_birth
+                            ? `Born on ${isoToMonthYear(officer.date_of_birth)}`
+                            : officer.birth_city?.trim()
+                              ? `Born in ${officer.birth_city.trim()}`
+                              : '—'}
                       </p>
                     </div>
                   </div>
