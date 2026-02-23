@@ -137,6 +137,7 @@
       "noCompanies": "No company assigned",
       "selectCompanies": "Select companies",
       "dateOfBirth": "Date of birth",
+      "birthCity": "Birth city",
       "position": "Position",
       "actions": "Actions",
       "firstName": "First name",
@@ -286,6 +287,7 @@
     "title": "Company",
     "details": "Company details",
     "copied": "Copied to clipboard",
+    "bornOnIn": "Born on {date} in {city}",
     "sectionTitle": "Company section",
     "sectionDescription": "This section will contain company information and documents."
   },

@@ -17,6 +17,7 @@ interface OfficerWithCompanies {
   first_name: string;
   last_name: string;
   date_of_birth: string | null;
+  birth_city: string;
   position: string;
   is_compliant: boolean;
   companies: { id: string; name: string }[];
@@ -44,7 +45,7 @@ export default function AdminOfficers() {
     queryFn: async () => {
       const { data: officersData, error: officersError } = await supabase
         .from('company_officers')
-        .select('id, first_name, last_name, date_of_birth, position, is_compliant, passport_document_id, secondary_id_document_id, power_of_attorney_document_id')
+        .select('id, first_name, last_name, date_of_birth, birth_city, position, is_compliant, passport_document_id, secondary_id_document_id, power_of_attorney_document_id')
         .order('last_name');
 
       if (officersError) throw officersError;
@@ -136,6 +137,7 @@ export default function AdminOfficers() {
               <TableHead>{t('admin.officers.fullName')}</TableHead>
               <TableHead>{t('admin.officers.companies')}</TableHead>
               <TableHead>{t('admin.officers.dateOfBirth')}</TableHead>
+              <TableHead>{t('admin.officers.birthCity')}</TableHead>
               <TableHead>{t('admin.officers.position')}</TableHead>
               <TableHead>{t('admin.officers.status')}</TableHead>
               <TableHead className="w-[100px]">{t('admin.officers.actions')}</TableHead>
@@ -144,13 +146,13 @@ export default function AdminOfficers() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   {t('common.loading')}
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   {t('admin.officers.noOfficers')}
                 </TableCell>
               </TableRow>
@@ -174,6 +176,7 @@ export default function AdminOfficers() {
                     )}
                   </TableCell>
                   <TableCell>{isoToDisplay(officer.date_of_birth)}</TableCell>
+                  <TableCell>{officer.birth_city?.trim() || '—'}</TableCell>
                   <TableCell>{officer.position}</TableCell>
                   <TableCell>
                     {officer.is_compliant ? (
