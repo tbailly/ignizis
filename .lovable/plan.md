@@ -1,100 +1,52 @@
-
-
-## Documents : appartenance entreprise + page utilisateur "Contracts and Invoices"
+## Ajout de la ville de naissance des mandataires sociaux
 
 ### 1. Migration base de donnees
 
-Ajouter une colonne `company_id` (nullable, FK vers `companies.id ON DELETE SET NULL`) a la table `documents`.
-
-Ajouter une politique RLS SELECT pour les membres de l'entreprise :
+Ajouter une colonne `birth_city` (TEXT, NOT NULL) a la table `company_officers`. La valeur par defaut `' '` est appliquee a toutes les lignes existantes.
 
 ```sql
-ALTER TABLE public.documents
-  ADD COLUMN company_id uuid REFERENCES public.companies(id) ON DELETE SET NULL;
-
-CREATE POLICY "Members can view company documents"
-  ON public.documents FOR SELECT
-  TO authenticated
-  USING (company_id IS NOT NULL AND is_member_of_company(company_id));
+ALTER TABLE public.company_officers
+  ADD COLUMN birth_city text NOT NULL;
 ```
 
-### 2. Admin : colonne "Company" dans la table des documents
+### 2. Table admin des mandataires (`src/pages/admin/AdminOfficers.tsx`)
 
-**Fichier : `src/pages/admin/AdminDocuments.tsx`**
+- Ajouter `birth_city` a l'interface `OfficerWithCompanies`
+- Ajouter une colonne "Birth city" dans le tableau, apres "Date of birth"
+- Mettre a jour le `colSpan` de 6 a 7
+- Ajouter la cle i18n `admin.officers.birthCity`
 
-- Ajouter `company_id` et `company_name` au `DocumentRow` interface
-- Dans la query, faire un join sur `companies` pour recuperer le nom : `select('*, companies:company_id(name)')`
-- Ajouter une colonne "Company" dans le tableau entre "Tags" et "Upload date", affichant le nom de l'entreprise ou "-"
-- Mettre a jour les `colSpan` de 6 a 7
+### 3. Formulaire de creation/modification (`src/components/admin/OfficerFormDialog.tsx`)
 
-### 3. Admin : champ "Company" dans les dialogues d'edition et d'upload
+- Ajouter un state `birthCity` initialise depuis `officer.birth_city` ou vide
+- Ajouter un champ Input apres la date de naissance avec le label "Birth city"
+- Inclure `birth_city` dans les operations INSERT et UPDATE
+- Ajouter `birth_city` a la validation (champ obligatoire, non vide)
 
-**Fichier : `src/components/admin/DocumentEditDialog.tsx`**
+### 4. Page entreprise (`src/pages/Entreprise.tsx`)
 
-- Ajouter un champ `company_id` a l'interface `DocumentData`
-- Ajouter un state `companyId` initialise depuis `document.company_id`
-- Charger la liste des entreprises via une query sur `companies` (id, name)
-- Afficher un dropdown searchable (reutiliser le pattern Combobox/Popover existant comme dans `DocumentSelect`) avec :
-  - Recherche par nom d'entreprise
-  - Option pour effacer la selection (bouton X)
-- Inclure `company_id` dans l'update
+- Ajouter `birth_city` a l'interface `Officer` et au SELECT de la query
+- Remplacer la ligne date de naissance par le format : `Born on {month} {year} in {city}`
+  - Exemple : "Born on January 1990 in Paris"
+  - Si pas de date : afficher uniquement "Born in {city}" ou "—"
+- Ajouter la cle i18n `company.bornOnIn` avec la valeur `"Born on {date} in {city}"`
 
-**Fichier : `src/components/admin/DocumentUploadDialog.tsx`**
-
-- Ajouter `companyId` au `FileEntry` interface
-- Ajouter le meme dropdown searchable dans chaque fiche de document
-- Inclure `company_id` dans l'insert
-
-### 4. Page utilisateur "Contrats" (My contracts and invoices)
-
-**Fichier : `src/pages/Contrats.tsx`**
-
-Remplacer le placeholder actuel par une page complete :
-
-- Charger les documents lies a `currentCompany.company_id` via `supabase.from('documents').select('*').eq('company_id', companyId).order('created_at', { ascending: false })`
-- Diviser en 2 sections avec des Card + CardHeader :
-  - **Invoices** : filtrer `document_type === 'invoice'`
-  - **Contracts** : filtrer `document_type === 'contract'`
-- Chaque section affiche un tableau avec les colonnes : Display name, Upload date, Actions
-- Actions :
-  - Bouton Eye (preview PDF dans une modale avec iframe + URL signee) — visible uniquement si le document est un PDF
-  - Bouton Download (URL signee avec nom d'origine) — toujours visible
-- Si aucun document dans une section, afficher un message "No invoices" / "No contracts"
-
-### 5. Traductions (en.json)
+### 5. Traductions (`src/i18n/locales/en.json`)
 
 Nouvelles cles :
 
 ```json
-"contracts": {
-  "title": "My contracts and invoices",
-  "invoices": "Invoices",
-  "contracts": "Contracts",
-  "noInvoices": "No invoices",
-  "noContracts": "No contracts",
-  "displayName": "Name",
-  "uploadDate": "Upload date",
-  "actions": "Actions"
-}
+"admin.officers.birthCity": "Birth city"
+"company.bornOnIn": "Born on {date} in {city}"
 ```
-
-Et pour l'admin :
-```json
-"admin.documents.company": "Company",
-"admin.documents.noCompany": "No company",
-"admin.documents.selectCompany": "Search and select a company..."
-```
-
----
 
 ### Recapitulatif
 
-| Element | Action |
-|---------|--------|
-| Migration SQL | +colonne `company_id` sur `documents`, +RLS policy lecture membres |
-| `AdminDocuments.tsx` | +colonne "Company" dans le tableau |
-| `DocumentEditDialog.tsx` | +dropdown searchable entreprise |
-| `DocumentUploadDialog.tsx` | +dropdown searchable entreprise |
-| `Contrats.tsx` | Page complete avec 2 sections (Invoices / Contracts) + preview PDF + download |
-| `en.json` | +cles i18n |
 
+| Element                 | Action                                            |
+| ----------------------- | ------------------------------------------------- |
+| Migration SQL           | +colonne `birth_city` TEXT NOT NULL               |
+| `AdminOfficers.tsx`     | +colonne "Birth city" dans le tableau             |
+| `OfficerFormDialog.tsx` | +champ Input "Birth city" apres date de naissance |
+| `Entreprise.tsx`        | Format "Born on January 1990 in Paris"            |
+| `en.json`               | +cles i18n                                        |
