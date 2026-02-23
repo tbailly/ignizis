@@ -23,6 +23,7 @@ interface CompanyWithUsers {
   perm_legal: boolean;
   perm_accounting: boolean;
   perm_finance: boolean;
+  accounting_software_url: string | null;
   users: { id: string; email: string; name: string | null }[];
 }
 
@@ -41,7 +42,7 @@ export default function AdminCompanies() {
     queryFn: async () => {
       const { data: companiesData, error: companiesError } = await supabase
         .from('companies')
-        .select('id, name, slug, status, company_number, address, country, perm_legal, perm_accounting, perm_finance')
+        .select('id, name, slug, status, company_number, address, country, perm_legal, perm_accounting, perm_finance, accounting_software_url')
         .order('name');
 
       if (companiesError) throw companiesError;

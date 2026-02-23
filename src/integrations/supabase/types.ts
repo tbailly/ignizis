@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       companies: {
         Row: {
+          accounting_software_url: string | null
           address: string | null
           company_number: string | null
           country: string | null
@@ -30,6 +31,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accounting_software_url?: string | null
           address?: string | null
           company_number?: string | null
           country?: string | null
@@ -44,6 +46,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accounting_software_url?: string | null
           address?: string | null
           company_number?: string | null
           country?: string | null

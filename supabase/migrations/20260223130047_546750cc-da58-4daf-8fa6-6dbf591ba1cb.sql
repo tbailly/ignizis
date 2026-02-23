@@ -1,0 +1,1 @@
+ALTER TABLE public.companies ADD COLUMN accounting_software_url text;
