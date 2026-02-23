@@ -25,7 +25,7 @@ export default function AdminRequests() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('requests' as any)
-        .select('id, title, description, status, company_id, position, request_number, companies(id, name)')
+        .select('id, title, description, status, company_id, position, request_number, requester_email, companies(id, name)')
         .order('position', { ascending: true });
 
       if (error) throw error;
@@ -38,6 +38,7 @@ export default function AdminRequests() {
         company_id: row.company_id,
         position: row.position,
         request_number: row.request_number,
+        requester_email: row.requester_email ?? null,
         company: row.companies ?? undefined,
       })) as RequestData[];
     },

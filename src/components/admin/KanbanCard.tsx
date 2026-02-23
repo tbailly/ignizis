@@ -41,6 +41,11 @@ export function KanbanCard({ request, onEdit }: KanbanCardProps) {
           {request.company.name}
         </p>
       )}
+      {request.requester_email && (
+        <p className="text-xs text-muted-foreground/80 mt-0.5 truncate">
+          {request.requester_email}
+        </p>
+      )}
       {request.description && (
         <p className="text-xs text-muted-foreground mt-1 line-clamp-2 break-words">
           {request.description}

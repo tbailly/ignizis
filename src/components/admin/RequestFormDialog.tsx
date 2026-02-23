@@ -35,6 +35,7 @@ export interface RequestData {
   company_id: string;
   position: number;
   request_number: number;
+  requester_email: string | null;
   company?: { id: string; name: string };
 }
 
@@ -80,6 +81,9 @@ export function RequestFormDialog({ request, companies, onClose, onSuccess, onDe
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [companyId, setCompanyId] = useState<string>('');
+  const [requesterEmail, setRequesterEmail] = useState('');
+  const [suggestedEmails, setSuggestedEmails] = useState<string[]>([]);
+  const [emailOpen, setEmailOpen] = useState(false);
   const [status, setStatus] = useState<string>('new');
   const [companyOpen, setCompanyOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -90,14 +94,34 @@ export function RequestFormDialog({ request, companies, onClose, onSuccess, onDe
       setTitle(request.title);
       setDescription(request.description ?? '');
       setCompanyId(request.company_id);
+      setRequesterEmail(request.requester_email ?? '');
       setStatus(request.status);
     } else {
       setTitle('');
       setDescription('');
       setCompanyId('');
+      setRequesterEmail('');
       setStatus('new');
     }
   }, [request]);
+
+  // Fetch suggested emails when companyId changes
+  useEffect(() => {
+    if (!companyId) {
+      setSuggestedEmails([]);
+      return;
+    }
+    (async () => {
+      const { data } = await supabase
+        .from('user_companies')
+        .select('users(email)')
+        .eq('company_id', companyId);
+      const emails = ((data as any[]) || [])
+        .map((row: any) => row.users?.email)
+        .filter(Boolean) as string[];
+      setSuggestedEmails([...new Set(emails)].sort());
+    })();
+  }, [companyId]);
 
   const selectedCompany = companies.find(c => c.id === companyId);
 
@@ -149,6 +173,7 @@ export function RequestFormDialog({ request, companies, onClose, onSuccess, onDe
             status: 'new',
             position: maxPos + 1,
             request_number: requestNumber,
+            requester_email: requesterEmail.trim() || null,
           });
 
         if (error) throw error;
@@ -241,7 +266,74 @@ export function RequestFormDialog({ request, companies, onClose, onSuccess, onDe
             </Popover>
           </div>
 
-          {/* Title */}
+          {/* Requester email — visible when company is selected */}
+          {companyId && (
+            <div className="space-y-2">
+              <Label>{t('admin.requests.requesterEmail')}</Label>
+              {isEditMode ? (
+                <Input
+                  value={requesterEmail}
+                  disabled
+                  className="opacity-70"
+                />
+              ) : (
+                <Popover open={emailOpen} onOpenChange={setEmailOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={emailOpen}
+                      className="w-full justify-between font-normal"
+                    >
+                      <span className={cn('truncate', !requesterEmail && 'text-muted-foreground')}>
+                        {requesterEmail || t('admin.requests.requesterEmailPlaceholder')}
+                      </span>
+                      <ChevronsUpDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                    <Command>
+                      <CommandInput
+                        placeholder={t('admin.requests.requesterEmailPlaceholder')}
+                        value={requesterEmail}
+                        onValueChange={setRequesterEmail}
+                      />
+                      <CommandList>
+                        <CommandEmpty>
+                          {requesterEmail ? (
+                            <button
+                              type="button"
+                              className="w-full text-left px-2 py-1.5 text-sm cursor-pointer hover:bg-accent rounded"
+                              onClick={() => setEmailOpen(false)}
+                            >
+                              {requesterEmail}
+                            </button>
+                          ) : null}
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {suggestedEmails.map((email) => (
+                            <CommandItem
+                              key={email}
+                              value={email}
+                              onSelect={() => {
+                                setRequesterEmail(email);
+                                setEmailOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn('mr-2 h-4 w-4 shrink-0', requesterEmail === email ? 'opacity-100' : 'opacity-0')}
+                              />
+                              <span className="truncate">{email}</span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              )}
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="request-title">{t('admin.requests.titleField')}</Label>
             <Input

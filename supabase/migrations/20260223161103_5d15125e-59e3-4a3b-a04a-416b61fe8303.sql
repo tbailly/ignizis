@@ -1,0 +1,1 @@
+ALTER TABLE public.requests ADD COLUMN requester_email text;
