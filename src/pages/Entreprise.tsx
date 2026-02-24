@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
+import DocumentsSection from '@/components/company/DocumentsSection';
 
 interface Officer {
   id: string;
@@ -209,6 +210,8 @@ export default function Entreprise() {
           </CardContent>
         </Card>
       </div>
+
+      <DocumentsSection companyId={company?.id} />
     </div>
   );
 }

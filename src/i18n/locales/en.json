@@ -293,7 +293,15 @@
     "copied": "Copied to clipboard",
     "bornOnIn": "Born on {date} in {city}",
     "sectionTitle": "Company section",
-    "sectionDescription": "This section will contain company information and documents."
+    "sectionDescription": "This section will contain company information and documents.",
+    "documents": "Documents",
+    "noDocuments": "No documents",
+    "documentName": "Name",
+    "documentTags": "Tags",
+    "documentUploadDate": "Upload date",
+    "documentActions": "Actions",
+    "documentPreview": "Preview",
+    "documentDownload": "Download"
   },
   "contracts": {
     "title": "My contracts and invoices",
