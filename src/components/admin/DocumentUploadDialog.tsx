@@ -114,8 +114,14 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
     }));
   };
 
-  const handleEntityChange = (index: number, linkedType: 'company' | 'officer' | null, linkedId: string | null) => {
-    updateEntry(index, { linkedType, linkedId, documentType: '' });
+  const handleEntityChange = (index: number, newLinkedType: 'company' | 'officer' | null, newLinkedId: string | null) => {
+    const currentEntry = entries[index];
+    const typeChanged = currentEntry.linkedType !== newLinkedType;
+    updateEntry(index, {
+      linkedType: newLinkedType,
+      linkedId: newLinkedId,
+      ...(typeChanged ? { documentType: '' } : {}),
+    });
   };
 
   const handleUpload = async () => {
@@ -248,7 +254,7 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
                     onValueChange={(v) => updateEntry(index, { documentType: v as DocumentType })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder={t('common.select')} />
+                      <SelectValue placeholder=" " />
                     </SelectTrigger>
                     <SelectContent>
                       {entry.linkedType === 'company' ? (
@@ -303,7 +309,7 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
           <Button variant="outline" onClick={onClose} disabled={saving}>
             {t('common.cancel')}
           </Button>
-          <Button onClick={handleUpload} disabled={saving || entries.length === 0}>
+          <Button onClick={handleUpload} disabled={saving || entries.length === 0 || entries.some(e => !e.linkedId || !e.documentType)}>
             {saving ? t('common.saving') : t('admin.documents.import')}
           </Button>
         </DialogFooter>
