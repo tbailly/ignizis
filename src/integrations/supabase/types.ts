@@ -439,7 +439,14 @@ export type Database = {
       }
     }
     Enums: {
-      document_type: "contract" | "invoice" | "other"
+      document_type:
+        | "contract"
+        | "invoice"
+        | "other"
+        | "passport"
+        | "secondary_id"
+        | "power_of_attorney"
+        | "legal"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -567,7 +574,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      document_type: ["contract", "invoice", "other"],
+      document_type: [
+        "contract",
+        "invoice",
+        "other",
+        "passport",
+        "secondary_id",
+        "power_of_attorney",
+        "legal",
+      ],
     },
   },
 } as const
