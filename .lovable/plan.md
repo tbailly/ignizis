@@ -1,88 +1,150 @@
 
 
-## Ajouter une section Documents sur la page Entreprise
+## Refonte du formulaire d'import de documents : liaison entreprise/mandataire et types dynamiques
 
 ### Vue d'ensemble
 
-Ajouter une nouvelle Card "Documents" sous les cartes existantes (details + mandataires) sur la page `/company`. Cette section affiche tous les documents lies a l'entreprise active dans une datatable avec colonnes : nom, tags, date d'upload, actions (preview PDF + download). Les documents sont tries par date d'ajout descendante.
+Transformer le formulaire d'import de documents pour :
+1. Ajouter 3 nouveaux types de document (`passport`, `secondary_id`, `power_of_attorney`) et renommer `other` en `legal`
+2. Remplacer le champ "Company" par un champ unifie "Company or corporate officer" (combobox mixte)
+3. Afficher le champ "Type" uniquement apres selection, avec des options filtrees selon le type d'entite choisie
+4. A l'upload, associer automatiquement le document au bon champ du mandataire social si applicable
 
-### Modifications
+---
 
-#### 1. `src/pages/Entreprise.tsx`
+### 1. Migration SQL : modifier l'enum `document_type`
 
-- Importer les composants necessaires : `Table`, `TableBody`, `TableCell`, `TableHead`, `TableHeader`, `TableRow`, `Button`, `Dialog`, `DialogContent`, `DialogHeader`, `DialogTitle`, `Badge`, `Eye`, `Download`, `FileText`
-- Ajouter un `useQuery` pour charger les documents de l'entreprise active (meme requete que dans `Contrats.tsx` mais sans filtre par type, et en incluant les tags via une jointure)
-- Requete documents :
-  ```
-  supabase.from('documents')
-    .select('id, display_name, document_type, storage_path, original_filename, mime_type, created_at')
-    .eq('company_id', companyId)
-    .order('created_at', { ascending: false })
-  ```
-- Requete tags (separee, via `document_tag_assignments`) :
-  ```
-  supabase.from('document_tag_assignments')
-    .select('document_id, document_tags(name)')
-    .in('document_id', documentIds)
-  ```
-- Ajouter les fonctions `handlePreview` et `handleDownload` (identiques a `Contrats.tsx`)
-- Ajouter une Card "Documents" apres la grille existante, contenant un `Table` avec 4 colonnes :
-  - **Name** : `display_name`
-  - **Tags** : badges avec les noms des tags associes
-  - **Upload date** : date formatee
-  - **Actions** : boutons Eye (preview PDF uniquement) et Download
-- Ajouter le Dialog de preview PDF (identique a `Contrats.tsx`)
-- Etat vide : message "No documents" si la liste est vide
+Ajouter les 3 nouvelles valeurs a l'enum et renommer `other` en `legal` :
 
-#### 2. `src/i18n/locales/en.json`
+```sql
+-- Ajouter les nouvelles valeurs
+ALTER TYPE document_type ADD VALUE IF NOT EXISTS 'passport';
+ALTER TYPE document_type ADD VALUE IF NOT EXISTS 'secondary_id';
+ALTER TYPE document_type ADD VALUE IF NOT EXISTS 'power_of_attorney';
+ALTER TYPE document_type ADD VALUE IF NOT EXISTS 'legal';
 
-Ajouter les cles de traduction dans la section `company` :
+-- Migrer les documents existants de 'other' vers 'legal'
+UPDATE documents SET document_type = 'legal' WHERE document_type = 'other';
+```
 
-```json
-"company": {
-  ...existing keys...,
-  "documents": "Documents",
-  "noDocuments": "No documents",
-  "documentName": "Name",
-  "documentTags": "Tags",
-  "documentUploadDate": "Upload date",
-  "documentActions": "Actions",
-  "documentPreview": "Preview",
-  "documentDownload": "Download"
+Note : PostgreSQL ne permet pas de supprimer une valeur d'enum. La valeur `other` restera dans l'enum mais ne sera plus utilisee dans l'interface.
+
+---
+
+### 2. `src/components/admin/DocumentUploadDialog.tsx` -- Refonte majeure
+
+**Modification de l'interface `FileEntry`** :
+```typescript
+interface FileEntry {
+  file: File;
+  displayName: string;
+  documentType: 'contract' | 'invoice' | 'legal' | 'passport' | 'secondary_id' | 'power_of_attorney' | '';
+  expiresAt: string;
+  // Nouveau : entite liee (entreprise OU mandataire)
+  linkedType: 'company' | 'officer' | null;
+  linkedId: string | null;
+  selectedTagIds: string[];
 }
 ```
 
-### Details techniques
-
-- Les policies RLS existantes (`Members can view company documents`) autorisent deja les utilisateurs a voir les documents de leur entreprise
-- Les tags sont charges via `document_tag_assignments` qui a une policy `Admins can select tag assignments` -- il faudra verifier si les utilisateurs non-admin peuvent voir les tags. Si non, on ajoutera une policy RLS `SELECT` pour les membres sur `document_tag_assignments` (condition : le document appartient a une entreprise dont l'utilisateur est membre)
-- Le composant `Badge` existant sera utilise pour afficher les tags
-- Pas de nouvelle dependance requise
-
-### Migration SQL (si necessaire)
-
-Ajouter une policy RLS sur `document_tag_assignments` pour permettre aux membres de voir les tags des documents de leur entreprise :
-
-```sql
-CREATE POLICY "Members can view tag assignments for company documents"
-  ON document_tag_assignments
-  FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM documents d
-      WHERE d.id = document_tag_assignments.document_id
-        AND d.company_id IS NOT NULL
-        AND public.is_member_of_company(d.company_id)
-    )
-  );
+**Nouvelles donnees a charger** :
+- Ajouter un `useQuery` pour les mandataires sociaux :
+```typescript
+const { data: officers = [] } = useQuery({
+  queryKey: ['officers-list'],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from('company_officers')
+      .select('id, first_name, last_name')
+      .order('last_name');
+    if (error) throw error;
+    return data || [];
+  },
+});
 ```
 
-Meme chose pour `document_tags` -- la policy existante `Authenticated users can view tags` couvre deja le SELECT, donc pas de changement necessaire.
+**Nouveau composant combobox "Company or corporate officer"** :
+- Combobox cherchable combinant entreprises et mandataires sociaux dans une seule liste
+- Chaque ligne affiche une icone a gauche : `Building2` pour les entreprises, `UserRound` pour les mandataires
+- Les entreprises sont listees en premier, puis les mandataires (2 groupes dans le Command)
+- La valeur selectionnee encode le type + id (ex: `company:uuid` ou `officer:uuid`)
+- Option de deselection (bouton X) comme dans `CompanySelect`
+
+**Logique d'affichage du champ Type** :
+- Le champ "Type" est **cache** tant qu'aucune entite n'est selectionnee
+- Si `linkedType === 'company'` : afficher uniquement Contract, Invoice, Legal
+- Si `linkedType === 'officer'` : afficher uniquement Passport, Secondary ID, Power of Attorney
+- Quand l'entite change, remettre `documentType` a `''`
+
+**Ordre des champs dans le formulaire** :
+1. Display name
+2. Company or corporate officer (combobox)
+3. Type (conditionnel, visible seulement si une entite est selectionnee)
+4. Expires at
+5. Tags
+
+**Logique d'upload modifiee** (`handleUpload`) :
+- Si `linkedType === 'company'` : inserer le document avec `company_id = linkedId` (comme aujourd'hui)
+- Si `linkedType === 'officer'` : 
+  - Inserer le document avec `company_id = null`
+  - Puis mettre a jour le mandataire en associant le document au bon champ selon le type :
+    - `passport` -> `UPDATE company_officers SET passport_document_id = docId WHERE id = officerId`
+    - `secondary_id` -> `UPDATE company_officers SET secondary_id_document_id = docId WHERE id = officerId`
+    - `power_of_attorney` -> `UPDATE company_officers SET power_of_attorney_document_id = docId WHERE id = officerId`
+
+---
+
+### 3. `src/components/admin/DocumentEditDialog.tsx` -- Mise a jour des types
+
+- Mettre a jour les options du Select pour inclure les 6 types (contract, invoice, legal, passport, secondary_id, power_of_attorney)
+- Mettre a jour l'interface `DocumentData` pour accepter les nouveaux types
+- Le champ Type reste toujours visible dans l'edition (pas de logique conditionnelle ici)
+
+---
+
+### 4. `src/pages/admin/AdminDocuments.tsx` -- Mise a jour du mapping des labels
+
+```typescript
+const typeLabels: Record<string, string> = {
+  contract: 'Contrat',
+  invoice: 'Facture',
+  legal: 'Legal',
+  passport: 'Passeport',
+  secondary_id: 'Secondary ID',
+  power_of_attorney: 'Power of Attorney',
+  other: 'Autre', // legacy
+};
+```
+
+---
+
+### 5. `src/i18n/locales/en.json` -- Nouvelles cles de traduction
+
+```json
+"admin.documents.typePassport": "Passport",
+"admin.documents.typeSecondaryId": "Secondary ID",
+"admin.documents.typePowerOfAttorney": "Power of Attorney",
+"admin.documents.typeLegal": "Legal",
+"admin.documents.companyOrOfficer": "Company or corporate officer",
+"admin.documents.selectCompanyOrOfficer": "Select a company or officer..."
+```
+
+---
+
+### 6. `src/components/company/DocumentsSection.tsx` -- Mise a jour des labels
+
+Mettre a jour le mapping `typeLabels` pour inclure les nouveaux types, comme dans AdminDocuments.
+
+---
 
 ### Resume
 
 | Fichier | Action |
 |---------|--------|
-| `src/pages/Entreprise.tsx` | Ajouter section Documents avec datatable (nom, tags, date, actions) |
-| `src/i18n/locales/en.json` | Ajouter cles de traduction pour la section documents |
-| Migration SQL | Ajouter policy RLS SELECT sur `document_tag_assignments` pour les membres |
+| Migration SQL | Ajouter `passport`, `secondary_id`, `power_of_attorney`, `legal` a l'enum ; migrer `other` vers `legal` |
+| `DocumentUploadDialog.tsx` | Refonte : combobox mixte entreprise/mandataire, type conditionnel, upload avec association mandataire |
+| `DocumentEditDialog.tsx` | Ajouter les nouveaux types au Select |
+| `AdminDocuments.tsx` | Mettre a jour `typeLabels` |
+| `en.json` | Nouvelles cles de traduction |
+| `DocumentsSection.tsx` | Mettre a jour `typeLabels` |
+
