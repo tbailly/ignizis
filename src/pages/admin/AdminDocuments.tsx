@@ -20,7 +20,7 @@ import {
 interface DocumentRow {
   id: string;
   display_name: string;
-  document_type: 'contract' | 'invoice' | 'other';
+  document_type: 'contract' | 'invoice' | 'other' | 'legal' | 'passport' | 'secondary_id' | 'power_of_attorney';
   storage_path: string;
   original_filename: string;
   file_size: number | null;
@@ -41,6 +41,10 @@ function formatDate(iso: string): string {
 const typeLabels: Record<string, string> = {
   contract: 'Contrat',
   invoice: 'Facture',
+  legal: 'Legal',
+  passport: 'Passeport',
+  secondary_id: 'Secondary ID',
+  power_of_attorney: 'Power of Attorney',
   other: 'Autre',
 };
 

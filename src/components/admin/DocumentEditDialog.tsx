@@ -32,7 +32,7 @@ function displayToIso(display: string): string | null {
 interface DocumentData {
   id: string;
   display_name: string;
-  document_type: 'contract' | 'invoice' | 'other';
+  document_type: 'contract' | 'invoice' | 'other' | 'legal' | 'passport' | 'secondary_id' | 'power_of_attorney';
   original_filename: string;
   expires_at: string | null;
   company_id: string | null;
@@ -161,7 +161,10 @@ export function DocumentEditDialog({ document, onClose, onSuccess }: DocumentEdi
               <SelectContent>
                 <SelectItem value="contract">{t('admin.documents.typeContract')}</SelectItem>
                 <SelectItem value="invoice">{t('admin.documents.typeInvoice')}</SelectItem>
-                <SelectItem value="other">{t('admin.documents.typeOther')}</SelectItem>
+                <SelectItem value="legal">{t('admin.documents.typeLegal')}</SelectItem>
+                <SelectItem value="passport">{t('admin.documents.typePassport')}</SelectItem>
+                <SelectItem value="secondary_id">{t('admin.documents.typeSecondaryId')}</SelectItem>
+                <SelectItem value="power_of_attorney">{t('admin.documents.typePowerOfAttorney')}</SelectItem>
               </SelectContent>
             </Select>
           </div>

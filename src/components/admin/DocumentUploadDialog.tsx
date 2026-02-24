@@ -16,7 +16,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 import { DateMaskInput } from '@/components/ui/date-mask-input';
-import { CompanySelect } from '@/components/admin/CompanySelect';
+import { EntitySelect } from '@/components/admin/EntitySelect';
 
 function displayToIso(display: string): string | null {
   if (!display || display.length !== 10) return null;
@@ -24,12 +24,15 @@ function displayToIso(display: string): string | null {
   return `${y}-${m}-${d}`;
 }
 
+type DocumentType = 'contract' | 'invoice' | 'legal' | 'passport' | 'secondary_id' | 'power_of_attorney' | '';
+
 interface FileEntry {
   file: File;
   displayName: string;
-  documentType: 'contract' | 'invoice' | 'other';
+  documentType: DocumentType;
   expiresAt: string;
-  companyId: string | null;
+  linkedType: 'company' | 'officer' | null;
+  linkedId: string | null;
   selectedTagIds: string[];
 }
 
@@ -63,14 +66,27 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
     },
   });
 
+  const { data: officers = [] } = useQuery({
+    queryKey: ['officers-list'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('company_officers')
+        .select('id, first_name, last_name')
+        .order('last_name');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const newEntries: FileEntry[] = files.map(file => ({
       file,
       displayName: file.name.replace(/\.[^/.]+$/, ''),
-      documentType: 'other',
+      documentType: '',
       expiresAt: '',
-      companyId: null,
+      linkedType: null,
+      linkedId: null,
       selectedTagIds: [],
     }));
     setEntries(prev => [...prev, ...newEntries]);
@@ -98,6 +114,10 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
     }));
   };
 
+  const handleEntityChange = (index: number, linkedType: 'company' | 'officer' | null, linkedId: string | null) => {
+    updateEntry(index, { linkedType, linkedId, documentType: '' });
+  };
+
   const handleUpload = async () => {
     if (entries.length === 0 || !profile?.id) return;
     setSaving(true);
@@ -113,23 +133,42 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
 
         if (uploadError) throw uploadError;
 
+        const docType = entry.documentType || 'legal';
+
         const { data: docData, error: docError } = await supabase
           .from('documents')
           .insert({
             display_name: entry.displayName,
-            document_type: entry.documentType,
+            document_type: docType,
             storage_path: storagePath,
             original_filename: entry.file.name,
             file_size: entry.file.size,
             mime_type: entry.file.type || null,
             uploaded_by: profile.id,
             expires_at: displayToIso(entry.expiresAt),
-            company_id: entry.companyId,
+            company_id: entry.linkedType === 'company' ? entry.linkedId : null,
           } as any)
           .select('id')
           .single();
 
         if (docError) throw docError;
+
+        // If linked to officer, update the officer's document field
+        if (entry.linkedType === 'officer' && entry.linkedId && docData?.id) {
+          const fieldMap: Record<string, string> = {
+            passport: 'passport_document_id',
+            secondary_id: 'secondary_id_document_id',
+            power_of_attorney: 'power_of_attorney_document_id',
+          };
+          const field = fieldMap[entry.documentType];
+          if (field) {
+            const { error: officerError } = await supabase
+              .from('company_officers')
+              .update({ [field]: docData.id } as any)
+              .eq('id', entry.linkedId);
+            if (officerError) throw officerError;
+          }
+        }
 
         if (entry.selectedTagIds.length > 0) {
           const { error: tagError } = await supabase
@@ -191,36 +230,50 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
               </div>
 
               <div className="space-y-2">
-                <Label>{t('admin.documents.documentType')}</Label>
-                <Select
-                  value={entry.documentType}
-                  onValueChange={(v) => updateEntry(index, { documentType: v as FileEntry['documentType'] })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="contract">{t('admin.documents.typeContract')}</SelectItem>
-                    <SelectItem value="invoice">{t('admin.documents.typeInvoice')}</SelectItem>
-                    <SelectItem value="other">{t('admin.documents.typeOther')}</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>{t('admin.documents.companyOrOfficer')}</Label>
+                <EntitySelect
+                  companies={companies}
+                  officers={officers}
+                  linkedType={entry.linkedType}
+                  linkedId={entry.linkedId}
+                  onChange={(type, id) => handleEntityChange(index, type, id)}
+                />
               </div>
+
+              {entry.linkedType && (
+                <div className="space-y-2">
+                  <Label>{t('admin.documents.documentType')}</Label>
+                  <Select
+                    value={entry.documentType}
+                    onValueChange={(v) => updateEntry(index, { documentType: v as DocumentType })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('common.select')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {entry.linkedType === 'company' ? (
+                        <>
+                          <SelectItem value="contract">{t('admin.documents.typeContract')}</SelectItem>
+                          <SelectItem value="invoice">{t('admin.documents.typeInvoice')}</SelectItem>
+                          <SelectItem value="legal">{t('admin.documents.typeLegal')}</SelectItem>
+                        </>
+                      ) : (
+                        <>
+                          <SelectItem value="passport">{t('admin.documents.typePassport')}</SelectItem>
+                          <SelectItem value="secondary_id">{t('admin.documents.typeSecondaryId')}</SelectItem>
+                          <SelectItem value="power_of_attorney">{t('admin.documents.typePowerOfAttorney')}</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label>{t('admin.documents.expiresAt')}</Label>
                 <DateMaskInput
                   value={entry.expiresAt}
                   onChange={(v) => updateEntry(index, { expiresAt: v })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>{t('admin.documents.company')}</Label>
-                <CompanySelect
-                  companies={companies}
-                  value={entry.companyId}
-                  onChange={(v) => updateEntry(index, { companyId: v })}
                 />
               </div>
 
