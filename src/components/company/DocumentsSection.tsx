@@ -7,9 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
-import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 
@@ -102,7 +99,7 @@ export default function DocumentsSection({ companyId }: DocumentsSectionProps) {
   return (
     <>
       <Card>
-        <CardHeader className="pb-4">
+        <CardHeader className="pb-3 md:pb-4">
           <CardTitle className="flex items-center gap-2 text-lg">
             <FileText className="h-5 w-5 text-primary" />
             {t('company.documents')}
@@ -114,45 +111,35 @@ export default function DocumentsSection({ companyId }: DocumentsSectionProps) {
           ) : documents.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t('company.noDocuments')}</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('company.documentName')}</TableHead>
-                  <TableHead>{t('company.documentTags')}</TableHead>
-                  <TableHead>{t('company.documentUploadDate')}</TableHead>
-                  <TableHead className="w-[100px]">{t('company.documentActions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {documents.map((doc) => (
-                  <TableRow key={doc.id}>
-                    <TableCell className="font-medium">{doc.display_name}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {(tagMap[doc.id] || []).map((tag) => (
-                          <Badge key={tag} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>{formatDate(doc.created_at)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        {isPdf(doc) && (
-                          <Button variant="ghost" size="icon" onClick={() => handlePreview(doc)} title={t('company.documentPreview')}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button variant="ghost" size="icon" onClick={() => handleDownload(doc)} title={t('company.documentDownload')}>
-                          <Download className="h-4 w-4" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {documents.map((doc) => (
+                <div key={doc.id} className="p-3 border rounded-lg space-y-2">
+                  <p className="text-sm font-medium truncate" title={doc.display_name}>
+                    {doc.display_name}
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {(tagMap[doc.id] || []).map((tag) => (
+                      <Badge key={tag} variant="secondary" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">{formatDate(doc.created_at)}</span>
+                    <div className="flex items-center gap-1">
+                      {isPdf(doc) && (
+                        <Button variant="ghost" size="icon" onClick={() => handlePreview(doc)} title={t('company.documentPreview')}>
+                          <Eye className="h-4 w-4" />
                         </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                      )}
+                      <Button variant="ghost" size="icon" onClick={() => handleDownload(doc)} title={t('company.documentDownload')}>
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>
