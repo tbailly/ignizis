@@ -177,20 +177,20 @@ export default function Entreprise() {
                   <div key={officer.id}>
                     {idx > 0 && <Separator className="mb-4" />}
                     <div className="space-y-0.5">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">
-                          <span className="font-semibold">{officer.last_name.toUpperCase()}</span>{' '}
-                          {officer.first_name}
-                        </p>
-                        {officer.is_compliant ? (
-                          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                            {t('admin.officers.compliant')}
-                          </Badge>
-                        ) : (
-                          <Badge variant="destructive">
-                            {t('admin.officers.nonCompliant')}
-                          </Badge>
-                        )}
+                        <div className="flex items-center justify-between flex-nowrap gap-2">
+                         <p className="text-sm font-medium min-w-0 truncate">
+                           <span className="font-semibold">{officer.last_name.toUpperCase()}</span>{' '}
+                           {officer.first_name}
+                         </p>
+                         {officer.is_compliant ? (
+                           <Badge className="bg-green-100 text-green-800 hover:bg-green-100 whitespace-nowrap shrink-0">
+                             {t('admin.officers.compliant')}
+                           </Badge>
+                         ) : (
+                           <Badge variant="destructive" className="whitespace-nowrap shrink-0">
+                             {t('admin.officers.nonCompliant')}
+                           </Badge>
+                         )}
                       </div>
                       <p className="text-sm text-muted-foreground">{officer.position}</p>
                       <p className="text-sm text-muted-foreground">

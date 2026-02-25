@@ -45,6 +45,7 @@ export default function DocumentsSection({ companyId }: DocumentsSectionProps) {
         .from('documents')
         .select('id, display_name, document_type, storage_path, original_filename, mime_type, created_at')
         .eq('company_id', companyId)
+        .eq('document_type', 'legal')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return (data || []) as DocRow[];
