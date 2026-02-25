@@ -1,50 +1,19 @@
 
 
-## Corrections du formulaire d'import de documents
+## Modifications de la page Company
 
-### 1. Placeholder "Select" vide sur le champ Type
+### 1. `src/components/company/DocumentsSection.tsx` -- Filtrer par type "legal"
 
-Dans `DocumentUploadDialog.tsx`, remplacer le `placeholder={t('common.select')}` du `SelectValue` par un espace vide (`placeholder=" "` ou `placeholder=""`), pour que le champ apparaisse vide au lieu d'afficher "Select".
+Ajouter `.eq('document_type', 'legal')` a la requete documents (ligne 47, avant `.order`).
 
-### 2. Bouton d'import disabled tant que tous les types ne sont pas remplis
+### 2. `src/pages/Entreprise.tsx` -- Badge non-compliant sur une seule ligne
 
-Dans `DocumentUploadDialog.tsx`, modifier la condition `disabled` du bouton d'import (ligne 306) :
-
-Actuellement : `disabled={saving || entries.length === 0}`
-
-Nouvelle condition : `disabled={saving || entries.length === 0 || entries.some(e => !e.linkedId || !e.documentType)}`
-
-Cela verifie que chaque entry a bien un `linkedId` (entreprise ou mandataire) ET un `documentType` rempli.
-
-### 3. Ne reset le type que lors d'un changement de categorie (company <-> officer)
-
-Dans `handleEntityChange` (ligne 117-119), ne remettre `documentType` a `''` que si le `linkedType` change de categorie. Si on reste dans la meme categorie (company -> company ou officer -> officer), conserver le type selectionne.
-
-Modifier `handleEntityChange` :
-
-```typescript
-const handleEntityChange = (index: number, newLinkedType: 'company' | 'officer' | null, newLinkedId: string | null) => {
-  const currentEntry = entries[index];
-  const typeChanged = currentEntry.linkedType !== newLinkedType;
-  updateEntry(index, {
-    linkedType: newLinkedType,
-    linkedId: newLinkedId,
-    ...(typeChanged ? { documentType: '' } : {}),
-  });
-};
-```
-
-### 4. Bouton d'import disabled si un champ "Company or corporate officer" est vide
-
-Deja couvert par le point 2 : la condition `entries.some(e => !e.linkedId || !e.documentType)` inclut la verification de `linkedId`.
-
----
-
-### Resume technique
+Sur le badge non-compliant (ligne 190), ajouter `whitespace-nowrap shrink-0` pour empecher le retour a la ligne. Aussi ajouter `min-w-0` sur le nom (le `<p>` parent) pour permettre la troncature si necessaire, et `gap-2` + `flex-nowrap` sur le conteneur flex.
 
 | Fichier | Modification |
 |---------|-------------|
-| `DocumentUploadDialog.tsx` ligne 251 | Remplacer `placeholder={t('common.select')}` par `placeholder=" "` |
-| `DocumentUploadDialog.tsx` ligne 306 | Ajouter `entries.some(e => !e.linkedId || !e.documentType)` a la condition disabled |
-| `DocumentUploadDialog.tsx` lignes 117-119 | Ne reset `documentType` que si `linkedType` change |
+| `DocumentsSection.tsx` ligne 47 | Ajouter `.eq('document_type', 'legal')` |
+| `Entreprise.tsx` ligne 180 | Ajouter `flex-nowrap gap-2` au conteneur flex |
+| `Entreprise.tsx` ligne 181-184 | Ajouter `min-w-0 truncate` sur le `<p>` du nom |
+| `Entreprise.tsx` ligne 186+190 | Ajouter `whitespace-nowrap shrink-0` sur les badges |
 
