@@ -102,13 +102,13 @@ export default function Entreprise() {
   const company = currentCompany?.company;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">{t('company.title')}</h1>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('company.title')}</h1>
         <p className="text-muted-foreground">{company?.name}</p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 md:gap-6 md:grid-cols-2">
         {/* Company details card */}
         <Card>
           <CardHeader className="pb-4">
