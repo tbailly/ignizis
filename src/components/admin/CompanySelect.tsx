@@ -18,7 +18,7 @@ export function CompanySelect({ companies, value, onChange }: CompanySelectProps
       groups={[
         { items: active.map(c => ({ id: c.id, label: c.name })) },
         ...(inactive.length > 0
-          ? [{ heading: t('common.inactive'), items: inactive.map(c => ({ id: c.id, label: c.name })), className: 'opacity-50' }]
+          ? [{ heading: t('common.inactiveCompanies'), items: inactive.map(c => ({ id: c.id, label: c.name })), className: 'opacity-50' }]
           : []),
       ]}
       selectedIds={value ? [value] : []}

@@ -26,6 +26,7 @@ import {
 import {
   Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from '@/components/ui/command';
+import { CompanySelect } from '@/components/admin/CompanySelect';
 
 export interface RequestData {
   id: string;
@@ -42,6 +43,7 @@ export interface RequestData {
 interface Company {
   id: string;
   name: string;
+  status?: string;
 }
 
 interface RequestFormDialogProps {
@@ -85,7 +87,6 @@ export function RequestFormDialog({ request, companies, onClose, onSuccess, onDe
   const [suggestedEmails, setSuggestedEmails] = useState<string[]>([]);
   const [emailOpen, setEmailOpen] = useState(false);
   const [status, setStatus] = useState<string>('new');
-  const [companyOpen, setCompanyOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -243,46 +244,11 @@ export function RequestFormDialog({ request, companies, onClose, onSuccess, onDe
                 className="opacity-70"
               />
             ) : (
-              <Popover open={companyOpen} onOpenChange={setCompanyOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={companyOpen}
-                    className="w-full justify-between font-normal"
-                  >
-                    <span className={cn('truncate', !selectedCompany && 'text-muted-foreground')}>
-                      {selectedCompany ? selectedCompany.name : t('admin.requests.companyPlaceholder')}
-                    </span>
-                    <ChevronsUpDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Search..." />
-                    <CommandList>
-                      <CommandEmpty>No company found.</CommandEmpty>
-                      <CommandGroup>
-                        {companies.map((c) => (
-                          <CommandItem
-                            key={c.id}
-                            value={c.name}
-                            onSelect={() => {
-                              setCompanyId(c.id);
-                              setCompanyOpen(false);
-                            }}
-                          >
-                            <Check
-                              className={cn('mr-2 h-4 w-4 shrink-0', companyId === c.id ? 'opacity-100' : 'opacity-0')}
-                            />
-                            <span className="truncate">{c.name}</span>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <CompanySelect
+                companies={companies}
+                value={companyId || null}
+                onChange={(id) => setCompanyId(id || '')}
+              />
             )}
           </div>
 
