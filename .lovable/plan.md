@@ -1,75 +1,93 @@
 
 
-## Architecture Soft Delete
+## Refactor des selecteurs d'entreprises : code commun + active/inactive
 
-### Approche : colonne `deleted_at` + vues PostgreSQL
+### Approche : composant generique `ComboboxSelect`
 
-Ajouter une colonne `deleted_at timestamptz NULL DEFAULT NULL` sur les 5 tables. Creer une vue PostgreSQL pour chaque table (prefixee `active_`) qui filtre automatiquement `WHERE deleted_at IS NULL`. Cote frontend, remplacer les appels `.delete()` par des `.update({ deleted_at: new Date().toISOString() })`.
+Creer un composant generique `src/components/admin/ComboboxSelect.tsx` qui encapsule toute la logique Popover + Command + groupes actifs/inactifs. Les 3 composants existants deviennent des wrappers fins.
 
-**Pourquoi des vues ?** Cela centralise le filtrage en base et evite d'ajouter `.is('deleted_at', null)` sur chaque requete frontend. Les vues sont aussi compatibles avec les jointures et les politiques RLS existantes.
+### 1. Nouveau composant `ComboboxSelect.tsx`
 
-### Migration SQL
+Props generiques :
 
-```sql
--- Ajouter deleted_at sur les 5 tables
-ALTER TABLE documents ADD COLUMN deleted_at timestamptz DEFAULT NULL;
-ALTER TABLE companies ADD COLUMN deleted_at timestamptz DEFAULT NULL;
-ALTER TABLE company_officers ADD COLUMN deleted_at timestamptz DEFAULT NULL;
-ALTER TABLE document_tags ADD COLUMN deleted_at timestamptz DEFAULT NULL;
-ALTER TABLE requests ADD COLUMN deleted_at timestamptz DEFAULT NULL;
+```ts
+interface ComboboxGroup {
+  heading?: string;
+  items: ComboboxItem[];
+  className?: string; // ex: "opacity-50" pour inactifs
+}
 
--- Creer des vues "active" pour chaque table
-CREATE VIEW active_documents AS SELECT * FROM documents WHERE deleted_at IS NULL;
-CREATE VIEW active_companies AS SELECT * FROM companies WHERE deleted_at IS NULL;
-CREATE VIEW active_company_officers AS SELECT * FROM company_officers WHERE deleted_at IS NULL;
-CREATE VIEW active_document_tags AS SELECT * FROM document_tags WHERE deleted_at IS NULL;
-CREATE VIEW active_requests AS SELECT * FROM requests WHERE deleted_at IS NULL;
+interface ComboboxItem {
+  id: string;
+  label: string;
+  icon?: React.ReactNode;
+}
+
+interface ComboboxSelectProps {
+  groups: ComboboxGroup[];
+  selectedIds: string[];
+  onToggle: (id: string) => void;
+  onClear?: () => void;
+  placeholder: string;
+  emptyText: string;
+  multiSelect?: boolean;        // true = reste ouvert apres selection
+  renderTriggerLabel?: (selected: ComboboxItem[]) => React.ReactNode;
+  renderBadges?: boolean;       // affiche les badges sous le trigger (pour multi)
+  onRemove?: (id: string) => void;
+}
 ```
 
-### Modifications frontend
+Le composant gere :
+- Popover open/close state
+- Le trigger Button avec chevron + bouton clear
+- Command avec CommandInput, CommandList, CommandEmpty
+- Rendu de N `CommandGroup` avec heading et className sur chaque item
+- Check icon selon `selectedIds.includes(item.id)`
+- Fermeture auto du popover si `!multiSelect`
 
-#### 1. Toutes les requetes SELECT
+### 2. Refactor `CompanySelect.tsx`
 
-Remplacer `.from('table')` par `.from('active_table')` dans tous les selects :
+Devient un wrapper qui :
+- Separe `companies` en 2 groupes (actives / inactives par `status`)
+- Passe `multiSelect={false}`, `selectedIds={value ? [value] : []}`
+- `onToggle` appelle `onChange(id === value ? null : id)`
 
-| Table originale | Vue active | Fichiers concernes |
-|---|---|---|
-| `documents` | `active_documents` | `AdminDocuments.tsx`, `DocumentsSection.tsx`, `Contrats.tsx`, `OfficerFormDialog.tsx`, `DocumentUploadDialog.tsx`, `DocumentEditDialog.tsx` |
-| `companies` | `active_companies` | `AdminCompanies.tsx`, `AdminRequests.tsx`, `CompanyFormDialog.tsx`, `DocumentUploadDialog.tsx`, `DocumentEditDialog.tsx`, `OfficerFormDialog.tsx`, `CompanyContext.tsx` |
-| `company_officers` | `active_company_officers` | `AdminOfficers.tsx`, `CompanyFormDialog.tsx`, `DocumentUploadDialog.tsx` |
-| `document_tags` | `active_document_tags` | `TagManagementDialog.tsx`, `DocumentUploadDialog.tsx`, `DocumentEditDialog.tsx`, `AdminDocuments.tsx` |
-| `requests` | `active_requests` | `AdminRequests.tsx`, `Juridique.tsx`, `KanbanBoard.tsx`, `RequestFormDialog.tsx` |
+~15 lignes au lieu de 88.
 
-Les INSERT/UPDATE/DELETE restent sur les tables originales.
+### 3. Refactor `MultiCompanySelect.tsx`
 
-#### 2. Actions de suppression → soft delete
+Wrapper qui :
+- Separe en 2 groupes actives/inactives
+- `multiSelect={true}`, `renderBadges={true}`
+- `onToggle` toggle dans le tableau, `onRemove` retire
 
-Remplacer `.delete().eq('id', id)` par `.update({ deleted_at: new Date().toISOString() }).eq('id', id)` dans :
+~15 lignes au lieu de 100.
 
-| Fichier | Action |
-|---|---|
-| `DeleteCompanyDialog.tsx` | `.from('companies').update(...)` |
-| `DeleteDocumentDialog.tsx` | `.from('documents').update(...)` (supprimer l'appel storage.remove) |
-| `DeleteOfficerDialog.tsx` | `.from('company_officers').update(...)` |
-| `TagManagementDialog.tsx` | `.from('document_tags').update(...)` |
-| `AdminRequests.tsx` handleDelete | `.from('requests').update(...)` |
+### 4. Refactor `EntitySelect.tsx`
 
-#### 3. Documents : conserver le fichier storage
+Wrapper qui :
+- Cree jusqu'a 4 groupes : companies actives, companies inactives, officers actifs (pas de status sur officers donc 1 seul groupe officers)
+- Chaque item a une `icon` (Building2 / UserRound)
+- `onToggle` gere la logique linkedType/linkedId
 
-Dans `DeleteDocumentDialog.tsx`, supprimer l'appel `supabase.storage.from('documents').remove(...)` car le fichier doit rester accessible si on restaure un jour le document.
+~30 lignes au lieu de 134.
 
-#### 4. Relations a filtrer
+### 5. Queries : ajouter `status` et utiliser `active_companies`
 
-- `officer_company_assignments` : pas de soft delete (table de liaison), mais les requetes qui joignent `company_officers` ou `companies` utiliseront les vues actives
-- `document_tag_assignments` : idem, pas de soft delete mais les jointures avec `document_tags` ou `documents` utiliseront les vues actives
-- `Entreprise.tsx` : la page company affiche les officers via `officer_company_assignments` -- les officers soft-deleted ne seront plus visibles car la requete sur `active_company_officers` les exclura
+Identique au plan precedent :
+- `UserFormDialog.tsx` : `active_companies`, select `id, name, status`, supprimer `.eq('status', 'active')`
+- `OfficerFormDialog.tsx`, `DocumentUploadDialog.tsx`, `DocumentEditDialog.tsx` : ajouter `status` au select
 
 ### Resume
 
-| Etape | Scope |
-|---|---|
-| 1 migration SQL | 5 colonnes `deleted_at` + 5 vues |
-| ~15 fichiers frontend | Remplacer `.from('table')` par `.from('active_table')` pour les SELECT |
-| 5 fichiers frontend | Remplacer `.delete()` par `.update({ deleted_at })` |
-| 1 fichier | Supprimer l'appel storage.remove dans DeleteDocumentDialog |
+| Fichier | Action |
+|---------|--------|
+| `ComboboxSelect.tsx` (nouveau) | Composant generique Popover+Command avec groupes et active/inactive |
+| `CompanySelect.tsx` | Wrapper ~15 lignes autour de ComboboxSelect |
+| `MultiCompanySelect.tsx` | Wrapper ~15 lignes autour de ComboboxSelect |
+| `EntitySelect.tsx` | Wrapper ~30 lignes autour de ComboboxSelect |
+| `UserFormDialog.tsx` | Query `active_companies` + `status` |
+| `OfficerFormDialog.tsx` | Ajouter `status` au select |
+| `DocumentUploadDialog.tsx` | Ajouter `status` au select |
+| `DocumentEditDialog.tsx` | Ajouter `status` au select |
 
