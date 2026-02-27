@@ -1,65 +1,75 @@
 
 
-## Responsiveness de la page `/companies`
+## Architecture Soft Delete
 
-### 1. `src/components/layout/MainLayout.tsx` — Réduire le padding sur mobile
+### Approche : colonne `deleted_at` + vues PostgreSQL
 
-Changer `p-6` en `p-4 md:p-6` sur le `<main>`.
+Ajouter une colonne `deleted_at timestamptz NULL DEFAULT NULL` sur les 5 tables. Creer une vue PostgreSQL pour chaque table (prefixee `active_`) qui filtre automatiquement `WHERE deleted_at IS NULL`. Cote frontend, remplacer les appels `.delete()` par des `.update({ deleted_at: new Date().toISOString() })`.
 
-### 2. `src/pages/Entreprise.tsx` — Adapter titre et espacements
+**Pourquoi des vues ?** Cela centralise le filtrage en base et evite d'ajouter `.is('deleted_at', null)` sur chaque requete frontend. Les vues sont aussi compatibles avec les jointures et les politiques RLS existantes.
 
-- Titre : `text-3xl` → `text-2xl md:text-3xl`
-- Espacement global : `space-y-6` → `space-y-4 md:space-y-6`
-- Gap grille cards : `gap-6` → `gap-4 md:gap-6`
+### Migration SQL
 
-### 3. `src/components/company/DocumentsSection.tsx` — Remplacer la table par des cartes responsives
+```sql
+-- Ajouter deleted_at sur les 5 tables
+ALTER TABLE documents ADD COLUMN deleted_at timestamptz DEFAULT NULL;
+ALTER TABLE companies ADD COLUMN deleted_at timestamptz DEFAULT NULL;
+ALTER TABLE company_officers ADD COLUMN deleted_at timestamptz DEFAULT NULL;
+ALTER TABLE document_tags ADD COLUMN deleted_at timestamptz DEFAULT NULL;
+ALTER TABLE requests ADD COLUMN deleted_at timestamptz DEFAULT NULL;
 
-Supprimer entièrement la `<Table>` et la remplacer par une grille de cartes, identique sur mobile et desktop. La grille s'adapte avec `grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3`.
-
-Chaque carte :
-
-```text
-┌──────────────────────────┐
-│ Nom du document          │
-│ [Tag1] [Tag2]            │
-│ 25/02/2026     👁  ⬇     │
-└──────────────────────────┘
+-- Creer des vues "active" pour chaque table
+CREATE VIEW active_documents AS SELECT * FROM documents WHERE deleted_at IS NULL;
+CREATE VIEW active_companies AS SELECT * FROM companies WHERE deleted_at IS NULL;
+CREATE VIEW active_company_officers AS SELECT * FROM company_officers WHERE deleted_at IS NULL;
+CREATE VIEW active_document_tags AS SELECT * FROM document_tags WHERE deleted_at IS NULL;
+CREATE VIEW active_requests AS SELECT * FROM requests WHERE deleted_at IS NULL;
 ```
 
-- Ligne 1 : `display_name` en `font-medium text-sm`, truncate si trop long
-- Ligne 2 : badges des tags (flex-wrap)
-- Ligne 3 : date à gauche (text-xs text-muted-foreground), boutons actions à droite (flex justify-between items-center)
+### Modifications frontend
 
-Structure JSX de chaque carte :
+#### 1. Toutes les requetes SELECT
 
-```tsx
-<div className="p-3 border rounded-lg space-y-2">
-  <p className="text-sm font-medium truncate">{doc.display_name}</p>
-  <div className="flex flex-wrap gap-1">
-    {(tagMap[doc.id] || []).map(tag => (
-      <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
-    ))}
-  </div>
-  <div className="flex items-center justify-between">
-    <span className="text-xs text-muted-foreground">{formatDate(doc.created_at)}</span>
-    <div className="flex items-center gap-1">
-      {isPdf(doc) && <Button variant="ghost" size="icon" ...><Eye /></Button>}
-      <Button variant="ghost" size="icon" ...><Download /></Button>
-    </div>
-  </div>
-</div>
-```
+Remplacer `.from('table')` par `.from('active_table')` dans tous les selects :
 
-Réduire aussi le padding du CardHeader : `pb-3 md:pb-4`.
+| Table originale | Vue active | Fichiers concernes |
+|---|---|---|
+| `documents` | `active_documents` | `AdminDocuments.tsx`, `DocumentsSection.tsx`, `Contrats.tsx`, `OfficerFormDialog.tsx`, `DocumentUploadDialog.tsx`, `DocumentEditDialog.tsx` |
+| `companies` | `active_companies` | `AdminCompanies.tsx`, `AdminRequests.tsx`, `CompanyFormDialog.tsx`, `DocumentUploadDialog.tsx`, `DocumentEditDialog.tsx`, `OfficerFormDialog.tsx`, `CompanyContext.tsx` |
+| `company_officers` | `active_company_officers` | `AdminOfficers.tsx`, `CompanyFormDialog.tsx`, `DocumentUploadDialog.tsx` |
+| `document_tags` | `active_document_tags` | `TagManagementDialog.tsx`, `DocumentUploadDialog.tsx`, `DocumentEditDialog.tsx`, `AdminDocuments.tsx` |
+| `requests` | `active_requests` | `AdminRequests.tsx`, `Juridique.tsx`, `KanbanBoard.tsx`, `RequestFormDialog.tsx` |
 
-### Résumé technique
+Les INSERT/UPDATE/DELETE restent sur les tables originales.
 
-| Fichier | Modification |
-|---------|-------------|
-| `MainLayout.tsx` | `p-6` → `p-4 md:p-6` |
-| `Entreprise.tsx` ligne 105 | `space-y-6` → `space-y-4 md:space-y-6` |
-| `Entreprise.tsx` ligne 107 | `text-3xl` → `text-2xl md:text-3xl` |
-| `Entreprise.tsx` ligne 111 | `gap-6` → `gap-4 md:gap-6` |
-| `DocumentsSection.tsx` | Supprimer la `<Table>` entière, la remplacer par une grille de cartes `grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3` |
-| `DocumentsSection.tsx` | CardHeader padding : `pb-4` → `pb-3 md:pb-4` |
+#### 2. Actions de suppression → soft delete
+
+Remplacer `.delete().eq('id', id)` par `.update({ deleted_at: new Date().toISOString() }).eq('id', id)` dans :
+
+| Fichier | Action |
+|---|---|
+| `DeleteCompanyDialog.tsx` | `.from('companies').update(...)` |
+| `DeleteDocumentDialog.tsx` | `.from('documents').update(...)` (supprimer l'appel storage.remove) |
+| `DeleteOfficerDialog.tsx` | `.from('company_officers').update(...)` |
+| `TagManagementDialog.tsx` | `.from('document_tags').update(...)` |
+| `AdminRequests.tsx` handleDelete | `.from('requests').update(...)` |
+
+#### 3. Documents : conserver le fichier storage
+
+Dans `DeleteDocumentDialog.tsx`, supprimer l'appel `supabase.storage.from('documents').remove(...)` car le fichier doit rester accessible si on restaure un jour le document.
+
+#### 4. Relations a filtrer
+
+- `officer_company_assignments` : pas de soft delete (table de liaison), mais les requetes qui joignent `company_officers` ou `companies` utiliseront les vues actives
+- `document_tag_assignments` : idem, pas de soft delete mais les jointures avec `document_tags` ou `documents` utiliseront les vues actives
+- `Entreprise.tsx` : la page company affiche les officers via `officer_company_assignments` -- les officers soft-deleted ne seront plus visibles car la requete sur `active_company_officers` les exclura
+
+### Resume
+
+| Etape | Scope |
+|---|---|
+| 1 migration SQL | 5 colonnes `deleted_at` + 5 vues |
+| ~15 fichiers frontend | Remplacer `.from('table')` par `.from('active_table')` pour les SELECT |
+| 5 fichiers frontend | Remplacer `.delete()` par `.update({ deleted_at })` |
+| 1 fichier | Supprimer l'appel storage.remove dans DeleteDocumentDialog |
 
