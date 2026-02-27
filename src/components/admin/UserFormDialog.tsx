@@ -38,12 +38,11 @@ export function UserFormDialog({ open, user, onClose, onSuccess }: UserFormDialo
     queryKey: ['admin-all-companies'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('companies')
-        .select('id, name')
-        .eq('status', 'active')
+        .from('active_companies' as any)
+        .select('id, name, status')
         .order('name');
       if (error) throw error;
-      return data as { id: string; name: string }[];
+      return (data as any[]) as { id: string; name: string; status?: string }[];
     },
     enabled: open,
   });
