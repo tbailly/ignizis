@@ -41,7 +41,7 @@ export default function AdminCompanies() {
     queryKey: ['admin-companies'],
     queryFn: async () => {
       const { data: companiesData, error: companiesError } = await supabase
-        .from('companies')
+        .from('active_companies' as any)
         .select('id, name, slug, status, company_number, address, country, perm_legal, perm_accounting, perm_finance, accounting_software_url')
         .order('name');
 
@@ -61,7 +61,7 @@ export default function AdminCompanies() {
 
       const usersById = new Map(usersData.map(u => [u.id, u]));
 
-      return (companiesData || []).map((c: any) => {
+      return ((companiesData as any[]) || []).map((c: any) => {
         const companyUserIds = (ucData || [])
           .filter((uc: any) => uc.company_id === c.id)
           .map((uc: any) => uc.user_id);

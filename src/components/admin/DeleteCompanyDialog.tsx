@@ -29,7 +29,7 @@ export function DeleteCompanyDialog({ company, onClose, onSuccess }: DeleteCompa
     try {
       const { error } = await supabase
         .from('companies')
-        .delete()
+        .update({ deleted_at: new Date().toISOString() } as any)
         .eq('id', company.id);
 
       if (error) throw error;

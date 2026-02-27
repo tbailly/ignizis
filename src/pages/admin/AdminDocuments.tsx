@@ -62,7 +62,7 @@ export default function AdminDocuments() {
     queryKey: ['admin-documents'],
     queryFn: async () => {
       const { data: docs, error: docsError } = await supabase
-        .from('documents')
+        .from('active_documents' as any)
         .select('*, companies:company_id(name)')
         .order('created_at', { ascending: false });
 
@@ -75,14 +75,14 @@ export default function AdminDocuments() {
       if (assignError) throw assignError;
 
       const { data: tags, error: tagsError } = await supabase
-        .from('document_tags')
+        .from('active_document_tags' as any)
         .select('id, name');
 
       if (tagsError) throw tagsError;
 
-      const tagsById = new Map(tags.map(t => [t.id, t.name]));
+      const tagsById = new Map((tags as any[]).map(t => [t.id, t.name]));
 
-      return (docs || []).map(doc => ({
+      return ((docs as any[]) || []).map(doc => ({
         ...doc,
         company_name: (doc as any).companies?.name || null,
         tags: (assignments || [])

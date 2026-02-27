@@ -22,17 +22,10 @@ export function DeleteDocumentDialog({ document, onClose, onSuccess }: DeleteDoc
     setDeleting(true);
 
     try {
-      // Delete from storage first
-      const { error: storageError } = await supabase.storage
-        .from('documents')
-        .remove([document.storage_path]);
-
-      if (storageError) throw storageError;
-
-      // Delete from DB (cascade deletes tag assignments)
+      // Soft delete (keep storage file for potential restoration)
       const { error: dbError } = await supabase
         .from('documents')
-        .delete()
+        .update({ deleted_at: new Date().toISOString() } as any)
         .eq('id', document.id);
 
       if (dbError) throw dbError;

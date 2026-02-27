@@ -21,6 +21,7 @@ export type Database = {
           company_number: string | null
           country: string | null
           created_at: string
+          deleted_at: string | null
           id: string
           name: string
           perm_accounting: boolean
@@ -36,6 +37,7 @@ export type Database = {
           company_number?: string | null
           country?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: string
           name: string
           perm_accounting?: boolean
@@ -51,6 +53,7 @@ export type Database = {
           company_number?: string | null
           country?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: string
           name?: string
           perm_accounting?: boolean
@@ -67,6 +70,7 @@ export type Database = {
           birth_city: string
           created_at: string
           date_of_birth: string | null
+          deleted_at: string | null
           first_name: string
           id: string
           is_compliant: boolean
@@ -80,6 +84,7 @@ export type Database = {
           birth_city?: string
           created_at?: string
           date_of_birth?: string | null
+          deleted_at?: string | null
           first_name: string
           id?: string
           is_compliant?: boolean
@@ -93,6 +98,7 @@ export type Database = {
           birth_city?: string
           created_at?: string
           date_of_birth?: string | null
+          deleted_at?: string | null
           first_name?: string
           id?: string
           is_compliant?: boolean
@@ -107,6 +113,13 @@ export type Database = {
             foreignKeyName: "company_officers_passport_document_id_fkey"
             columns: ["passport_document_id"]
             isOneToOne: false
+            referencedRelation: "active_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_officers_passport_document_id_fkey"
+            columns: ["passport_document_id"]
+            isOneToOne: false
             referencedRelation: "documents"
             referencedColumns: ["id"]
           },
@@ -114,7 +127,21 @@ export type Database = {
             foreignKeyName: "company_officers_power_of_attorney_document_id_fkey"
             columns: ["power_of_attorney_document_id"]
             isOneToOne: false
+            referencedRelation: "active_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_officers_power_of_attorney_document_id_fkey"
+            columns: ["power_of_attorney_document_id"]
+            isOneToOne: false
             referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_officers_secondary_id_document_id_fkey"
+            columns: ["secondary_id_document_id"]
+            isOneToOne: false
+            referencedRelation: "active_documents"
             referencedColumns: ["id"]
           },
           {
@@ -147,7 +174,21 @@ export type Database = {
             foreignKeyName: "document_tag_assignments_document_id_fkey"
             columns: ["document_id"]
             isOneToOne: false
+            referencedRelation: "active_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_tag_assignments_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
             referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_tag_assignments_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "active_document_tags"
             referencedColumns: ["id"]
           },
           {
@@ -162,16 +203,19 @@ export type Database = {
       document_tags: {
         Row: {
           created_at: string
+          deleted_at: string | null
           id: string
           name: string
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           id?: string
           name: string
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           id?: string
           name?: string
         }
@@ -181,6 +225,7 @@ export type Database = {
         Row: {
           company_id: string | null
           created_at: string
+          deleted_at: string | null
           display_name: string
           document_type: Database["public"]["Enums"]["document_type"]
           expires_at: string | null
@@ -195,6 +240,7 @@ export type Database = {
         Insert: {
           company_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           display_name: string
           document_type: Database["public"]["Enums"]["document_type"]
           expires_at?: string | null
@@ -209,6 +255,7 @@ export type Database = {
         Update: {
           company_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           display_name?: string
           document_type?: Database["public"]["Enums"]["document_type"]
           expires_at?: string | null
@@ -221,6 +268,13 @@ export type Database = {
           uploaded_by?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "documents_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "active_companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "documents_company_id_fkey"
             columns: ["company_id"]
@@ -254,7 +308,21 @@ export type Database = {
             foreignKeyName: "officer_company_assignments_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
+            referencedRelation: "active_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "officer_company_assignments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "officer_company_assignments_officer_id_fkey"
+            columns: ["officer_id"]
+            isOneToOne: false
+            referencedRelation: "active_company_officers"
             referencedColumns: ["id"]
           },
           {
@@ -271,6 +339,7 @@ export type Database = {
           company_id: string
           created_at: string
           created_by: string | null
+          deleted_at: string | null
           description: string | null
           id: string
           position: number
@@ -284,6 +353,7 @@ export type Database = {
           company_id: string
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
           description?: string | null
           id?: string
           position?: number
@@ -297,6 +367,7 @@ export type Database = {
           company_id?: string
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
           description?: string | null
           id?: string
           position?: number
@@ -307,6 +378,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "active_companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "requests_company_id_fkey"
             columns: ["company_id"]
@@ -336,6 +414,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "user_companies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "active_companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_companies_company_id_fkey"
             columns: ["company_id"]
@@ -375,6 +460,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "user_roles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "active_companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_roles_company_id_fkey"
             columns: ["company_id"]
@@ -420,7 +512,289 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      active_companies: {
+        Row: {
+          accounting_software_url: string | null
+          address: string | null
+          company_number: string | null
+          country: string | null
+          created_at: string | null
+          deleted_at: string | null
+          id: string | null
+          name: string | null
+          perm_accounting: boolean | null
+          perm_finance: boolean | null
+          perm_legal: boolean | null
+          slug: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          accounting_software_url?: string | null
+          address?: string | null
+          company_number?: string | null
+          country?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          id?: string | null
+          name?: string | null
+          perm_accounting?: boolean | null
+          perm_finance?: boolean | null
+          perm_legal?: boolean | null
+          slug?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          accounting_software_url?: string | null
+          address?: string | null
+          company_number?: string | null
+          country?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          id?: string | null
+          name?: string | null
+          perm_accounting?: boolean | null
+          perm_finance?: boolean | null
+          perm_legal?: boolean | null
+          slug?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      active_company_officers: {
+        Row: {
+          birth_city: string | null
+          created_at: string | null
+          date_of_birth: string | null
+          deleted_at: string | null
+          first_name: string | null
+          id: string | null
+          is_compliant: boolean | null
+          last_name: string | null
+          passport_document_id: string | null
+          position: string | null
+          power_of_attorney_document_id: string | null
+          secondary_id_document_id: string | null
+        }
+        Insert: {
+          birth_city?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          deleted_at?: string | null
+          first_name?: string | null
+          id?: string | null
+          is_compliant?: boolean | null
+          last_name?: string | null
+          passport_document_id?: string | null
+          position?: string | null
+          power_of_attorney_document_id?: string | null
+          secondary_id_document_id?: string | null
+        }
+        Update: {
+          birth_city?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          deleted_at?: string | null
+          first_name?: string | null
+          id?: string | null
+          is_compliant?: boolean | null
+          last_name?: string | null
+          passport_document_id?: string | null
+          position?: string | null
+          power_of_attorney_document_id?: string | null
+          secondary_id_document_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_officers_passport_document_id_fkey"
+            columns: ["passport_document_id"]
+            isOneToOne: false
+            referencedRelation: "active_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_officers_passport_document_id_fkey"
+            columns: ["passport_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_officers_power_of_attorney_document_id_fkey"
+            columns: ["power_of_attorney_document_id"]
+            isOneToOne: false
+            referencedRelation: "active_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_officers_power_of_attorney_document_id_fkey"
+            columns: ["power_of_attorney_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_officers_secondary_id_document_id_fkey"
+            columns: ["secondary_id_document_id"]
+            isOneToOne: false
+            referencedRelation: "active_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_officers_secondary_id_document_id_fkey"
+            columns: ["secondary_id_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      active_document_tags: {
+        Row: {
+          created_at: string | null
+          deleted_at: string | null
+          id: string | null
+          name: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          deleted_at?: string | null
+          id?: string | null
+          name?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          deleted_at?: string | null
+          id?: string | null
+          name?: string | null
+        }
+        Relationships: []
+      }
+      active_documents: {
+        Row: {
+          company_id: string | null
+          created_at: string | null
+          deleted_at: string | null
+          display_name: string | null
+          document_type: Database["public"]["Enums"]["document_type"] | null
+          expires_at: string | null
+          file_size: number | null
+          id: string | null
+          mime_type: string | null
+          original_filename: string | null
+          storage_path: string | null
+          updated_at: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          display_name?: string | null
+          document_type?: Database["public"]["Enums"]["document_type"] | null
+          expires_at?: string | null
+          file_size?: number | null
+          id?: string | null
+          mime_type?: string | null
+          original_filename?: string | null
+          storage_path?: string | null
+          updated_at?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          display_name?: string | null
+          document_type?: Database["public"]["Enums"]["document_type"] | null
+          expires_at?: string | null
+          file_size?: number | null
+          id?: string | null
+          mime_type?: string | null
+          original_filename?: string | null
+          storage_path?: string | null
+          updated_at?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "active_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      active_requests: {
+        Row: {
+          company_id: string | null
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          description: string | null
+          id: string | null
+          position: number | null
+          request_number: number | null
+          requester_email: string | null
+          status: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          id?: string | null
+          position?: number | null
+          request_number?: number | null
+          requester_email?: string | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          id?: string | null
+          position?: number | null
+          request_number?: number | null
+          requester_email?: string | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "active_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       has_permission: {

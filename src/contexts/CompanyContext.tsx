@@ -66,7 +66,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       if (isAdmin) {
         // Admins see ALL companies (including inactive, unassigned)
         const { data, error } = await supabase
-          .from('companies')
+          .from('active_companies' as any)
           .select('id, name, slug, address, company_number, country, status, perm_legal, perm_accounting, perm_finance, accounting_software_url')
           .order('name');
 

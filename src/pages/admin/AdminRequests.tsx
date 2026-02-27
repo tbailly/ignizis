@@ -24,7 +24,7 @@ export default function AdminRequests() {
     queryKey: ['admin-requests'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('requests' as any)
+        .from('active_requests' as any)
         .select('id, title, description, status, company_id, position, request_number, requester_email, companies(id, name)')
         .order('position', { ascending: true });
 
@@ -48,11 +48,11 @@ export default function AdminRequests() {
     queryKey: ['admin-companies-list'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('companies')
+        .from('active_companies' as any)
         .select('id, name')
         .order('name');
       if (error) throw error;
-      return (data ?? []) as Company[];
+      return ((data as any[]) ?? []) as Company[];
     },
   });
 
@@ -62,7 +62,7 @@ export default function AdminRequests() {
     try {
       const { error } = await supabase
         .from('requests' as any)
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', id);
 
       if (error) throw error;

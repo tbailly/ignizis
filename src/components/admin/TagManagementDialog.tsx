@@ -31,11 +31,11 @@ export function TagManagementDialog({ onClose }: Props) {
     queryKey: ['document_tags'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('document_tags')
+        .from('active_document_tags' as any)
         .select('*')
         .order('name');
       if (error) throw error;
-      return data;
+      return (data as any[]) || [];
     },
   });
 
@@ -66,7 +66,7 @@ export function TagManagementDialog({ onClose }: Props) {
 
   const handleDelete = async () => {
     if (!deletingTag) return;
-    const { error } = await supabase.from('document_tags').delete().eq('id', deletingTag.id);
+    const { error } = await supabase.from('document_tags').update({ deleted_at: new Date().toISOString() } as any).eq('id', deletingTag.id);
     if (error) { toast.error(error.message); return; }
     toast.success(t('admin.documents.tagDeleteSuccess'));
     setDeletingTag(null);

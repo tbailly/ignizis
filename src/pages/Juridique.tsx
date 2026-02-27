@@ -76,7 +76,7 @@ export default function Juridique() {
     setLoadingRequests(true);
     try {
       const { data, error } = await supabase
-        .from('requests' as any)
+        .from('active_requests' as any)
         .select('id, request_number, status, title, description')
         .eq('company_id', companyId)
         .order('created_at', { ascending: false });

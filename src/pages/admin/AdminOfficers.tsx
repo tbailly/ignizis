@@ -44,7 +44,7 @@ export default function AdminOfficers() {
     queryKey: ['admin-officers'],
     queryFn: async () => {
       const { data: officersData, error: officersError } = await supabase
-        .from('company_officers')
+        .from('active_company_officers' as any)
         .select('id, first_name, last_name, date_of_birth, birth_city, position, is_compliant, passport_document_id, secondary_id_document_id, power_of_attorney_document_id')
         .order('last_name');
 
@@ -57,12 +57,12 @@ export default function AdminOfficers() {
       if (assignErr) throw assignErr;
 
       const { data: companiesData, error: companiesError } = await supabase
-        .from('companies')
+        .from('active_companies' as any)
         .select('id, name');
 
       if (companiesError) throw companiesError;
 
-      const companiesById = new Map(companiesData.map(c => [c.id, c.name]));
+      const companiesById = new Map((companiesData as any[]).map(c => [c.id, c.name]));
 
       // Group assignments by officer
       const assignmentsByOfficer = new Map<string, { id: string; name: string }[]>();
@@ -74,7 +74,7 @@ export default function AdminOfficers() {
         assignmentsByOfficer.get(a.officer_id)!.push({ id: a.company_id, name });
       }
 
-      return (officersData || []).map(o => ({
+      return ((officersData as any[]) || []).map(o => ({
         ...o,
         companies: assignmentsByOfficer.get(o.id) || [],
       })) as OfficerWithCompanies[];

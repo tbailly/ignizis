@@ -41,12 +41,12 @@ export default function Contrats() {
     queryFn: async () => {
       if (!companyId) return [];
       const { data, error } = await supabase
-        .from('documents')
+        .from('active_documents' as any)
         .select('id, display_name, document_type, storage_path, original_filename, mime_type, created_at')
         .eq('company_id', companyId)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data || []) as DocRow[];
+      return ((data as any[]) || []) as DocRow[];
     },
     enabled: !!companyId,
   });
