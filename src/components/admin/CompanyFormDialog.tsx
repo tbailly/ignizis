@@ -132,7 +132,7 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
     }
 
     const { data, error } = await supabase
-      .from('company_officers')
+      .from('active_company_officers' as any)
       .select('id, last_name, first_name, date_of_birth, position')
       .in('id', officerIds)
       .order('created_at', { ascending: true });
@@ -143,7 +143,7 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
     }
 
     setOfficers(
-      (data || []).map((o) => ({
+      ((data as any[]) || []).map((o: any) => ({
         id: o.id,
         last_name: o.last_name,
         first_name: o.first_name,

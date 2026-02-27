@@ -51,18 +51,18 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
   const { data: availableTags = [] } = useQuery({
     queryKey: ['document-tags'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('document_tags').select('id, name').order('name');
+      const { data, error } = await supabase.from('active_document_tags' as any).select('id, name').order('name');
       if (error) throw error;
-      return data || [];
+      return (data as any[]) || [];
     },
   });
 
   const { data: companies = [] } = useQuery({
     queryKey: ['companies-list'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('companies').select('id, name').order('name');
+      const { data, error } = await supabase.from('active_companies' as any).select('id, name').order('name');
       if (error) throw error;
-      return data || [];
+      return (data as any[]) || [];
     },
   });
 
@@ -70,11 +70,11 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
     queryKey: ['officers-list'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('company_officers')
+        .from('active_company_officers' as any)
         .select('id, first_name, last_name')
         .order('last_name');
       if (error) throw error;
-      return data || [];
+      return (data as any[]) || [];
     },
   });
 

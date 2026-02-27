@@ -57,18 +57,18 @@ export function DocumentEditDialog({ document, onClose, onSuccess }: DocumentEdi
   const { data: availableTags = [] } = useQuery({
     queryKey: ['document-tags'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('document_tags').select('id, name').order('name');
+      const { data, error } = await supabase.from('active_document_tags' as any).select('id, name').order('name');
       if (error) throw error;
-      return data || [];
+      return (data as any[]) || [];
     },
   });
 
   const { data: companies = [] } = useQuery({
     queryKey: ['companies-list'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('companies').select('id, name').order('name');
+      const { data, error } = await supabase.from('active_companies' as any).select('id, name').order('name');
       if (error) throw error;
-      return data || [];
+      return (data as any[]) || [];
     },
   });
 

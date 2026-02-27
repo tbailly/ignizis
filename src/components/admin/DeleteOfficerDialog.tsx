@@ -24,7 +24,7 @@ export function DeleteOfficerDialog({ officer, onClose, onSuccess }: DeleteOffic
     try {
       const { error } = await supabase
         .from('company_officers')
-        .delete()
+        .update({ deleted_at: new Date().toISOString() } as any)
         .eq('id', officer.id);
 
       if (error) throw error;
