@@ -27,10 +27,9 @@ export function DeleteCompanyDialog({ company, onClose, onSuccess }: DeleteCompa
     setDeleting(true);
 
     try {
-      const { error } = await supabase
-        .from('companies')
-        .update({ deleted_at: new Date().toISOString() } as any)
-        .eq('id', company.id);
+      const { error } = await supabase.rpc('soft_delete_company' as any, {
+        p_company_id: company.id,
+      });
 
       if (error) throw error;
 

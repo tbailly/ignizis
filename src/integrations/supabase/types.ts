@@ -811,6 +811,10 @@ export type Database = {
         Args: { p_officer_id: string }
         Returns: undefined
       }
+      soft_delete_company: {
+        Args: { p_company_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       document_type:
