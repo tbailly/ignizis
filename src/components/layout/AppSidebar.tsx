@@ -110,33 +110,28 @@ export function AppSidebar() {
 
       {/* Main Navigation */}
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>{t('sidebar.navigation')}</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => {
-                const fullPath = companyPath(item.path);
-                const locked = !hasPermission(item.permission);
-                return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={location.pathname === fullPath}
-                      tooltip={locked ? `${item.title} (${t('common.locked')})` : item.title}
-                      className={cn(locked && "opacity-50")}
-                    >
-                      <NavLink to={fullPath} onClick={closeMobileSidebar}>
-                        <item.icon className="h-4 w-4" />
-                        <span className="flex-1">{item.title}</span>
-                        {locked && <Lock className="h-3.5 w-3.5 text-muted-foreground ml-auto" />}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        <SidebarMenu>
+          {menuItems.map((item) => {
+            const fullPath = companyPath(item.path);
+            const locked = !hasPermission(item.permission);
+            return (
+              <SidebarMenuItem key={item.path}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location.pathname === fullPath}
+                  tooltip={locked ? `${item.title} (${t('common.locked')})` : item.title}
+                  className={cn(locked && "opacity-50")}
+                >
+                  <NavLink to={fullPath} onClick={closeMobileSidebar}>
+                    <item.icon className="h-4 w-4" />
+                    <span className="flex-1">{item.title}</span>
+                    {locked && <Lock className="h-3.5 w-3.5 text-muted-foreground ml-auto" />}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
 
         {/* Admin Navigation */}
         {isAdmin && (
@@ -144,18 +139,6 @@ export function AppSidebar() {
             <SidebarGroupLabel>{t('sidebar.admin')}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location.pathname === '/admin'}
-                    tooltip={t('sidebar.admin')}
-                  >
-                    <NavLink to="/admin" onClick={closeMobileSidebar}>
-                      <Shield className="h-4 w-4" />
-                      <span>{t('sidebar.admin')}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
