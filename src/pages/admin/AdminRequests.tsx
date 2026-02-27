@@ -11,6 +11,7 @@ import { RequestFormDialog, type RequestData } from '@/components/admin/RequestF
 interface Company {
   id: string;
   name: string;
+  status?: string;
 }
 
 export default function AdminRequests() {
@@ -49,7 +50,7 @@ export default function AdminRequests() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('active_companies' as any)
-        .select('id, name')
+        .select('id, name, status')
         .order('name');
       if (error) throw error;
       return ((data as any[]) ?? []) as Company[];

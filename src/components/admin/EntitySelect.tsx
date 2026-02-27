@@ -31,9 +31,6 @@ export function EntitySelect({ companies, officers, linkedType, linkedId, onChan
     ...(activeCompanies.length > 0
       ? [{ heading: t('sidebar.adminCompanies'), items: activeCompanies.map(companyItem) }]
       : []),
-    ...(inactiveCompanies.length > 0
-      ? [{ heading: t('common.inactive'), items: inactiveCompanies.map(companyItem), className: 'opacity-50' }]
-      : []),
     ...(officers.length > 0
       ? [{
           heading: t('sidebar.adminOfficers'),
@@ -43,6 +40,9 @@ export function EntitySelect({ companies, officers, linkedType, linkedId, onChan
             icon: icon('officer'),
           })),
         }]
+      : []),
+    ...(inactiveCompanies.length > 0
+      ? [{ heading: t('common.inactiveCompanies'), items: inactiveCompanies.map(companyItem), className: 'opacity-50' }]
       : []),
   ];
 
