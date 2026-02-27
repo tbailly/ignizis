@@ -1,46 +1,25 @@
 
 
-## Cascade soft-delete d'une entreprise : documents + requests
+## Supprimer la page Admin Dashboard + simplifier la sidebar
 
-### Approche : fonction PostgreSQL transactionnelle
+### 1. `App.tsx` — Rediriger `/admin` vers `/admin/companies`
 
-Creer une fonction `soft_delete_company(p_company_id uuid)` qui effectue les 3 updates dans une seule transaction. Appeler cette fonction via `supabase.rpc()` depuis le frontend.
+Remplacer `<Route index element={<AdminDashboard />} />` par `<Route index element={<Navigate to="/admin/companies" replace />} />`. Supprimer l'import `AdminDashboard`.
 
-### 1. Migration SQL — Fonction `soft_delete_company`
+### 2. `AdminDashboard.tsx` — Supprimer le fichier
 
-```sql
-CREATE OR REPLACE FUNCTION public.soft_delete_company(p_company_id uuid)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-DECLARE
-  v_now timestamptz := now();
-BEGIN
-  UPDATE companies SET deleted_at = v_now WHERE id = p_company_id AND deleted_at IS NULL;
-  UPDATE documents SET deleted_at = v_now WHERE company_id = p_company_id AND deleted_at IS NULL;
-  UPDATE requests  SET deleted_at = v_now WHERE company_id = p_company_id AND deleted_at IS NULL;
-END;
-$$;
-```
+Le fichier `src/pages/admin/AdminDashboard.tsx` n'est plus utilisé.
 
-Etant `SECURITY DEFINER`, la fonction bypass RLS. Pas besoin de politique supplementaire. La transaction est implicite (une fonction PL/pgSQL = 1 transaction).
+### 3. `AppSidebar.tsx` — Restructurer la sidebar
 
-### 2. `DeleteCompanyDialog.tsx` — Appeler `rpc('soft_delete_company')`
+- Supprimer le wrapper `SidebarGroup` / `SidebarGroupLabel("Navigation")` autour des menu items métier : les `SidebarMenuItem` restent directement dans un `SidebarMenu` au niveau du `SidebarContent`.
+- Dans le groupe Administration, supprimer l'entrée "Admin" (lien vers `/admin`) qui faisait doublon avec le dashboard supprimé. Garder uniquement les sous-pages (companies, users, officers, documents, requests).
 
-Remplacer le `.from('companies').update(...)` (lignes 30-33) par :
-
-```ts
-const { error } = await supabase.rpc('soft_delete_company' as any, {
-  p_company_id: company.id,
-});
-```
-
-### Resume
+### Résumé
 
 | Fichier | Modification |
 |---------|-------------|
-| Migration SQL | Fonction `soft_delete_company` (transaction implicite) |
-| `DeleteCompanyDialog.tsx` | `supabase.rpc('soft_delete_company', ...)` |
+| `App.tsx` | `Navigate to="/admin/companies"` au lieu de `AdminDashboard` |
+| `AdminDashboard.tsx` | Supprimé |
+| `AppSidebar.tsx` | Retirer groupe "Navigation", retirer lien "/admin" dans groupe Admin |
 
