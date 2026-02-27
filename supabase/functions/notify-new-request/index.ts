@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
 // ── Configurable recipient ──
-const NOTIFICATION_EMAIL = "thomasbaillysalins01+legal@gmail.com";
+const NOTIFICATION_EMAIL = "delivered+legal@resend.dev";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,8 +15,7 @@ serve(async (req) => {
   }
 
   try {
-    const { request_number, title, description, company_name, requester_email } =
-      await req.json();
+    const { request_number, title, description, company_name, requester_email } = await req.json();
 
     const resendApiKey = Deno.env.get("RESEND_API_KEY") as string;
 
@@ -61,12 +60,9 @@ serve(async (req) => {
     });
   } catch (err: unknown) {
     console.error("notify-new-request error:", err);
-    return new Response(
-      JSON.stringify({ error: (err as Error).message || "Internal error" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return new Response(JSON.stringify({ error: (err as Error).message || "Internal error" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
