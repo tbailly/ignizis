@@ -85,7 +85,7 @@ export function OfficerFormDialog({ officer, onClose, onSuccess }: OfficerFormDi
       setPowerOfAttorneyDocId(null);
     }
 
-    supabase.from('active_companies' as any).select('id, name').order('name').then(({ data }) => {
+    supabase.from('active_companies' as any).select('id, name, status').order('name').then(({ data }) => {
       setAllCompanies((data as any[]) || []);
     });
 

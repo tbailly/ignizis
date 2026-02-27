@@ -60,7 +60,7 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
   const { data: companies = [] } = useQuery({
     queryKey: ['companies-list'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('active_companies' as any).select('id, name').order('name');
+      const { data, error } = await supabase.from('active_companies' as any).select('id, name, status').order('name');
       if (error) throw error;
       return (data as any[]) || [];
     },

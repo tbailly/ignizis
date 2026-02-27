@@ -11,7 +11,8 @@
     "user": "User",
     "locked": "Not active",
     "lockedTitle": "Option not activated",
-    "lockedDescription": "This feature is not included in your current plan. Contact your administrator to activate it."
+    "lockedDescription": "This feature is not included in your current plan. Contact your administrator to activate it.",
+    "inactive": "Inactives"
   },
   "auth": {
     "title": "Sign in",
