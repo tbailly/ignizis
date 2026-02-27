@@ -1,37 +1,46 @@
 
 
-## Utiliser `CompanySelect` dans `RequestFormDialog` + réordonner les sections inactive
+## Cascade soft-delete d'une entreprise : documents + requests
 
-### 1. `AdminRequests.tsx` — Ajouter `status` à la query companies
+### Approche : fonction PostgreSQL transactionnelle
 
-Ligne 52 : `.select('id, name')` → `.select('id, name, status')` et adapter le type `Company` pour inclure `status`.
+Creer une fonction `soft_delete_company(p_company_id uuid)` qui effectue les 3 updates dans une seule transaction. Appeler cette fonction via `supabase.rpc()` depuis le frontend.
 
-### 2. `RequestFormDialog.tsx` — Remplacer le Popover inline par `CompanySelect`
+### 1. Migration SQL — Fonction `soft_delete_company`
 
-- Adapter l'interface `Company` pour inclure `status?: string`
-- Supprimer les imports inutilisés (`Popover`, `Command*`, `Check`, `ChevronsUpDown`, `cn`)
-- Supprimer le state `companyOpen`
-- Remplacer le bloc Popover (lignes 246-286) par `<CompanySelect companies={companies} value={companyId || null} onChange={(id) => setCompanyId(id || '')} />`
+```sql
+CREATE OR REPLACE FUNCTION public.soft_delete_company(p_company_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+DECLARE
+  v_now timestamptz := now();
+BEGIN
+  UPDATE companies SET deleted_at = v_now WHERE id = p_company_id AND deleted_at IS NULL;
+  UPDATE documents SET deleted_at = v_now WHERE company_id = p_company_id AND deleted_at IS NULL;
+  UPDATE requests  SET deleted_at = v_now WHERE company_id = p_company_id AND deleted_at IS NULL;
+END;
+$$;
+```
 
-### 3. `CompanySelect.tsx` — Renommer "Inactives" → "Inactive companies"
+Etant `SECURITY DEFINER`, la fonction bypass RLS. Pas besoin de politique supplementaire. La transaction est implicite (une fonction PL/pgSQL = 1 transaction).
 
-Ligne 21 : remplacer `t('common.inactive')` par `t('common.inactiveCompanies')`.
+### 2. `DeleteCompanyDialog.tsx` — Appeler `rpc('soft_delete_company')`
 
-### 4. `EntitySelect.tsx` — Réordonner les groupes et renommer
+Remplacer le `.from('companies').update(...)` (lignes 30-33) par :
 
-Changer l'ordre des groupes : active companies → officers → inactive companies (au lieu de active → inactive → officers). Remplacer `t('common.inactive')` par `t('common.inactiveCompanies')`.
+```ts
+const { error } = await supabase.rpc('soft_delete_company' as any, {
+  p_company_id: company.id,
+});
+```
 
-### 5. `en.json` — Ajouter la clé `common.inactiveCompanies`
-
-Ajouter `"inactiveCompanies": "Inactive companies"`.
-
-### Résumé
+### Resume
 
 | Fichier | Modification |
 |---------|-------------|
-| `AdminRequests.tsx` | Ajouter `status` au select + type |
-| `RequestFormDialog.tsx` | Remplacer Popover inline par `<CompanySelect>`, supprimer imports inutiles |
-| `CompanySelect.tsx` | `t('common.inactive')` → `t('common.inactiveCompanies')` |
-| `EntitySelect.tsx` | Réordonner : actives → officers → inactives, renommer heading |
-| `en.json` | Ajouter `"inactiveCompanies": "Inactive companies"` |
+| Migration SQL | Fonction `soft_delete_company` (transaction implicite) |
+| `DeleteCompanyDialog.tsx` | `supabase.rpc('soft_delete_company', ...)` |
 
