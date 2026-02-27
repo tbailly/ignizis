@@ -1,93 +1,37 @@
 
 
-## Refactor des selecteurs d'entreprises : code commun + active/inactive
+## Utiliser `CompanySelect` dans `RequestFormDialog` + réordonner les sections inactive
 
-### Approche : composant generique `ComboboxSelect`
+### 1. `AdminRequests.tsx` — Ajouter `status` à la query companies
 
-Creer un composant generique `src/components/admin/ComboboxSelect.tsx` qui encapsule toute la logique Popover + Command + groupes actifs/inactifs. Les 3 composants existants deviennent des wrappers fins.
+Ligne 52 : `.select('id, name')` → `.select('id, name, status')` et adapter le type `Company` pour inclure `status`.
 
-### 1. Nouveau composant `ComboboxSelect.tsx`
+### 2. `RequestFormDialog.tsx` — Remplacer le Popover inline par `CompanySelect`
 
-Props generiques :
+- Adapter l'interface `Company` pour inclure `status?: string`
+- Supprimer les imports inutilisés (`Popover`, `Command*`, `Check`, `ChevronsUpDown`, `cn`)
+- Supprimer le state `companyOpen`
+- Remplacer le bloc Popover (lignes 246-286) par `<CompanySelect companies={companies} value={companyId || null} onChange={(id) => setCompanyId(id || '')} />`
 
-```ts
-interface ComboboxGroup {
-  heading?: string;
-  items: ComboboxItem[];
-  className?: string; // ex: "opacity-50" pour inactifs
-}
+### 3. `CompanySelect.tsx` — Renommer "Inactives" → "Inactive companies"
 
-interface ComboboxItem {
-  id: string;
-  label: string;
-  icon?: React.ReactNode;
-}
+Ligne 21 : remplacer `t('common.inactive')` par `t('common.inactiveCompanies')`.
 
-interface ComboboxSelectProps {
-  groups: ComboboxGroup[];
-  selectedIds: string[];
-  onToggle: (id: string) => void;
-  onClear?: () => void;
-  placeholder: string;
-  emptyText: string;
-  multiSelect?: boolean;        // true = reste ouvert apres selection
-  renderTriggerLabel?: (selected: ComboboxItem[]) => React.ReactNode;
-  renderBadges?: boolean;       // affiche les badges sous le trigger (pour multi)
-  onRemove?: (id: string) => void;
-}
-```
+### 4. `EntitySelect.tsx` — Réordonner les groupes et renommer
 
-Le composant gere :
-- Popover open/close state
-- Le trigger Button avec chevron + bouton clear
-- Command avec CommandInput, CommandList, CommandEmpty
-- Rendu de N `CommandGroup` avec heading et className sur chaque item
-- Check icon selon `selectedIds.includes(item.id)`
-- Fermeture auto du popover si `!multiSelect`
+Changer l'ordre des groupes : active companies → officers → inactive companies (au lieu de active → inactive → officers). Remplacer `t('common.inactive')` par `t('common.inactiveCompanies')`.
 
-### 2. Refactor `CompanySelect.tsx`
+### 5. `en.json` — Ajouter la clé `common.inactiveCompanies`
 
-Devient un wrapper qui :
-- Separe `companies` en 2 groupes (actives / inactives par `status`)
-- Passe `multiSelect={false}`, `selectedIds={value ? [value] : []}`
-- `onToggle` appelle `onChange(id === value ? null : id)`
+Ajouter `"inactiveCompanies": "Inactive companies"`.
 
-~15 lignes au lieu de 88.
+### Résumé
 
-### 3. Refactor `MultiCompanySelect.tsx`
-
-Wrapper qui :
-- Separe en 2 groupes actives/inactives
-- `multiSelect={true}`, `renderBadges={true}`
-- `onToggle` toggle dans le tableau, `onRemove` retire
-
-~15 lignes au lieu de 100.
-
-### 4. Refactor `EntitySelect.tsx`
-
-Wrapper qui :
-- Cree jusqu'a 4 groupes : companies actives, companies inactives, officers actifs (pas de status sur officers donc 1 seul groupe officers)
-- Chaque item a une `icon` (Building2 / UserRound)
-- `onToggle` gere la logique linkedType/linkedId
-
-~30 lignes au lieu de 134.
-
-### 5. Queries : ajouter `status` et utiliser `active_companies`
-
-Identique au plan precedent :
-- `UserFormDialog.tsx` : `active_companies`, select `id, name, status`, supprimer `.eq('status', 'active')`
-- `OfficerFormDialog.tsx`, `DocumentUploadDialog.tsx`, `DocumentEditDialog.tsx` : ajouter `status` au select
-
-### Resume
-
-| Fichier | Action |
-|---------|--------|
-| `ComboboxSelect.tsx` (nouveau) | Composant generique Popover+Command avec groupes et active/inactive |
-| `CompanySelect.tsx` | Wrapper ~15 lignes autour de ComboboxSelect |
-| `MultiCompanySelect.tsx` | Wrapper ~15 lignes autour de ComboboxSelect |
-| `EntitySelect.tsx` | Wrapper ~30 lignes autour de ComboboxSelect |
-| `UserFormDialog.tsx` | Query `active_companies` + `status` |
-| `OfficerFormDialog.tsx` | Ajouter `status` au select |
-| `DocumentUploadDialog.tsx` | Ajouter `status` au select |
-| `DocumentEditDialog.tsx` | Ajouter `status` au select |
+| Fichier | Modification |
+|---------|-------------|
+| `AdminRequests.tsx` | Ajouter `status` au select + type |
+| `RequestFormDialog.tsx` | Remplacer Popover inline par `<CompanySelect>`, supprimer imports inutiles |
+| `CompanySelect.tsx` | `t('common.inactive')` → `t('common.inactiveCompanies')` |
+| `EntitySelect.tsx` | Réordonner : actives → officers → inactives, renommer heading |
+| `en.json` | Ajouter `"inactiveCompanies": "Inactive companies"` |
 
