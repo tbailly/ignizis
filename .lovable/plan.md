@@ -1,63 +1,84 @@
 
 
-## Sécuriser et fiabiliser les notifications de demandes
+## Aligner l'application sur les Ignizis Branding Guidelines
 
-### 1. Migration SQL — Table `notification_queue` + trigger + cron
+### Palette de couleurs extraite du branding guide
 
-Créer en une seule migration :
+| Nom | HEX | Usage |
+|-----|-----|-------|
+| Pulse Blue | #3E00FF | Primary / accents / CTA |
+| Core Black | #000000 | Background principal (dark) |
+| Cloud Grey | #FAFAF9 | Background clair / texte sur fond sombre |
+| Soft Lilac | #DBD3FF | Accents secondaires, hover states |
+| Shadow Lilac | #BFB8F8 | Variantes accent |
+| Skinstone | #E7948F | Accent chaud, notifications, warnings |
 
-- **Extension `pg_net`** (si pas déjà active)
-- **Table `notification_queue`** avec colonnes : `id`, `request_id` (FK), `status` (pending/sent/failed), `attempts`, `created_at`, `last_attempt_at`
-- **RLS** sur `notification_queue` (admin only)
-- **Trigger `AFTER INSERT ON requests`** : insère une ligne `pending` dans la queue + appelle `pg_net` vers la edge function avec le service role key depuis le vault
-- **Fonction trigger** `notify_new_request_trigger()` en `SECURITY DEFINER`
+### 1. Refonte du design system CSS (`src/index.css`)
 
-### 2. Cron pg_cron — Retry toutes les 5 minutes
+Remap les CSS variables pour les deux modes :
 
-Via SQL insert (pas migration, car contient l'URL projet + anon key) :
+**Mode dark (par défaut)** :
+- `--background` : Core Black (#000000)
+- `--foreground` : Cloud Grey (#FAFAF9)
+- `--primary` : Pulse Blue (#3E00FF)
+- `--primary-foreground` : blanc
+- `--secondary` / `--muted` : nuances sombres dérivées (#0D0D15, #1A1A2E)
+- `--accent` : Soft Lilac (#DBD3FF) avec foreground sombre
+- `--border` / `--input` : gris sombre (#1F1F33)
+- `--card` : légèrement plus clair que le background (#0A0A14)
+- `--sidebar-background` : Core Black ou très légèrement off-black
+- `--sidebar-primary` : Pulse Blue
+- `--destructive` : Skinstone (#E7948F)
 
-```sql
-SELECT cron.schedule(
-  'retry-failed-notifications',
-  '*/5 * * * *',
-  $$ SELECT net.http_post(
-    url := 'https://epcelmrwfqniycdrxaoi.supabase.co/functions/v1/retry-failed-notifications',
-    headers := '{"Content-Type":"application/json","Authorization":"Bearer <service_role_key>"}'::jsonb,
-    body := '{}'::jsonb
-  ) AS request_id; $$
-);
-```
+**Mode light (optionnel)** :
+- `--background` : Cloud Grey (#FAFAF9)
+- `--foreground` : Core Black (#000000)
+- `--primary` : Pulse Blue (#3E00FF)
+- `--card` : blanc
+- Sidebar : fond clair, texte sombre
 
-### 3. Edge function `notify-new-request` — Sécuriser + marquer la queue
+### 2. Typographie — Montserrat comme alternative Gotham
 
-- Valider que `Authorization` = `Bearer <SUPABASE_SERVICE_ROLE_KEY>`, sinon 403
-- Envoyer l'email via Resend (logique existante)
-- En cas de succès : `UPDATE notification_queue SET status = 'sent', attempts = attempts + 1, last_attempt_at = now() WHERE id = queue_id`
-- En cas d'échec : `UPDATE notification_queue SET status = 'failed', attempts = attempts + 1, last_attempt_at = now() WHERE id = queue_id`
+- Importer Montserrat (weights 300, 400, 700) depuis Google Fonts dans `index.html`
+- Configurer `tailwind.config.ts` avec `fontFamily: { sans: ['Montserrat', ...] }`
+- Supprimer toute référence à la font-family par défaut
 
-### 4. Nouvelle edge function `retry-failed-notifications`
+### 3. Page d'authentification (`src/pages/Auth.tsx`)
 
-- Valider le service role key
-- Sélectionner les entrées `notification_queue` en `pending` ou `failed` avec `attempts < 5`
-- Joindre `requests` + `companies` pour reconstruire le payload
-- Pour chaque entrée : appeler Resend, mettre à jour le statut (`sent` ou `failed`)
+- Fond noir plein écran avec gradient radial Pulse Blue (rappelant le style "digital application" du guide)
+- Logo IGNIZIS en texte blanc bold ou image SVG en header
+- Card de login semi-transparente avec bordure subtle lilac
+- Bouton CTA en Pulse Blue
 
-### 5. Frontend — Supprimer les appels manuels
+### 4. Sidebar (`src/components/layout/AppSidebar.tsx`)
 
-- `RequestFormDialog.tsx` lignes 182-191 : supprimer `supabase.functions.invoke('notify-new-request', ...)`
-- `Juridique.tsx` lignes 139-148 : supprimer le bloc équivalent
+- Fond Core Black
+- Items actifs : highlight Pulse Blue
+- Texte Cloud Grey, icônes Soft Lilac en hover
+- Footer utilisateur : cohérent avec le thème sombre
 
-### 6. Supprimer le security finding `notify_no_auth`
+### 5. Dashboard et pages internes
 
-### Résumé
+- Cards avec fond légèrement off-black, bordure subtile
+- Badges et éléments d'accent utilisant Soft Lilac / Shadow Lilac
+- Boutons primaires en Pulse Blue
 
-| Composant | Action |
-|-----------|--------|
-| Migration SQL | Table `notification_queue` + trigger `AFTER INSERT ON requests` |
-| Cron `pg_cron` | Retry `*/5 * * * *` → appel `retry-failed-notifications` |
-| `notify-new-request` | Valider service role, envoyer email, marquer queue |
-| `retry-failed-notifications` | Nouvelle edge function, retente les échecs |
-| `RequestFormDialog.tsx` | Supprimer appel manuel |
-| `Juridique.tsx` | Supprimer appel manuel |
-| Security finding | Supprimer `notify_no_auth` |
+### 6. Gradient brand comme élément décoratif
+
+- Ajouter un gradient linéaire Core Black → Pulse Blue comme accent visuel sur la page Auth et potentiellement en header du dashboard
+
+### 7. Thème par défaut à "dark"
+
+- Modifier `ThemeContext.tsx` : initialiser `theme` à `'dark'` au lieu de `'system'`
+
+### Fichiers impactés
+
+| Fichier | Modification |
+|---------|-------------|
+| `index.html` | Import Google Fonts Montserrat |
+| `src/index.css` | Refonte complète des CSS variables (dark par défaut, light optionnel) |
+| `tailwind.config.ts` | Ajout fontFamily Montserrat |
+| `src/pages/Auth.tsx` | Redesign avec gradient, logo, style Ignizis |
+| `src/components/layout/AppSidebar.tsx` | Ajustements visuels sidebar |
+| `src/contexts/ThemeContext.tsx` | Default theme → `'dark'` |
 
