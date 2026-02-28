@@ -284,6 +284,48 @@ export type Database = {
           },
         ]
       }
+      notification_queue: {
+        Row: {
+          attempts: number
+          created_at: string
+          id: string
+          last_attempt_at: string | null
+          request_id: string
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          id?: string
+          last_attempt_at?: string | null
+          request_id: string
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          id?: string
+          last_attempt_at?: string | null
+          request_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_queue_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "active_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_queue_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       officer_company_assignments: {
         Row: {
           company_id: string

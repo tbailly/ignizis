@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.recalculate-compliance]
 verify_jwt = false
+
+[functions.notify-new-request]
+verify_jwt = false
+
+[functions.retry-failed-notifications]
+verify_jwt = false
