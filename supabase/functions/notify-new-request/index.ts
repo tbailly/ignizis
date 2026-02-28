@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// ── Configurable recipient ──
 const NOTIFICATION_EMAIL = "delivered+legal@resend.dev";
 
 const corsHeaders = {
@@ -14,8 +14,23 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Validate service role key
+  const authHeader = req.headers.get("Authorization");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!authHeader || authHeader !== `Bearer ${serviceKey}`) {
+    return new Response(JSON.stringify({ error: "Forbidden" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const supabaseAdmin = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    serviceKey!,
+  );
+
   try {
-    const { request_number, title, description, company_name, requester_email } = await req.json();
+    const { queue_id, request_number, title, description, company_name, requester_email } = await req.json();
 
     const resendApiKey = Deno.env.get("RESEND_API_KEY") as string;
 
@@ -45,6 +60,16 @@ serve(async (req) => {
     if (!response.ok) {
       const err = await response.text();
       console.error("Resend API error:", err);
+
+      // Mark queue as failed
+      if (queue_id) {
+        await supabaseAdmin.from("notification_queue").update({
+          status: "failed",
+          attempts: 1,
+          last_attempt_at: new Date().toISOString(),
+        }).eq("id", queue_id);
+      }
+
       return new Response(JSON.stringify({ error: err }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -53,6 +78,15 @@ serve(async (req) => {
 
     const result = await response.json();
     console.log("Notification email sent:", result);
+
+    // Mark queue as sent
+    if (queue_id) {
+      await supabaseAdmin.from("notification_queue").update({
+        status: "sent",
+        attempts: 1,
+        last_attempt_at: new Date().toISOString(),
+      }).eq("id", queue_id);
+    }
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

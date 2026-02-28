@@ -179,17 +179,6 @@ export function RequestFormDialog({ request, companies, onClose, onSuccess, onDe
 
         if (error) throw error;
 
-        // Fire-and-forget notification email
-        supabase.functions.invoke('notify-new-request', {
-          body: {
-            request_number: requestNumber,
-            title: title.trim(),
-            description: description.trim() || null,
-            company_name: selectedCompany?.name || '',
-            requester_email: requesterEmail.trim() || null,
-          },
-        }).catch((err) => console.error('Notification error:', err));
-
         toast.success(t('admin.requests.createSuccess'));
       }
 
