@@ -16,7 +16,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 
 // Pages
 import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
+
 import Entreprise from "./pages/Entreprise";
 import Contrats from "./pages/Contrats";
 import Juridique from "./pages/Juridique";
@@ -110,7 +110,7 @@ const App = () => (
 
                   {/* Company-scoped routes */}
                   <Route path="/:companySlug" element={<CompanySlugSync />}>
-                    <Route index element={<Dashboard />} />
+                    <Route index element={<Navigate to="company" replace />} />
                     <Route path="company" element={<Entreprise />} />
                     <Route path="contracts" element={<Contrats />} />
                     <Route path="legal" element={<Juridique />} />
