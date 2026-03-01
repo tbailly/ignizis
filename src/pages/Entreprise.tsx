@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { format, parseISO, isFuture } from 'date-fns';
+import { format, parseISO, isFuture, differenceInCalendarDays } from 'date-fns';
 import { Building2, Copy, Check, Users } from 'lucide-react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useTranslation } from '@/i18n/useTranslation';
@@ -17,7 +17,7 @@ interface Officer {
   date_of_birth: string | null;
   birth_city: string;
   position: string;
-  is_compliant: boolean;
+  compliant_until: string | null;
 }
 
 const COUNTRY_MAP: Record<string, string> = {
@@ -74,7 +74,7 @@ export default function Entreprise() {
         // Load officers assigned to this company via junction table
         const { data, error } = await (supabase
           .from('officer_company_assignments' as any)
-          .select('officer_id, company_officers:officer_id(id, last_name, first_name, date_of_birth, birth_city, position, is_compliant)')
+          .select('officer_id, company_officers:officer_id(id, last_name, first_name, date_of_birth, birth_city, position, compliant_until)')
           .eq('company_id', currentCompany.company_id) as any);
 
         if (error) {
@@ -193,9 +193,9 @@ export default function Entreprise() {
                            <span className="font-semibold">{officer.last_name.toUpperCase()}</span>{' '}
                            {officer.first_name}
                          </p>
-                         {officer.is_compliant ? (
+                         {officer.compliant_until && isFuture(parseISO(officer.compliant_until)) ? (
                            <Badge className="bg-green-100 text-green-800 hover:bg-green-100 whitespace-nowrap shrink-0">
-                             {t('admin.officers.compliant')}
+                             {t('admin.officers.compliant')} ({differenceInCalendarDays(parseISO(officer.compliant_until), new Date())}j)
                            </Badge>
                          ) : (
                            <Badge variant="destructive" className="whitespace-nowrap shrink-0">

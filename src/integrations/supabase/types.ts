@@ -71,12 +71,12 @@ export type Database = {
       company_officers: {
         Row: {
           birth_city: string
+          compliant_until: string | null
           created_at: string
           date_of_birth: string | null
           deleted_at: string | null
           first_name: string
           id: string
-          is_compliant: boolean
           last_name: string
           passport_document_id: string | null
           position: string
@@ -85,12 +85,12 @@ export type Database = {
         }
         Insert: {
           birth_city?: string
+          compliant_until?: string | null
           created_at?: string
           date_of_birth?: string | null
           deleted_at?: string | null
           first_name: string
           id?: string
-          is_compliant?: boolean
           last_name: string
           passport_document_id?: string | null
           position: string
@@ -99,12 +99,12 @@ export type Database = {
         }
         Update: {
           birth_city?: string
+          compliant_until?: string | null
           created_at?: string
           date_of_birth?: string | null
           deleted_at?: string | null
           first_name?: string
           id?: string
-          is_compliant?: boolean
           last_name?: string
           passport_document_id?: string | null
           position?: string
@@ -614,12 +614,12 @@ export type Database = {
       active_company_officers: {
         Row: {
           birth_city: string | null
+          compliant_until: string | null
           created_at: string | null
           date_of_birth: string | null
           deleted_at: string | null
           first_name: string | null
           id: string | null
-          is_compliant: boolean | null
           last_name: string | null
           passport_document_id: string | null
           position: string | null
@@ -628,12 +628,12 @@ export type Database = {
         }
         Insert: {
           birth_city?: string | null
+          compliant_until?: string | null
           created_at?: string | null
           date_of_birth?: string | null
           deleted_at?: string | null
           first_name?: string | null
           id?: string | null
-          is_compliant?: boolean | null
           last_name?: string | null
           passport_document_id?: string | null
           position?: string | null
@@ -642,12 +642,12 @@ export type Database = {
         }
         Update: {
           birth_city?: string | null
+          compliant_until?: string | null
           created_at?: string | null
           date_of_birth?: string | null
           deleted_at?: string | null
           first_name?: string | null
           id?: string | null
-          is_compliant?: boolean | null
           last_name?: string | null
           passport_document_id?: string | null
           position?: string | null
@@ -854,8 +854,7 @@ export type Database = {
         Args: { target_company_id: string }
         Returns: boolean
       }
-      recalculate_all_officer_compliance: { Args: never; Returns: undefined }
-      recalculate_officer_compliance: {
+      recalculate_officer_compliant_until: {
         Args: { p_officer_id: string }
         Returns: undefined
       }
