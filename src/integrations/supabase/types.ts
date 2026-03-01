@@ -23,6 +23,7 @@ export type Database = {
           country: string | null
           created_at: string
           deleted_at: string | null
+          finance_software_url: string | null
           id: string
           name: string
           perm_accounting: boolean
@@ -40,6 +41,7 @@ export type Database = {
           country?: string | null
           created_at?: string
           deleted_at?: string | null
+          finance_software_url?: string | null
           id?: string
           name: string
           perm_accounting?: boolean
@@ -57,6 +59,7 @@ export type Database = {
           country?: string | null
           created_at?: string
           deleted_at?: string | null
+          finance_software_url?: string | null
           id?: string
           name?: string
           perm_accounting?: boolean
@@ -566,6 +569,7 @@ export type Database = {
           country: string | null
           created_at: string | null
           deleted_at: string | null
+          finance_software_url: string | null
           id: string | null
           name: string | null
           perm_accounting: boolean | null
@@ -583,6 +587,7 @@ export type Database = {
           country?: string | null
           created_at?: string | null
           deleted_at?: string | null
+          finance_software_url?: string | null
           id?: string | null
           name?: string | null
           perm_accounting?: boolean | null
@@ -600,6 +605,7 @@ export type Database = {
           country?: string | null
           created_at?: string | null
           deleted_at?: string | null
+          finance_software_url?: string | null
           id?: string | null
           name?: string | null
           perm_accounting?: boolean | null

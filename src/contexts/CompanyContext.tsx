@@ -16,6 +16,7 @@ interface Company {
   perm_accounting: boolean;
   perm_finance: boolean;
   accounting_software_url: string | null;
+  finance_software_url: string | null;
   compliant_until: string | null;
 }
 
@@ -68,7 +69,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         // Admins see ALL companies (including inactive, unassigned)
         const { data, error } = await supabase
           .from('active_companies' as any)
-          .select('id, name, slug, address, company_number, country, status, perm_legal, perm_accounting, perm_finance, accounting_software_url, compliant_until')
+          .select('id, name, slug, address, company_number, country, status, perm_legal, perm_accounting, perm_finance, accounting_software_url, finance_software_url, compliant_until')
           .order('name');
 
         if (error) {
@@ -100,6 +101,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
               perm_accounting,
               perm_finance,
               accounting_software_url,
+              finance_software_url,
               compliant_until
             )
           `);
