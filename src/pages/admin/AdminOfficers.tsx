@@ -181,11 +181,11 @@ export default function AdminOfficers() {
                   <TableCell>{officer.position}</TableCell>
                   <TableCell>
                     {officer.compliant_until && isFuture(parseISO(officer.compliant_until)) ? (
-                      <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                      <Badge variant="success">
                         {t('admin.officers.compliant')} ({differenceInCalendarDays(parseISO(officer.compliant_until), new Date())}j)
                       </Badge>
                     ) : (
-                      <Badge variant="destructive">
+                      <Badge variant="danger">
                         {t('admin.officers.nonCompliant')}
                       </Badge>
                     )}

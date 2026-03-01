@@ -220,11 +220,11 @@ export default function AdminCompanies() {
                     </TableCell>
                     <TableCell>
                       {compliant ? (
-                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                        <Badge variant="success">
                           {t('admin.companies.compliant')} ({days}d)
                         </Badge>
                       ) : (
-                        <Badge variant="destructive">
+                        <Badge variant="danger">
                           {t('admin.companies.nonCompliant')}
                         </Badge>
                       )}

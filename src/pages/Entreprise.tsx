@@ -118,11 +118,11 @@ export default function Entreprise() {
                 {t('company.details')}
               </span>
               {company?.compliant_until && isFuture(parseISO(company.compliant_until as string)) ? (
-                <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                <Badge variant="success">
                   {t('admin.companies.compliant')}
                 </Badge>
               ) : (
-                <Badge variant="destructive">
+                <Badge variant="danger">
                   {t('admin.companies.nonCompliant')}
                 </Badge>
               )}
@@ -194,11 +194,11 @@ export default function Entreprise() {
                            {officer.first_name}
                          </p>
                          {officer.compliant_until && isFuture(parseISO(officer.compliant_until)) ? (
-                           <Badge className="bg-green-100 text-green-800 hover:bg-green-100 whitespace-nowrap shrink-0">
+                           <Badge variant="success" className="shrink-0">
                              {t('admin.officers.compliant')} ({differenceInCalendarDays(parseISO(officer.compliant_until), new Date())}j)
                            </Badge>
                          ) : (
-                           <Badge variant="destructive" className="whitespace-nowrap shrink-0">
+                           <Badge variant="danger" className="shrink-0">
                              {t('admin.officers.nonCompliant')}
                            </Badge>
                          )}
