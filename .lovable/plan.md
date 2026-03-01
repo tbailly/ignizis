@@ -1,34 +1,36 @@
 
 
-## Ajouter un lien externe pour la section Finance (comme Accounting)
+## Améliorations UI de la page AdminDocuments
 
-### 1. Migration SQL
+### 1. Scroll horizontal limité à la table
 
-Ajouter `finance_software_url text DEFAULT NULL` à la table `companies` et mettre à jour la vue `active_companies`.
+Actuellement le `Table` component wraps dans un `div.overflow-auto`. Le titre et la barre de recherche sont en dehors du `div.rounded-md.border` donc ils ne scrollent pas horizontalement — mais le conteneur parent `space-y-6` pourrait déborder. Il faut s'assurer que le wrapper de la table a bien `overflow-x-auto` et que le layout parent ne déborde pas.
 
-### 2. CompanyFormDialog.tsx
+Concrètement : ajouter `overflow-x-auto` sur le `div.rounded-md.border` qui entoure la `Table`, et s'assurer que le conteneur parent a `overflow-x-hidden` (cohérent avec la contrainte layout existante).
 
-Sous le toggle Finance (même pattern que le bloc `permAccounting` + input URL) : afficher un input URL conditionnel quand `permFinance` est activé.
+### 2. Actions : Eye + Pencil inline, "..." dropdown pour Download + Delete
 
-### 3. CompanyContext.tsx
+Remplacer les 4 boutons d'action par :
+- **Eye** (preview PDF, conditionnel) — inline
+- **Pencil** (edit) — inline
+- **MoreHorizontal** ("...") — ouvre un `DropdownMenu` contenant :
+  - Download (icône Download)
+  - Delete (icône Trash2, texte rouge)
 
-Ajouter `finance_software_url: string | null` dans l'interface `Company` et dans les selects.
+Imports à ajouter : `MoreHorizontal` de lucide-react, `DropdownMenu*` de `@/components/ui/dropdown-menu`.
 
-### 4. Finance.tsx
+### 3. Type "Secondary ID" sur une seule ligne
 
-Calquer sur `Comptabilite.tsx` : si `finance_software_url` existe, afficher un CTA avec `ExternalLink` qui ouvre l'URL dans un nouvel onglet. Sinon, message "pas de lien configuré".
+Ajouter `whitespace-nowrap` sur le `Badge` dans la colonne type pour empêcher le retour à la ligne.
 
-### 5. Traductions (en.json)
+### 4. Colonne "Display name" : largeur fixe ~190px + troncature + tooltip au hover
 
-Ajouter les clés : `finance.softwareDescription`, `finance.openSoftware`, `finance.noSoftwareUrl`, `admin.companies.financeSoftwareUrl`, `admin.companies.financeSoftwareUrlPlaceholder`.
+- `TableHead` : ajouter `className="w-[190px] min-w-[190px] max-w-[190px]"`
+- `TableCell` : ajouter `max-w-[190px] truncate` et wrapper le texte dans un `Tooltip` (de `@/components/ui/tooltip`) pour afficher le nom complet au hover.
 
-### Fichiers impactés
+### Fichier impacté
 
 | Fichier | Modification |
 |---------|-------------|
-| Migration SQL | `finance_software_url` sur `companies` + vue `active_companies` |
-| `src/components/admin/CompanyFormDialog.tsx` | Input URL conditionnel sous toggle Finance |
-| `src/contexts/CompanyContext.tsx` | Ajout champ dans interface + selects |
-| `src/pages/Finance.tsx` | CTA externe comme Comptabilite.tsx |
-| `src/i18n/locales/en.json` | Nouvelles clés |
+| `src/pages/admin/AdminDocuments.tsx` | Les 4 changements ci-dessus |
 
