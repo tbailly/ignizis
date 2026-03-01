@@ -205,6 +205,8 @@
       "deleteConfirmDesc": "This action is irreversible. The following document will be permanently deleted:",
       "deleteConfirmButton": "Delete permanently",
       "noDocuments": "No documents found",
+      "download": "Download",
+      "delete": "Delete",
       "manageTags": "Manage tags",
       "addTag": "Add",
       "tagName": "Tag name",
