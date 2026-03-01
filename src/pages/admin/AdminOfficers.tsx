@@ -11,6 +11,7 @@ import {
 import { useTranslation } from '@/i18n/useTranslation';
 import { OfficerFormDialog } from '@/components/admin/OfficerFormDialog';
 import { DeleteOfficerDialog } from '@/components/admin/DeleteOfficerDialog';
+import { differenceInCalendarDays, parseISO, isFuture } from 'date-fns';
 
 interface OfficerWithCompanies {
   id: string;
@@ -19,7 +20,7 @@ interface OfficerWithCompanies {
   date_of_birth: string | null;
   birth_city: string;
   position: string;
-  is_compliant: boolean;
+  compliant_until: string | null;
   companies: { id: string; name: string }[];
   passport_document_id: string | null;
   secondary_id_document_id: string | null;
@@ -45,7 +46,7 @@ export default function AdminOfficers() {
     queryFn: async () => {
       const { data: officersData, error: officersError } = await supabase
         .from('active_company_officers' as any)
-        .select('id, first_name, last_name, date_of_birth, birth_city, position, is_compliant, passport_document_id, secondary_id_document_id, power_of_attorney_document_id')
+        .select('id, first_name, last_name, date_of_birth, birth_city, position, compliant_until, passport_document_id, secondary_id_document_id, power_of_attorney_document_id')
         .order('last_name');
 
       if (officersError) throw officersError;
@@ -179,9 +180,9 @@ export default function AdminOfficers() {
                   <TableCell>{officer.birth_city?.trim() || '—'}</TableCell>
                   <TableCell>{officer.position}</TableCell>
                   <TableCell>
-                    {officer.is_compliant ? (
+                    {officer.compliant_until && isFuture(parseISO(officer.compliant_until)) ? (
                       <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                        {t('admin.officers.compliant')}
+                        {t('admin.officers.compliant')} ({differenceInCalendarDays(parseISO(officer.compliant_until), new Date())}j)
                       </Badge>
                     ) : (
                       <Badge variant="destructive">
