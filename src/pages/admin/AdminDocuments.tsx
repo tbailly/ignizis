@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { FileText, Pencil, Trash2, Search, Upload, Eye, Download, Tags } from 'lucide-react';
+import { FileText, Pencil, Trash2, Search, Upload, Eye, Download, Tags, MoreHorizontal } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,12 @@ import { TagManagementDialog } from '@/components/admin/TagManagementDialog';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface DocumentRow {
   id: string;
@@ -123,7 +129,7 @@ export default function AdminDocuments() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-hidden">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
           <FileText className="h-8 w-8 text-primary" />
@@ -151,11 +157,11 @@ export default function AdminDocuments() {
         />
       </div>
 
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('admin.documents.displayName')}</TableHead>
+              <TableHead className="w-[190px] min-w-[190px] max-w-[190px]">{t('admin.documents.displayName')}</TableHead>
               <TableHead>{t('admin.documents.documentType')}</TableHead>
               <TableHead>{t('admin.documents.tags')}</TableHead>
               <TableHead>{t('admin.documents.company')}</TableHead>
@@ -180,9 +186,18 @@ export default function AdminDocuments() {
             ) : (
               filtered.map((doc) => (
                 <TableRow key={doc.id}>
-                  <TableCell className="font-medium">{doc.display_name}</TableCell>
+                  <TableCell className="max-w-[190px]">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="block truncate font-medium">{doc.display_name}</span>
+                        </TooltipTrigger>
+                        <TooltipContent>{doc.display_name}</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{typeLabels[doc.document_type] || doc.document_type}</Badge>
+                    <Badge variant="outline" className="whitespace-nowrap">{typeLabels[doc.document_type] || doc.document_type}</Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
@@ -220,15 +235,26 @@ export default function AdminDocuments() {
                           <Eye className="h-4 w-4" />
                         </Button>
                       )}
-                      <Button variant="ghost" size="icon" onClick={() => handleDownload(doc)}>
-                        <Download className="h-4 w-4" />
-                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => setEditingDoc(doc)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setDeletingDoc(doc)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleDownload(doc)}>
+                            <Download className="h-4 w-4 mr-2" />
+                            {t('admin.documents.download')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setDeletingDoc(doc)} className="text-destructive focus:text-destructive">
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            {t('admin.documents.delete')}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </TableCell>
                 </TableRow>
