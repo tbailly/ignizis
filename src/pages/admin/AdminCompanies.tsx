@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Building2, Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { Building2, Plus, Pencil, Trash2, Search, MoreHorizontal, ShieldCheck } from 'lucide-react';
+import { differenceInDays, isFuture, parseISO } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,9 +9,17 @@ import { Badge } from '@/components/ui/badge';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useTranslation } from '@/i18n/useTranslation';
 import { CompanyFormDialog } from '@/components/admin/CompanyFormDialog';
 import { DeleteCompanyDialog } from '@/components/admin/DeleteCompanyDialog';
+import { toast } from 'sonner';
 
 interface CompanyWithUsers {
   id: string;
@@ -24,7 +33,18 @@ interface CompanyWithUsers {
   perm_accounting: boolean;
   perm_finance: boolean;
   accounting_software_url: string | null;
+  compliant_until: string | null;
   users: { id: string; email: string; name: string | null }[];
+}
+
+function isCompliant(compliantUntil: string | null): boolean {
+  if (!compliantUntil) return false;
+  return isFuture(parseISO(compliantUntil));
+}
+
+function daysRemaining(compliantUntil: string | null): number {
+  if (!compliantUntil) return 0;
+  return differenceInDays(parseISO(compliantUntil), new Date());
 }
 
 export default function AdminCompanies() {
@@ -35,6 +55,7 @@ export default function AdminCompanies() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<CompanyWithUsers | null>(null);
   const [deletingCompany, setDeletingCompany] = useState<CompanyWithUsers | null>(null);
+  const [validatingCompany, setValidatingCompany] = useState<CompanyWithUsers | null>(null);
   const PAGE_SIZE = 10;
 
   const { data: companies = [], isLoading } = useQuery({
@@ -42,7 +63,7 @@ export default function AdminCompanies() {
     queryFn: async () => {
       const { data: companiesData, error: companiesError } = await supabase
         .from('active_companies' as any)
-        .select('id, name, slug, status, company_number, address, country, perm_legal, perm_accounting, perm_finance, accounting_software_url')
+        .select('id, name, slug, status, company_number, address, country, perm_legal, perm_accounting, perm_finance, accounting_software_url, compliant_until')
         .order('name');
 
       if (companiesError) throw companiesError;
@@ -105,6 +126,23 @@ export default function AdminCompanies() {
     queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
   };
 
+  const handleValidateCompliance = async () => {
+    if (!validatingCompany) return;
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 90);
+    const { error } = await supabase
+      .from('companies')
+      .update({ compliant_until: futureDate.toISOString().split('T')[0] } as any)
+      .eq('id', validatingCompany.id);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success(t('admin.companies.validateComplianceSuccess'));
+      queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
+    }
+    setValidatingCompany(null);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -137,56 +175,93 @@ export default function AdminCompanies() {
               <TableHead>{t('admin.companies.name')}</TableHead>
               <TableHead>{t('admin.companies.users')}</TableHead>
               <TableHead>{t('admin.companies.status')}</TableHead>
+              <TableHead>{t('admin.companies.compliant')}</TableHead>
               <TableHead className="w-[100px]">{t('admin.companies.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                   {t('common.loading')}
                 </TableCell>
               </TableRow>
             ) : paginated.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                   {t('admin.companies.noCompanies')}
                 </TableCell>
               </TableRow>
             ) : (
-              paginated.map((company) => (
-                <TableRow key={company.id}>
-                  <TableCell className="font-medium">{company.name}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {company.users.length === 0 ? (
-                        <span className="text-muted-foreground text-sm">—</span>
+              paginated.map((company) => {
+                const compliant = isCompliant(company.compliant_until);
+                const days = daysRemaining(company.compliant_until);
+                return (
+                  <TableRow key={company.id}>
+                    <TableCell className="font-medium">{company.name}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {company.users.length === 0 ? (
+                          <span className="text-muted-foreground text-sm">—</span>
+                        ) : (
+                          company.users.map(u => (
+                            <Badge key={u.id} variant="secondary" className="text-xs">
+                              {u.name || u.email}
+                            </Badge>
+                          ))
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={company.status === 'active' ? 'default' : 'outline'}>
+                        {t(`admin.companies.${company.status}`)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {compliant ? (
+                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                          {t('admin.companies.compliant')} ({days}d)
+                        </Badge>
                       ) : (
-                        company.users.map(u => (
-                          <Badge key={u.id} variant="secondary" className="text-xs">
-                            {u.name || u.email}
-                          </Badge>
-                        ))
+                        <Badge variant="destructive">
+                          {t('admin.companies.nonCompliant')}
+                        </Badge>
                       )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={company.status === 'active' ? 'default' : 'outline'}>
-                      {t(`admin.companies.${company.status}`)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(company)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setDeletingCompany(company)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(company)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleOpenEdit(company)}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              {t('admin.companies.edit')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setValidatingCompany(company)}>
+                              <ShieldCheck className="h-4 w-4 mr-2" />
+                              {t('admin.companies.validateCompliance')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => setDeletingCompany(company)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              {t('admin.companies.delete')}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
@@ -194,25 +269,9 @@ export default function AdminCompanies() {
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page === 0}
-            onClick={() => setPage(p => p - 1)}
-          >
-            ←
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            {page + 1} / {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page >= totalPages - 1}
-            onClick={() => setPage(p => p + 1)}
-          >
-            →
-          </Button>
+          <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>←</Button>
+          <span className="text-sm text-muted-foreground">{page + 1} / {totalPages}</span>
+          <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>→</Button>
         </div>
       )}
 
@@ -230,6 +289,23 @@ export default function AdminCompanies() {
           onSuccess={handleDeleteSuccess}
         />
       )}
+
+      <AlertDialog open={!!validatingCompany} onOpenChange={(open) => !open && setValidatingCompany(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('admin.companies.validateComplianceConfirmTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('admin.companies.validateComplianceConfirmDesc').replace('{name}', validatingCompany?.name || '')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleValidateCompliance}>
+              {t('admin.companies.validateComplianceConfirmButton')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

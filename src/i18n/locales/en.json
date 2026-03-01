@@ -111,7 +111,16 @@
       "officerPosition": "Position",
       "addOfficer": "Add officer",
       "removeOfficer": "Remove",
-      "noOfficers": "No corporate officers added"
+      "noOfficers": "No corporate officers added",
+      "compliant": "Compliant",
+      "nonCompliant": "Non-compliant",
+      "validateCompliance": "Validate compliance",
+      "validateComplianceConfirmTitle": "Validate compliance",
+      "validateComplianceConfirmDesc": "This will mark {name} as compliant for the next 90 days.",
+      "validateComplianceConfirmButton": "Confirm",
+      "validateComplianceSuccess": "Compliance validated",
+      "daysRemaining": "{days}d remaining",
+      "edit": "Edit"
     },
     "users": {
       "title": "Users",

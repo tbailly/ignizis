@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isFuture } from 'date-fns';
 import { Building2, Copy, Check, Users } from 'lucide-react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useTranslation } from '@/i18n/useTranslation';
@@ -112,9 +112,20 @@ export default function Entreprise() {
         {/* Company details card */}
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Building2 className="h-5 w-5 text-primary" />
-              {t('company.details')}
+            <CardTitle className="flex items-center justify-between text-lg">
+              <span className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-primary" />
+                {t('company.details')}
+              </span>
+              {company?.compliant_until && isFuture(parseISO(company.compliant_until as string)) ? (
+                <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                  {t('admin.companies.compliant')}
+                </Badge>
+              ) : (
+                <Badge variant="destructive">
+                  {t('admin.companies.nonCompliant')}
+                </Badge>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
