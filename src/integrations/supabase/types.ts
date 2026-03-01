@@ -19,6 +19,7 @@ export type Database = {
           accounting_software_url: string | null
           address: string | null
           company_number: string | null
+          compliant_until: string | null
           country: string | null
           created_at: string
           deleted_at: string | null
@@ -35,6 +36,7 @@ export type Database = {
           accounting_software_url?: string | null
           address?: string | null
           company_number?: string | null
+          compliant_until?: string | null
           country?: string | null
           created_at?: string
           deleted_at?: string | null
@@ -51,6 +53,7 @@ export type Database = {
           accounting_software_url?: string | null
           address?: string | null
           company_number?: string | null
+          compliant_until?: string | null
           country?: string | null
           created_at?: string
           deleted_at?: string | null
@@ -559,6 +562,7 @@ export type Database = {
           accounting_software_url: string | null
           address: string | null
           company_number: string | null
+          compliant_until: string | null
           country: string | null
           created_at: string | null
           deleted_at: string | null
@@ -575,6 +579,7 @@ export type Database = {
           accounting_software_url?: string | null
           address?: string | null
           company_number?: string | null
+          compliant_until?: string | null
           country?: string | null
           created_at?: string | null
           deleted_at?: string | null
@@ -591,6 +596,7 @@ export type Database = {
           accounting_software_url?: string | null
           address?: string | null
           company_number?: string | null
+          compliant_until?: string | null
           country?: string | null
           created_at?: string | null
           deleted_at?: string | null

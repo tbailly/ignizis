@@ -1,0 +1,1 @@
+ALTER TABLE companies ADD COLUMN compliant_until date DEFAULT NULL;
