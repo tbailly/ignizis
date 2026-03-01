@@ -1,36 +1,22 @@
 
 
-## Améliorations UI de la page AdminDocuments
+## Badges : whitespace-nowrap + couleurs succès/danger
 
-### 1. Scroll horizontal limité à la table
+### 1. Badge component (`src/components/ui/badge.tsx`)
 
-Actuellement le `Table` component wraps dans un `div.overflow-auto`. Le titre et la barre de recherche sont en dehors du `div.rounded-md.border` donc ils ne scrollent pas horizontalement — mais le conteneur parent `space-y-6` pourrait déborder. Il faut s'assurer que le wrapper de la table a bien `overflow-x-auto` et que le layout parent ne déborde pas.
+- Ajouter `whitespace-nowrap` dans la classe de base du `cva`
+- Ajouter deux nouveaux variants :
+  - `success` : `bg-[#24A148]/15 text-[#24A148] border-[#24A148]/30`
+  - `danger` : `bg-[#da1e28]/15 text-[#da1e28] border-[#da1e28]/30`
 
-Concrètement : ajouter `overflow-x-auto` sur le `div.rounded-md.border` qui entoure la `Table`, et s'assurer que le conteneur parent a `overflow-x-hidden` (cohérent avec la contrainte layout existante).
+### 2. Remplacer les usages inline de `bg-green-100 text-green-800` et `variant="destructive"` pour la conformité
 
-### 2. Actions : Eye + Pencil inline, "..." dropdown pour Download + Delete
+Fichiers impactés :
+- `src/pages/admin/AdminCompanies.tsx` — badges compliance → `variant="success"` / `variant="danger"`
+- `src/pages/admin/AdminOfficers.tsx` — idem
+- `src/pages/Entreprise.tsx` — badges compliance entreprise + officers → idem
 
-Remplacer les 4 boutons d'action par :
-- **Eye** (preview PDF, conditionnel) — inline
-- **Pencil** (edit) — inline
-- **MoreHorizontal** ("...") — ouvre un `DropdownMenu` contenant :
-  - Download (icône Download)
-  - Delete (icône Trash2, texte rouge)
+Partout où on avait `className="bg-green-100 text-green-800 ..."` → `variant="success"`, et `variant="destructive"` pour compliance → `variant="danger"`.
 
-Imports à ajouter : `MoreHorizontal` de lucide-react, `DropdownMenu*` de `@/components/ui/dropdown-menu`.
-
-### 3. Type "Secondary ID" sur une seule ligne
-
-Ajouter `whitespace-nowrap` sur le `Badge` dans la colonne type pour empêcher le retour à la ligne.
-
-### 4. Colonne "Display name" : largeur fixe ~190px + troncature + tooltip au hover
-
-- `TableHead` : ajouter `className="w-[190px] min-w-[190px] max-w-[190px]"`
-- `TableCell` : ajouter `max-w-[190px] truncate` et wrapper le texte dans un `Tooltip` (de `@/components/ui/tooltip`) pour afficher le nom complet au hover.
-
-### Fichier impacté
-
-| Fichier | Modification |
-|---------|-------------|
-| `src/pages/admin/AdminDocuments.tsx` | Les 4 changements ci-dessus |
+Note : `variant="destructive"` reste disponible pour les usages non-compliance (boutons, toasts, etc.).
 
