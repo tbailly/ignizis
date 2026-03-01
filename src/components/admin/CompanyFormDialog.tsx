@@ -28,6 +28,7 @@ interface CompanyData {
   perm_accounting: boolean;
   perm_finance: boolean;
   accounting_software_url: string | null;
+  finance_software_url: string | null;
 }
 
 interface CompanyFormDialogProps {
@@ -77,6 +78,7 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
   const [permAccounting, setPermAccounting] = useState(true);
   const [permFinance, setPermFinance] = useState(true);
   const [accountingSoftwareUrl, setAccountingSoftwareUrl] = useState('');
+  const [financeSoftwareUrl, setFinanceSoftwareUrl] = useState('');
   const [officers, setOfficers] = useState<Officer[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -94,6 +96,7 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
         setPermAccounting(company.perm_accounting !== false);
         setPermFinance(company.perm_finance !== false);
         setAccountingSoftwareUrl(company.accounting_software_url || '');
+        setFinanceSoftwareUrl(company.finance_software_url || '');
         // Load officers from DB
         loadOfficers(company.id);
       } else {
@@ -108,6 +111,7 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
         setPermAccounting(true);
         setPermFinance(true);
         setAccountingSoftwareUrl('');
+        setFinanceSoftwareUrl('');
         setOfficers([]);
       }
     }
@@ -255,6 +259,7 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
         perm_accounting: permAccounting,
         perm_finance: permFinance,
         accounting_software_url: accountingSoftwareUrl.trim() || null,
+        finance_software_url: financeSoftwareUrl.trim() || null,
       };
 
       let companyId: string;
@@ -411,6 +416,19 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
               <span className="text-sm">{t('admin.companies.finance')}</span>
               <Switch checked={permFinance} onCheckedChange={setPermFinance} />
             </div>
+
+            {permFinance && (
+              <div className="space-y-2 pl-4">
+                <Label htmlFor="finance-url">{t('admin.companies.financeSoftwareUrl')}</Label>
+                <Input
+                  id="finance-url"
+                  type="url"
+                  value={financeSoftwareUrl}
+                  onChange={(e) => setFinanceSoftwareUrl(e.target.value)}
+                  placeholder={t('admin.companies.financeSoftwareUrlPlaceholder')}
+                />
+              </div>
+            )}
           </div>
 
           {/* Corporate officers */}

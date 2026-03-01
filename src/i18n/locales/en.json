@@ -80,6 +80,8 @@
       "accountingSoftwareUrl": "Accounting software URL",
       "accountingSoftwareUrlPlaceholder": "https://...",
       "finance": "Finance",
+      "financeSoftwareUrl": "Finance software URL",
+      "financeSoftwareUrlPlaceholder": "https://...",
       "companyNumber": "Company number",
       "address": "Address",
       "addressPlaceholder": "Enter company address...",
@@ -369,7 +371,10 @@
   "finance": {
     "title": "Finance",
     "sectionTitle": "Finance section",
-    "sectionDescription": "This section will contain financial information and documents."
+    "sectionDescription": "This section will contain financial information and documents.",
+    "softwareDescription": "Access your company's finance software to manage your financial operations.",
+    "openSoftware": "Open finance software",
+    "noSoftwareUrl": "No finance software has been configured for this company."
   },
   "legalNotice": {
     "title": "Legal notice",
