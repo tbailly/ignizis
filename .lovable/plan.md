@@ -1,84 +1,54 @@
 
 
-## Aligner l'application sur les Ignizis Branding Guidelines
+## Ajouter la conformité d'entreprise avec date d'expiration
 
-### Palette de couleurs extraite du branding guide
+### 1. Migration SQL — Nouvelle colonne `compliant_until`
 
-| Nom | HEX | Usage |
-|-----|-----|-------|
-| Pulse Blue | #3E00FF | Primary / accents / CTA |
-| Core Black | #000000 | Background principal (dark) |
-| Cloud Grey | #FAFAF9 | Background clair / texte sur fond sombre |
-| Soft Lilac | #DBD3FF | Accents secondaires, hover states |
-| Shadow Lilac | #BFB8F8 | Variantes accent |
-| Skinstone | #E7948F | Accent chaud, notifications, warnings |
+Ajouter à la table `companies` :
+```sql
+ALTER TABLE companies ADD COLUMN compliant_until date DEFAULT NULL;
+```
 
-### 1. Refonte du design system CSS (`src/index.css`)
+Mettre à jour la vue `active_companies` pour inclure `compliant_until`.
 
-Remap les CSS variables pour les deux modes :
+### 2. Admin — Datatable `AdminCompanies.tsx`
 
-**Mode dark (par défaut)** :
-- `--background` : Core Black (#000000)
-- `--foreground` : Cloud Grey (#FAFAF9)
-- `--primary` : Pulse Blue (#3E00FF)
-- `--primary-foreground` : blanc
-- `--secondary` / `--muted` : nuances sombres dérivées (#0D0D15, #1A1A2E)
-- `--accent` : Soft Lilac (#DBD3FF) avec foreground sombre
-- `--border` / `--input` : gris sombre (#1F1F33)
-- `--card` : légèrement plus clair que le background (#0A0A14)
-- `--sidebar-background` : Core Black ou très légèrement off-black
-- `--sidebar-primary` : Pulse Blue
-- `--destructive` : Skinstone (#E7948F)
+- Ajouter une colonne **"Compliant"** entre "Status" et "Actions"
+  - Badge vert `Compliant` + `(X days)` si `compliant_until >= today`
+  - Badge rouge `Non-compliant` si `NULL` ou passé
+- Remplacer le bouton Trash par un **bouton "..." (MoreHorizontal)** qui ouvre un `DropdownMenu` contenant :
+  - Edit (icône Pencil)
+  - **Validate compliance** (icône ShieldCheck) → ouvre une modale de confirmation
+  - Delete (icône Trash2, texte rouge)
+- Garder le bouton Edit existant tel quel
+- **Modale de confirmation** : AlertDialog "Validate compliance for {company name} for the next 90 days?" avec bouton Confirm qui fait `UPDATE companies SET compliant_until = now() + interval '90 days' WHERE id = ...`
 
-**Mode light (optionnel)** :
-- `--background` : Cloud Grey (#FAFAF9)
-- `--foreground` : Core Black (#000000)
-- `--primary` : Pulse Blue (#3E00FF)
-- `--card` : blanc
-- Sidebar : fond clair, texte sombre
+### 3. Page Entreprise (`Entreprise.tsx`)
 
-### 2. Typographie — Montserrat comme alternative Gotham
+- Dans le `CardTitle` de "Company details", ajouter à droite un badge :
+  - Vert `Compliant` si `compliant_until >= today`
+  - Rouge `Non-compliant` sinon
 
-- Importer Montserrat (weights 300, 400, 700) depuis Google Fonts dans `index.html`
-- Configurer `tailwind.config.ts` avec `fontFamily: { sans: ['Montserrat', ...] }`
-- Supprimer toute référence à la font-family par défaut
+### 4. Traductions (`en.json`)
 
-### 3. Page d'authentification (`src/pages/Auth.tsx`)
-
-- Fond noir plein écran avec gradient radial Pulse Blue (rappelant le style "digital application" du guide)
-- Logo IGNIZIS en texte blanc bold ou image SVG en header
-- Card de login semi-transparente avec bordure subtle lilac
-- Bouton CTA en Pulse Blue
-
-### 4. Sidebar (`src/components/layout/AppSidebar.tsx`)
-
-- Fond Core Black
-- Items actifs : highlight Pulse Blue
-- Texte Cloud Grey, icônes Soft Lilac en hover
-- Footer utilisateur : cohérent avec le thème sombre
-
-### 5. Dashboard et pages internes
-
-- Cards avec fond légèrement off-black, bordure subtile
-- Badges et éléments d'accent utilisant Soft Lilac / Shadow Lilac
-- Boutons primaires en Pulse Blue
-
-### 6. Gradient brand comme élément décoratif
-
-- Ajouter un gradient linéaire Core Black → Pulse Blue comme accent visuel sur la page Auth et potentiellement en header du dashboard
-
-### 7. Thème par défaut à "dark"
-
-- Modifier `ThemeContext.tsx` : initialiser `theme` à `'dark'` au lieu de `'system'`
+Ajouter :
+```json
+"compliant": "Compliant",
+"nonCompliant": "Non-compliant",
+"validateCompliance": "Validate compliance",
+"validateComplianceConfirmTitle": "Validate compliance",
+"validateComplianceConfirmDesc": "This will mark {name} as compliant for the next 90 days.",
+"validateComplianceConfirmButton": "Confirm",
+"validateComplianceSuccess": "Compliance validated",
+"daysRemaining": "{days}d remaining"
+```
 
 ### Fichiers impactés
 
 | Fichier | Modification |
 |---------|-------------|
-| `index.html` | Import Google Fonts Montserrat |
-| `src/index.css` | Refonte complète des CSS variables (dark par défaut, light optionnel) |
-| `tailwind.config.ts` | Ajout fontFamily Montserrat |
-| `src/pages/Auth.tsx` | Redesign avec gradient, logo, style Ignizis |
-| `src/components/layout/AppSidebar.tsx` | Ajustements visuels sidebar |
-| `src/contexts/ThemeContext.tsx` | Default theme → `'dark'` |
+| Migration SQL | `compliant_until date` sur `companies` + vue `active_companies` |
+| `src/pages/admin/AdminCompanies.tsx` | Colonne Compliant, bouton "...", dropdown, modale |
+| `src/pages/Entreprise.tsx` | Badge conformité dans le header de la card |
+| `src/i18n/locales/en.json` | Nouvelles clés de traduction |
 
