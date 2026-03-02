@@ -308,7 +308,7 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
           )}
         </DialogHeader>
 
-        <div className="overflow-y-auto flex-1 min-h-0">
+        <div className="overflow-y-auto flex-1 min-h-0 px-1">
           <div className="space-y-4 py-2">
             {/* Company name */}
             <div className="space-y-2">

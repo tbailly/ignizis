@@ -137,7 +137,7 @@ export function UserFormDialog({ open, user, onClose, onSuccess }: UserFormDialo
           )}
         </DialogHeader>
 
-        <div className="overflow-y-auto flex-1 min-h-0">
+        <div className="overflow-y-auto flex-1 min-h-0 px-1">
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label htmlFor="user-email">{t('admin.users.email')}</Label>
