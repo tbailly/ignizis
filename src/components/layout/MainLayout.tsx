@@ -20,7 +20,6 @@ export function MainLayout({ children }: MainLayoutProps) {
           {/* Mobile Header */}
           <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background px-4 md:hidden">
             <SidebarTrigger className="-ml-2" />
-            <span className="font-semibold">Portail Entreprises</span>
           </header>
           
           {/* Main Content */}
