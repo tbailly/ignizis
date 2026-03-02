@@ -1,4 +1,4 @@
-import { Building2, FileText, Scale, Calculator, TrendingUp, ChevronDown, Settings, FileQuestion, LogOut, Info, ChevronsUpDown, Shield, Users, UserCheck, Lock, Kanban } from 'lucide-react';
+import { Building2, FileText, Scale, Calculator, TrendingUp, ChevronDown, Settings, FileQuestion, LogOut, Info, ChevronsUpDown, Shield, Users, UserCheck, Lock, Kanban, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -91,16 +91,16 @@ export function AppSidebar() {
               <DropdownMenuItem
                 key={uc.company_id}
                 onClick={() => handleCompanySwitch(uc)}
-                className={cn(
-                  "flex items-center gap-2 cursor-pointer",
-                  currentCompany?.company_id === uc.company_id && "bg-accent"
-                )}
+                className="flex items-center gap-2 cursor-pointer"
               >
                 <span className="truncate flex-1">{uc.company.name}</span>
                 {uc.company.status !== 'active' && (
                   <Badge variant="outline" className="text-muted-foreground text-[10px] px-1.5 py-0 shrink-0">
                     Inactive
                   </Badge>
+                )}
+                {currentCompany?.company_id === uc.company_id && (
+                  <Check className="h-4 w-4 shrink-0 text-primary" />
                 )}
               </DropdownMenuItem>
             ))}
