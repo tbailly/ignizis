@@ -92,7 +92,7 @@ export function TagManagementDialog({ onClose }: Props) {
             <DialogTitle>{t('admin.documents.manageTags')}</DialogTitle>
           </DialogHeader>
 
-          <div className="overflow-y-auto flex-1 min-h-0">
+          <div className="overflow-y-auto flex-1 min-h-0 px-1">
             <div className="space-y-2">
               {isLoading ? (
                 <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
