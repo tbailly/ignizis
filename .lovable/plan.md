@@ -1,35 +1,68 @@
 
 
-## Plan de refactoring : uniformisation du rouge #da1e28
+## Plan : Modales admin — header/footer sticky, hauteur coherente, sous-titres creation
 
-### Probleme
+### Probleme actuel
 
-La variable CSS `--destructive` est actuellement definie sur `5 68% 73%` (Skinstone #E7948F, un rose saumon), alors que la charte Ignizis impose `#da1e28` pour tout ce qui est destructif/erreur/danger. Tous les composants utilisant `text-destructive`, `bg-destructive`, `border-destructive` heritent donc de la mauvaise couleur.
+1. **Header et footer scrollent** avec le contenu car `overflow-y-auto` est applique sur `DialogContent` entier
+2. **Hauteur max incoherente** : CompanyFormDialog = `max-h-[90vh]`, DocumentUploadDialog = `max-h-[80vh]`, OfficerFormDialog = aucune limite
+3. **Sous-titres inutiles en creation** : certains dialogs repetent le titre dans la description
 
-### Solution : un seul changement central
+### Solution
 
-Modifier `--destructive` dans `src/index.css` (light et dark) pour pointer vers #da1e28 en HSL. Cela corrige automatiquement tous les composants qui referencent cette variable (boutons, badges, toasts, alerts, formulaires, icones).
+Restructurer chaque dialog pour utiliser un layout flex vertical avec header et footer fixes et uniquement le corps scrollable.
 
-`#da1e28` en HSL = environ `356 78% 49%`.
+### Fichiers a modifier
 
-### Fichiers impactes
+#### 1. `src/components/ui/dialog.tsx` — DialogContent
 
-| Fichier | Modification |
-|---------|-------------|
-| `src/index.css` | Remplacer `--destructive: 5 68% 73%` par `--destructive: 356 78% 49%` dans `:root` ET `.dark` |
-| `src/components/ui/toast.tsx` | Remplacer les classes Tailwind hardcodees `text-red-300`, `hover:text-red-50`, `focus:ring-red-400`, `ring-offset-red-600` par les equivalents `text-destructive-foreground` / variables destructive |
-| `src/pages/admin/AdminDocuments.tsx` | Ligne 223 : remplacer le badge expiry par `variant="success"` / `variant="danger"` au lieu de classes inline `bg-green-600` et `variant="destructive"` |
+Ajouter `max-h-[85vh] flex flex-col` au style par defaut de `DialogContent`, et retirer tout `overflow` (chaque dialog gere son scroll dans le body).
 
-### Detail technique
+#### 2. Chaque dialog admin — Pattern uniforme
 
-1. **`src/index.css`** — Changement central, 2 lignes (light + dark) :
-   ```css
-   --destructive: 356 78% 49%; /* #da1e28 */
-   ```
+Appliquer le meme pattern a tous les dialogs qui ont du contenu scrollable :
 
-2. **`toast.tsx`** — Le `ToastClose` utilise des couleurs `red-*` hardcodees dans les groupes destructive. Les remplacer par des references a la variable destructive pour coherence.
+```text
+DialogContent (max-h-[85vh] flex flex-col)
+├── DialogHeader        ← fixe en haut
+├── div.overflow-y-auto.flex-1.min-h-0  ← seule zone scrollable
+│   └── contenu du formulaire
+└── DialogFooter        ← fixe en bas
+```
 
-3. **`AdminDocuments.tsx`** — Le badge d'expiration utilise `variant="destructive"` (expire) et des classes inline `bg-green-600` (valide). Remplacer par `variant="danger"` et `variant="success"` comme les autres pages.
+Dialogs concernes :
+- **CompanyFormDialog** : retirer `max-h-[90vh] overflow-y-auto` du DialogContent, wrapper le `<div className="space-y-4">` dans `<div className="overflow-y-auto flex-1 min-h-0">`
+- **OfficerFormDialog** : meme restructuration (c'est celui qui deborde actuellement)
+- **RequestFormDialog** : idem
+- **DocumentEditDialog** : idem
+- **DocumentUploadDialog** : retirer `max-h-[80vh] overflow-y-auto`, appliquer le pattern
+- **UserFormDialog** : idem (contenu court mais pattern coherent)
+- **TagManagementDialog** : retirer le `max-h-[50vh] overflow-y-auto` interne, appliquer le pattern sur le corps
 
-Aucun autre fichier ne necessite de changement : tous les usages de `text-destructive`, `bg-destructive`, `border-destructive` dans button.tsx, alert.tsx, form.tsx, badge.tsx, TagManagementDialog, AdminUsers, AdminOfficers, RequestFormDialog etc. heritent automatiquement de la variable CSS.
+Les dialogs AlertDialog (delete) sont courts et n'ont pas besoin de scroll.
+
+#### 3. Sous-titres en mode creation
+
+Pour les dialogs de creation, supprimer `<DialogDescription>` et ne garder que `<DialogTitle>` avec le texte "Create a X" :
+
+- **CompanyFormDialog** : en mode create, ne pas rendre `DialogDescription`
+- **OfficerFormDialog** : en mode create, ne pas rendre `DialogDescription`
+- **RequestFormDialog** : en mode create, ne pas rendre `DialogDescription`
+- **UserFormDialog** : en mode create, ne pas rendre `DialogDescription`
+- **DocumentUploadDialog** : deja sans description, rien a changer
+
+Note : pour eviter les warnings d'accessibilite Radix (DialogContent sans Description), on ajoutera `aria-describedby={undefined}` sur DialogContent quand il n'y a pas de description.
+
+### Resume des changements
+
+| Fichier | Changement |
+|---------|-----------|
+| `dialog.tsx` | Ajouter `max-h-[85vh] flex flex-col` a DialogContent |
+| `CompanyFormDialog.tsx` | Retirer overflow du content, wrapper body dans scroll div, conditionner DialogDescription |
+| `OfficerFormDialog.tsx` | Wrapper body dans scroll div, conditionner DialogDescription |
+| `RequestFormDialog.tsx` | Wrapper body dans scroll div, conditionner DialogDescription |
+| `UserFormDialog.tsx` | Wrapper body dans scroll div, conditionner DialogDescription |
+| `DocumentEditDialog.tsx` | Wrapper body dans scroll div (edit only = description gardee) |
+| `DocumentUploadDialog.tsx` | Retirer overflow, wrapper body dans scroll div |
+| `TagManagementDialog.tsx` | Retirer max-h interne, wrapper dans scroll div |
 
