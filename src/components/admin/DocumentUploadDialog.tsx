@@ -14,7 +14,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { X } from 'lucide-react';
+import { X, Upload } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { DateMaskInput } from '@/components/ui/date-mask-input';
 import { EntitySelect } from '@/components/admin/EntitySelect';
 
@@ -47,6 +48,7 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [entries, setEntries] = useState<FileEntry[]>([]);
   const [saving, setSaving] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const { data: availableTags = [] } = useQuery({
     queryKey: ['document-tags'],
@@ -78,8 +80,7 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
     },
   });
 
-  const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+  const addFiles = (files: File[]) => {
     const newEntries: FileEntry[] = files.map(file => ({
       file,
       displayName: file.name.replace(/\.[^/.]+$/, ''),
@@ -90,7 +91,17 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
       selectedTagIds: [],
     }));
     setEntries(prev => [...prev, ...newEntries]);
+  };
+
+  const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    addFiles(Array.from(e.target.files || []));
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    addFiles(Array.from(e.dataTransfer.files));
   };
 
   const updateEntry = (index: number, updates: Partial<FileEntry>) => {
@@ -204,18 +215,39 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="sm:max-w-2xl" aria-describedby={undefined}>
         <DialogHeader>
-          <DialogTitle>{t('admin.documents.import')}</DialogTitle>
+          <DialogTitle>
+            {t('admin.documents.import')}
+            {entries.length > 0 && (
+              <Badge variant="secondary" className="ml-2 align-middle">
+                {t('admin.documents.documentCount').replace('{count}', String(entries.length))}
+              </Badge>
+            )}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="overflow-y-auto flex-1 min-h-0 px-1">
           <div className="space-y-4 py-2">
-            <div>
-              <Input
+            <div
+              className={cn(
+                "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors",
+                isDragging
+                  ? "border-primary bg-primary/5"
+                  : "border-muted-foreground/25 hover:border-muted-foreground/50"
+              )}
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+            >
+              <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+              <p className="text-sm font-medium">{t('admin.documents.dropzoneText')}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t('admin.documents.dropzoneHint')}</p>
+              <input
                 ref={fileInputRef}
                 type="file"
                 multiple
                 onChange={handleFilesSelected}
-                className="cursor-pointer"
+                className="hidden"
               />
             </div>
 
