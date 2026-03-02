@@ -1,5 +1,6 @@
 {
   "common": {
+    "dayShort": "d",
     "loading": "Loading...",
     "switchingCompany": "Switching company…",
     "save": "Save",
