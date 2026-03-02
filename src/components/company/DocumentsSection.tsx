@@ -9,6 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface DocRow {
   id: string;
@@ -114,9 +117,18 @@ export default function DocumentsSection({ companyId }: DocumentsSectionProps) {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {documents.map((doc) => (
                 <div key={doc.id} className="p-3 border rounded-lg space-y-2">
-                  <p className="text-sm font-medium truncate" title={doc.display_name}>
-                    {doc.display_name}
-                  </p>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <p className="text-sm font-medium truncate">
+                          {doc.display_name}
+                        </p>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{doc.display_name}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <div className="flex flex-wrap gap-1">
                     {(tagMap[doc.id] || []).map((tag) => (
                       <Badge key={tag} variant="secondary" className="text-xs">

@@ -188,8 +188,8 @@ export default function Entreprise() {
                   <div key={officer.id}>
                     {idx > 0 && <Separator className="mb-4" />}
                     <div className="space-y-0.5">
-                        <div className="flex items-center justify-between flex-nowrap gap-2">
-                         <p className="text-sm font-medium min-w-0 truncate">
+                        <div className="flex items-start justify-between gap-2">
+                         <p className="text-sm font-medium min-w-0">
                            <span className="font-semibold">{officer.last_name.toUpperCase()}</span>{' '}
                            {officer.first_name}
                          </p>
