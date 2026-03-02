@@ -23,9 +23,9 @@ export function MainLayout({ children }: MainLayoutProps) {
           </header>
           
           {/* Main Content */}
-          <main className="flex-1 p-4 md:p-6 overflow-x-hidden">
+          <div className="flex-1 p-4 md:p-6">
             {children}
-          </main>
+          </div>
         </SidebarInset>
       </div>
     </SidebarProvider>
