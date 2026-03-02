@@ -48,13 +48,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        fetchProfile(session.user.id);
-        fetchAdminStatus(session.user.id);
+        await Promise.all([
+          fetchProfile(session.user.id),
+          fetchAdminStatus(session.user.id),
+        ]);
       }
       setLoading(false);
     });
