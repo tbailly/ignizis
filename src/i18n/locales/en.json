@@ -223,7 +223,10 @@
       "clearDate": "Clear",
       "company": "Company",
       "noCompany": "No company found",
-      "selectCompany": "Search and select a company..."
+      "selectCompany": "Search and select a company...",
+      "dropzoneText": "Click or drop files to import",
+      "dropzoneHint": "You can add more files at any time",
+      "documentCount": "{count} document(s)"
     },
     "requests": {
       "title": "Requests",
