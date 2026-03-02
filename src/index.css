@@ -32,7 +32,7 @@
     --accent: 255 100% 92%; /* Soft Lilac #DBD3FF */
     --accent-foreground: 255 100% 30%;
 
-    --destructive: 5 68% 73%; /* Skinstone #E7948F */
+    --destructive: 356 78% 49%; /* #da1e28 */
     --destructive-foreground: 0 0% 100%;
 
     --border: 255 15% 90%;
@@ -73,7 +73,7 @@
     --accent: 255 69% 91%; /* Soft Lilac #DBD3FF */
     --accent-foreground: 240 30% 8%;
 
-    --destructive: 5 68% 73%; /* Skinstone */
+    --destructive: 356 78% 49%; /* #da1e28 */
     --destructive-foreground: 0 0% 100%;
 
     --border: 240 30% 15%; /* #1F1F33 */

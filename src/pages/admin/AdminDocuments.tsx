@@ -220,7 +220,7 @@ export default function AdminDocuments() {
                     {doc.expires_at ? (
                       <div className="flex items-center gap-2">
                         <span>{formatDate(doc.expires_at)}</span>
-                        <Badge variant={new Date(doc.expires_at) < new Date() ? 'destructive' : 'secondary'} className={new Date(doc.expires_at) >= new Date() ? 'bg-green-600 text-white hover:bg-green-700' : ''}>
+                        <Badge variant={new Date(doc.expires_at) < new Date() ? 'danger' : 'success'}>
                           {new Date(doc.expires_at) < new Date() ? t('admin.documents.expired') : t('admin.documents.valid')}
                         </Badge>
                       </div>
