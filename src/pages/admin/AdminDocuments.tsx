@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { FileText, Pencil, Trash2, Search, Upload, Eye, Download, Tags, MoreHorizontal } from 'lucide-react';
+import { FileText, Pencil, Trash2, Search, Upload, Eye, Download, Tags, MoreHorizontal, Building2, UserRound } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +36,8 @@ interface DocumentRow {
   expires_at: string | null;
   company_id: string | null;
   company_name: string | null;
+  officer_name: string | null;
+  linked_entity: 'company' | 'officer' | null;
   tags: { id: string; name: string }[];
 }
 
@@ -86,16 +88,32 @@ export default function AdminDocuments() {
 
       if (tagsError) throw tagsError;
 
+      const { data: officersList } = await supabase
+        .from('active_company_officers' as any)
+        .select('id, first_name, last_name, passport_document_id, secondary_id_document_id, power_of_attorney_document_id');
+
+      const docToOfficer = new Map<string, string>();
+      for (const o of (officersList as any[]) || []) {
+        for (const field of ['passport_document_id', 'secondary_id_document_id', 'power_of_attorney_document_id'] as const) {
+          if (o[field]) docToOfficer.set(o[field], `${o.first_name} ${o.last_name}`);
+        }
+      }
+
       const tagsById = new Map((tags as any[]).map(t => [t.id, t.name]));
 
-      return ((docs as any[]) || []).map(doc => ({
-        ...doc,
-        company_name: (doc as any).companies?.name || null,
-        tags: (assignments || [])
-          .filter(a => a.document_id === doc.id)
-          .map(a => ({ id: a.tag_id, name: tagsById.get(a.tag_id) || '' }))
-          .filter(t => t.name),
-      })) as DocumentRow[];
+      return ((docs as any[]) || []).map(doc => {
+        const isOfficerType = ['passport', 'secondary_id', 'power_of_attorney'].includes(doc.document_type);
+        return {
+          ...doc,
+          company_name: (doc as any).companies?.name || null,
+          officer_name: docToOfficer.get(doc.id) || null,
+          linked_entity: isOfficerType ? 'officer' as const : ((doc as any).companies?.name ? 'company' as const : null),
+          tags: (assignments || [])
+            .filter(a => a.document_id === doc.id)
+            .map(a => ({ id: a.tag_id, name: tagsById.get(a.tag_id) || '' }))
+            .filter(t => t.name),
+        };
+      }) as DocumentRow[];
     },
   });
 
@@ -164,7 +182,7 @@ export default function AdminDocuments() {
               <TableHead className="w-[190px] min-w-[190px] max-w-[190px]">{t('admin.documents.displayName')}</TableHead>
               <TableHead>{t('admin.documents.documentType')}</TableHead>
               <TableHead>{t('admin.documents.tags')}</TableHead>
-              <TableHead>{t('admin.documents.company')}</TableHead>
+              <TableHead>{t('admin.documents.entity')}</TableHead>
               <TableHead>{t('admin.documents.uploadDate')}</TableHead>
               <TableHead>{t('admin.documents.expiresAt')}</TableHead>
               <TableHead className="w-[100px]">{t('admin.documents.actions')}</TableHead>
@@ -209,8 +227,16 @@ export default function AdminDocuments() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {doc.company_name ? (
-                      <span>{doc.company_name}</span>
+                    {doc.linked_entity === 'company' && doc.company_name ? (
+                      <span className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                        {doc.company_name}
+                      </span>
+                    ) : doc.linked_entity === 'officer' && doc.officer_name ? (
+                      <span className="flex items-center gap-2">
+                        <UserRound className="h-4 w-4 text-muted-foreground shrink-0" />
+                        {doc.officer_name}
+                      </span>
                     ) : (
                       <span className="text-muted-foreground">-</span>
                     )}
