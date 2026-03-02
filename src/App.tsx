@@ -90,6 +90,15 @@ function RootRedirect() {
   return null;
 }
 
+function IosSafariPointerFix() {
+  useEffect(() => {
+    const noop = () => {};
+    document.body.addEventListener('pointerdown', noop);
+    return () => document.body.removeEventListener('pointerdown', noop);
+  }, []);
+  return null;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
@@ -97,6 +106,7 @@ const App = () => (
         <ThemeProvider>
           <I18nProvider>
             <TooltipProvider>
+              <IosSafariPointerFix />
               <Toaster />
               <Sonner />
               <Routes>
