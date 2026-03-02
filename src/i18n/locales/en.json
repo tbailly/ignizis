@@ -222,6 +222,7 @@
       "valid": "Valid",
       "clearDate": "Clear",
       "company": "Company",
+      "entity": "Entity",
       "noCompany": "No company found",
       "selectCompany": "Search and select a company...",
       "dropzoneText": "Click or drop files to import",
