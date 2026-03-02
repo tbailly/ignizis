@@ -181,100 +181,104 @@ export function OfficerFormDialog({ officer, onClose, onSuccess }: OfficerFormDi
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" aria-describedby={isEditMode ? undefined : undefined}>
         <DialogHeader>
           <DialogTitle>
             {isEditMode ? t('admin.officers.edit') : t('admin.officers.create')}
           </DialogTitle>
-          <DialogDescription>
-            {isEditMode ? t('admin.officers.editDesc') : t('admin.officers.createDesc')}
-          </DialogDescription>
+          {isEditMode && (
+            <DialogDescription>
+              {t('admin.officers.editDesc')}
+            </DialogDescription>
+          )}
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          <div className="space-y-2">
-            <Label>{t('admin.officers.companies')}</Label>
-            <MultiCompanySelect
-              companies={allCompanies}
-              selectedIds={selectedCompanyIds}
-              onChange={setSelectedCompanyIds}
-              placeholder={t('admin.officers.selectCompanies')}
-            />
-          </div>
+        <div className="overflow-y-auto flex-1 min-h-0">
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>{t('admin.officers.companies')}</Label>
+              <MultiCompanySelect
+                companies={allCompanies}
+                selectedIds={selectedCompanyIds}
+                onChange={setSelectedCompanyIds}
+                placeholder={t('admin.officers.selectCompanies')}
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="officer-first-name">{t('admin.officers.firstName')}</Label>
-            <Input
-              id="officer-first-name"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="officer-first-name">{t('admin.officers.firstName')}</Label>
+              <Input
+                id="officer-first-name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="officer-last-name">{t('admin.officers.lastName')}</Label>
-            <Input
-              id="officer-last-name"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="officer-last-name">{t('admin.officers.lastName')}</Label>
+              <Input
+                id="officer-last-name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="officer-dob">{t('admin.officers.dateOfBirth')}</Label>
-            <DateMaskInput
-              id="officer-dob"
-              value={dateOfBirth}
-              onChange={setDateOfBirth}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="officer-dob">{t('admin.officers.dateOfBirth')}</Label>
+              <DateMaskInput
+                id="officer-dob"
+                value={dateOfBirth}
+                onChange={setDateOfBirth}
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="officer-birth-city">{t('admin.officers.birthCity')}</Label>
-            <Input
-              id="officer-birth-city"
-              value={birthCity}
-              onChange={(e) => setBirthCity(e.target.value)}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="officer-birth-city">{t('admin.officers.birthCity')}</Label>
+              <Input
+                id="officer-birth-city"
+                value={birthCity}
+                onChange={(e) => setBirthCity(e.target.value)}
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="officer-position">{t('admin.officers.position')}</Label>
-            <Input
-              id="officer-position"
-              value={position}
-              onChange={(e) => setPosition(e.target.value)}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="officer-position">{t('admin.officers.position')}</Label>
+              <Input
+                id="officer-position"
+                value={position}
+                onChange={(e) => setPosition(e.target.value)}
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label>{t('admin.officers.passport')}</Label>
-            <DocumentSelect
-              documents={allDocuments}
-              value={passportDocId}
-              onChange={setPassportDocId}
-              placeholder={t('admin.officers.selectDocument')}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label>{t('admin.officers.passport')}</Label>
+              <DocumentSelect
+                documents={allDocuments}
+                value={passportDocId}
+                onChange={setPassportDocId}
+                placeholder={t('admin.officers.selectDocument')}
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label>{t('admin.officers.secondaryId')}</Label>
-            <DocumentSelect
-              documents={allDocuments}
-              value={secondaryIdDocId}
-              onChange={setSecondaryIdDocId}
-              placeholder={t('admin.officers.selectDocument')}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label>{t('admin.officers.secondaryId')}</Label>
+              <DocumentSelect
+                documents={allDocuments}
+                value={secondaryIdDocId}
+                onChange={setSecondaryIdDocId}
+                placeholder={t('admin.officers.selectDocument')}
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label>{t('admin.officers.powerOfAttorney')}</Label>
-            <DocumentSelect
-              documents={allDocuments}
-              value={powerOfAttorneyDocId}
-              onChange={setPowerOfAttorneyDocId}
-              placeholder={t('admin.officers.selectDocument')}
-            />
+            <div className="space-y-2">
+              <Label>{t('admin.officers.powerOfAttorney')}</Label>
+              <DocumentSelect
+                documents={allDocuments}
+                value={powerOfAttorneyDocId}
+                onChange={setPowerOfAttorneyDocId}
+                placeholder={t('admin.officers.selectDocument')}
+              />
+            </div>
           </div>
         </div>
 

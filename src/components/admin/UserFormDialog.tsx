@@ -125,37 +125,41 @@ export function UserFormDialog({ open, user, onClose, onSuccess }: UserFormDialo
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" aria-describedby={isEditing ? undefined : undefined}>
         <DialogHeader>
           <DialogTitle>
             {isEditing ? t('admin.users.edit') : t('admin.users.create')}
           </DialogTitle>
-          <DialogDescription>
-            {isEditing ? t('admin.users.edit') : t('admin.users.create')}
-          </DialogDescription>
+          {isEditing && (
+            <DialogDescription>
+              {t('admin.users.edit')}
+            </DialogDescription>
+          )}
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          <div className="space-y-2">
-            <Label htmlFor="user-email">{t('admin.users.email')}</Label>
-            <Input
-              id="user-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isEditing}
-              placeholder="user@example.com"
-            />
-          </div>
+        <div className="overflow-y-auto flex-1 min-h-0">
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="user-email">{t('admin.users.email')}</Label>
+              <Input
+                id="user-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isEditing}
+                placeholder="user@example.com"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label>{t('admin.users.companies')}</Label>
-            <MultiCompanySelect
-              companies={allCompanies}
-              selectedIds={selectedCompanyIds}
-              onChange={setSelectedCompanyIds}
-              placeholder={t('admin.users.companiesPlaceholder')}
-            />
+            <div className="space-y-2">
+              <Label>{t('admin.users.companies')}</Label>
+              <MultiCompanySelect
+                companies={allCompanies}
+                selectedIds={selectedCompanyIds}
+                onChange={setSelectedCompanyIds}
+                placeholder={t('admin.users.companiesPlaceholder')}
+              />
+            </div>
           </div>
         </div>
 

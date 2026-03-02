@@ -134,82 +134,84 @@ export function DocumentEditDialog({ document, onClose, onSuccess }: DocumentEdi
           <DialogDescription>{t('admin.documents.editDesc')}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          <div className="space-y-2">
-            <Label>{t('admin.documents.originalFile')}</Label>
-            <Input value={document.original_filename} disabled />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="doc-display-name">{t('admin.documents.displayName')}</Label>
-            <Input
-              id="doc-display-name"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>{t('admin.documents.documentType')}</Label>
-            <Select
-              value={documentType}
-              onValueChange={(v) => setDocumentType(v as DocumentData['document_type'])}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="contract">{t('admin.documents.typeContract')}</SelectItem>
-                <SelectItem value="invoice">{t('admin.documents.typeInvoice')}</SelectItem>
-                <SelectItem value="legal">{t('admin.documents.typeLegal')}</SelectItem>
-                <SelectItem value="passport">{t('admin.documents.typePassport')}</SelectItem>
-                <SelectItem value="secondary_id">{t('admin.documents.typeSecondaryId')}</SelectItem>
-                <SelectItem value="power_of_attorney">{t('admin.documents.typePowerOfAttorney')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>{t('admin.documents.expiresAt')}</Label>
-            <div className="flex items-center gap-2">
-              <DateMaskInput
-                value={expiresAt}
-                onChange={setExpiresAt}
-                className="flex-1"
-              />
-              {expiresAt && (
-                <Button type="button" variant="ghost" size="icon" onClick={() => setExpiresAt('')}>
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
+        <div className="overflow-y-auto flex-1 min-h-0">
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>{t('admin.documents.originalFile')}</Label>
+              <Input value={document.original_filename} disabled />
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label>{t('admin.documents.company')}</Label>
-            <CompanySelect
-              companies={companies}
-              value={companyId}
-              onChange={setCompanyId}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="doc-display-name">{t('admin.documents.displayName')}</Label>
+              <Input
+                id="doc-display-name"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label>{t('admin.documents.tags')}</Label>
-            <div className="flex flex-wrap gap-2">
-              {availableTags.map(tag => {
-                const selected = selectedTagIds.includes(tag.id);
-                return (
-                  <Badge
-                    key={tag.id}
-                    variant={selected ? 'default' : 'outline'}
-                    className="cursor-pointer"
-                    onClick={() => toggleTag(tag.id)}
-                  >
-                    {tag.name}
-                  </Badge>
-                );
-              })}
+            <div className="space-y-2">
+              <Label>{t('admin.documents.documentType')}</Label>
+              <Select
+                value={documentType}
+                onValueChange={(v) => setDocumentType(v as DocumentData['document_type'])}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="contract">{t('admin.documents.typeContract')}</SelectItem>
+                  <SelectItem value="invoice">{t('admin.documents.typeInvoice')}</SelectItem>
+                  <SelectItem value="legal">{t('admin.documents.typeLegal')}</SelectItem>
+                  <SelectItem value="passport">{t('admin.documents.typePassport')}</SelectItem>
+                  <SelectItem value="secondary_id">{t('admin.documents.typeSecondaryId')}</SelectItem>
+                  <SelectItem value="power_of_attorney">{t('admin.documents.typePowerOfAttorney')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('admin.documents.expiresAt')}</Label>
+              <div className="flex items-center gap-2">
+                <DateMaskInput
+                  value={expiresAt}
+                  onChange={setExpiresAt}
+                  className="flex-1"
+                />
+                {expiresAt && (
+                  <Button type="button" variant="ghost" size="icon" onClick={() => setExpiresAt('')}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('admin.documents.company')}</Label>
+              <CompanySelect
+                companies={companies}
+                value={companyId}
+                onChange={setCompanyId}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('admin.documents.tags')}</Label>
+              <div className="flex flex-wrap gap-2">
+                {availableTags.map(tag => {
+                  const selected = selectedTagIds.includes(tag.id);
+                  return (
+                    <Badge
+                      key={tag.id}
+                      variant={selected ? 'default' : 'outline'}
+                      className="cursor-pointer"
+                      onClick={() => toggleTag(tag.id)}
+                    >
+                      {tag.name}
+                    </Badge>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>

@@ -202,107 +202,109 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>{t('admin.documents.import')}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          <div>
-            <Input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              onChange={handleFilesSelected}
-              className="cursor-pointer"
-            />
-          </div>
-
-          {entries.map((entry, index) => (
-            <div key={index} className="border rounded-lg p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground truncate">{entry.file.name}</span>
-                <Button variant="ghost" size="icon" onClick={() => removeEntry(index)}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-
-              <div className="space-y-2">
-                <Label>{t('admin.documents.displayName')}</Label>
-                <Input
-                  value={entry.displayName}
-                  onChange={(e) => updateEntry(index, { displayName: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>{t('admin.documents.companyOrOfficer')}</Label>
-                <EntitySelect
-                  companies={companies}
-                  officers={officers}
-                  linkedType={entry.linkedType}
-                  linkedId={entry.linkedId}
-                  onChange={(type, id) => handleEntityChange(index, type, id)}
-                />
-              </div>
-
-              {entry.linkedType && (
-                <div className="space-y-2">
-                  <Label>{t('admin.documents.documentType')}</Label>
-                  <Select
-                    value={entry.documentType}
-                    onValueChange={(v) => updateEntry(index, { documentType: v as DocumentType })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder=" " />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {entry.linkedType === 'company' ? (
-                        <>
-                          <SelectItem value="contract">{t('admin.documents.typeContract')}</SelectItem>
-                          <SelectItem value="invoice">{t('admin.documents.typeInvoice')}</SelectItem>
-                          <SelectItem value="legal">{t('admin.documents.typeLegal')}</SelectItem>
-                        </>
-                      ) : (
-                        <>
-                          <SelectItem value="passport">{t('admin.documents.typePassport')}</SelectItem>
-                          <SelectItem value="secondary_id">{t('admin.documents.typeSecondaryId')}</SelectItem>
-                          <SelectItem value="power_of_attorney">{t('admin.documents.typePowerOfAttorney')}</SelectItem>
-                        </>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label>{t('admin.documents.expiresAt')}</Label>
-                <DateMaskInput
-                  value={entry.expiresAt}
-                  onChange={(v) => updateEntry(index, { expiresAt: v })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>{t('admin.documents.tags')}</Label>
-                <div className="flex flex-wrap gap-2">
-                  {availableTags.map(tag => {
-                    const selected = entry.selectedTagIds.includes(tag.id);
-                    return (
-                      <Badge
-                        key={tag.id}
-                        variant={selected ? 'default' : 'outline'}
-                        className="cursor-pointer"
-                        onClick={() => toggleTag(index, tag.id)}
-                      >
-                        {tag.name}
-                      </Badge>
-                    );
-                  })}
-                </div>
-              </div>
+        <div className="overflow-y-auto flex-1 min-h-0">
+          <div className="space-y-4 py-2">
+            <div>
+              <Input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                onChange={handleFilesSelected}
+                className="cursor-pointer"
+              />
             </div>
-          ))}
+
+            {entries.map((entry, index) => (
+              <div key={index} className="border rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground truncate">{entry.file.name}</span>
+                  <Button variant="ghost" size="icon" onClick={() => removeEntry(index)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('admin.documents.displayName')}</Label>
+                  <Input
+                    value={entry.displayName}
+                    onChange={(e) => updateEntry(index, { displayName: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('admin.documents.companyOrOfficer')}</Label>
+                  <EntitySelect
+                    companies={companies}
+                    officers={officers}
+                    linkedType={entry.linkedType}
+                    linkedId={entry.linkedId}
+                    onChange={(type, id) => handleEntityChange(index, type, id)}
+                  />
+                </div>
+
+                {entry.linkedType && (
+                  <div className="space-y-2">
+                    <Label>{t('admin.documents.documentType')}</Label>
+                    <Select
+                      value={entry.documentType}
+                      onValueChange={(v) => updateEntry(index, { documentType: v as DocumentType })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder=" " />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {entry.linkedType === 'company' ? (
+                          <>
+                            <SelectItem value="contract">{t('admin.documents.typeContract')}</SelectItem>
+                            <SelectItem value="invoice">{t('admin.documents.typeInvoice')}</SelectItem>
+                            <SelectItem value="legal">{t('admin.documents.typeLegal')}</SelectItem>
+                          </>
+                        ) : (
+                          <>
+                            <SelectItem value="passport">{t('admin.documents.typePassport')}</SelectItem>
+                            <SelectItem value="secondary_id">{t('admin.documents.typeSecondaryId')}</SelectItem>
+                            <SelectItem value="power_of_attorney">{t('admin.documents.typePowerOfAttorney')}</SelectItem>
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label>{t('admin.documents.expiresAt')}</Label>
+                  <DateMaskInput
+                    value={entry.expiresAt}
+                    onChange={(v) => updateEntry(index, { expiresAt: v })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('admin.documents.tags')}</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {availableTags.map(tag => {
+                      const selected = entry.selectedTagIds.includes(tag.id);
+                      return (
+                        <Badge
+                          key={tag.id}
+                          variant={selected ? 'default' : 'outline'}
+                          className="cursor-pointer"
+                          onClick={() => toggleTag(index, tag.id)}
+                        >
+                          {tag.name}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         <DialogFooter>
