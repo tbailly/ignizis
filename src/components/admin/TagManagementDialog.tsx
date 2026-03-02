@@ -87,52 +87,54 @@ export function TagManagementDialog({ onClose }: Props) {
   return (
     <>
       <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>{t('admin.documents.manageTags')}</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-2 max-h-[50vh] overflow-y-auto">
-            {isLoading ? (
-              <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
-            ) : tags.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t('admin.documents.noTags')}</p>
-            ) : (
-              tags.map((tag) => (
-                <div key={tag.id} className="flex items-center gap-2">
-                  {editingId === tag.id ? (
-                    <>
-                      <Input
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleRename(tag.id);
-                          if (e.key === 'Escape') cancelEdit();
-                        }}
-                        className="flex-1 h-8"
-                        autoFocus
-                      />
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRename(tag.id)}>
-                        <Check className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={cancelEdit}>
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <span className="flex-1 text-sm">{tag.name}</span>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEdit(tag)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeletingTag(tag)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </>
-                  )}
-                </div>
-              ))
-            )}
+          <div className="overflow-y-auto flex-1 min-h-0">
+            <div className="space-y-2">
+              {isLoading ? (
+                <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
+              ) : tags.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t('admin.documents.noTags')}</p>
+              ) : (
+                tags.map((tag) => (
+                  <div key={tag.id} className="flex items-center gap-2">
+                    {editingId === tag.id ? (
+                      <>
+                        <Input
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleRename(tag.id);
+                            if (e.key === 'Escape') cancelEdit();
+                          }}
+                          className="flex-1 h-8"
+                          autoFocus
+                        />
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRename(tag.id)}>
+                          <Check className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={cancelEdit}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="flex-1 text-sm">{tag.name}</span>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEdit(tag)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeletingTag(tag)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-2 pt-2 border-t">

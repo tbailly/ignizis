@@ -296,143 +296,147 @@ export function CompanyFormDialog({ open, company, onClose, onSuccess }: Company
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg" aria-describedby={isEditing ? undefined : undefined}>
         <DialogHeader>
           <DialogTitle>
             {isEditing ? t('admin.companies.edit') : t('admin.companies.create')}
           </DialogTitle>
-          <DialogDescription>
-            {isEditing ? t('admin.companies.edit') : t('admin.companies.create')}
-          </DialogDescription>
+          {isEditing && (
+            <DialogDescription>
+              {t('admin.companies.edit')}
+            </DialogDescription>
+          )}
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          {/* Company name */}
-          <div className="space-y-2">
-            <Label htmlFor="company-name">{t('admin.companies.name')}</Label>
-            <Input
-              id="company-name"
-              value={name}
-              onChange={(e) => handleNameChange(e.target.value)}
-              maxLength={100}
-              placeholder={t('admin.companies.name')}
-            />
-          </div>
-
-          {/* Slug */}
-          <div className="space-y-2">
-            <Label htmlFor="company-slug">{t('admin.companies.slug')}</Label>
-            <Input
-              id="company-slug"
-              value={slug}
-              onChange={(e) => handleSlugChange(e.target.value)}
-              placeholder="my-company"
-            />
-          </div>
-
-          {/* Company number */}
-          <div className="space-y-2">
-            <Label htmlFor="company-number">{t('admin.companies.companyNumber')}</Label>
-            <Input
-              id="company-number"
-              value={companyNumber}
-              onChange={(e) => setCompanyNumber(e.target.value)}
-              placeholder={t('admin.companies.companyNumber')}
-            />
-          </div>
-
-          {/* Address */}
-          <div className="space-y-2">
-            <Label htmlFor="company-address">{t('admin.companies.address')}</Label>
-            <Textarea
-              id="company-address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder={t('admin.companies.addressPlaceholder')}
-              rows={3}
-            />
-          </div>
-
-          {/* Country */}
-          <div className="space-y-2">
-            <Label htmlFor="company-country">{t('admin.companies.country')}</Label>
-            <Select value={country} onValueChange={setCountry}>
-              <SelectTrigger id="company-country">
-                <SelectValue placeholder={t('admin.companies.countryPlaceholder')} />
-              </SelectTrigger>
-              <SelectContent>
-                {COUNTRY_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.code} value={opt.code}>
-                    {t(opt.label)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Status */}
-          <div className="flex items-center justify-between">
-            <Label htmlFor="company-status">{t('admin.companies.status')}</Label>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
-                {status ? t('admin.companies.active') : t('admin.companies.inactive')}
-              </span>
-              <Switch
-                id="company-status"
-                checked={status}
-                onCheckedChange={setStatus}
+        <div className="overflow-y-auto flex-1 min-h-0">
+          <div className="space-y-4 py-2">
+            {/* Company name */}
+            <div className="space-y-2">
+              <Label htmlFor="company-name">{t('admin.companies.name')}</Label>
+              <Input
+                id="company-name"
+                value={name}
+                onChange={(e) => handleNameChange(e.target.value)}
+                maxLength={100}
+                placeholder={t('admin.companies.name')}
               />
             </div>
-          </div>
 
-          {/* Permissions */}
-          <div className="space-y-3">
-            <Label>{t('admin.companies.permissions')}</Label>
-
-            <div className="flex items-center justify-between">
-              <span className="text-sm">{t('admin.companies.legal')}</span>
-              <Switch checked={permLegal} onCheckedChange={setPermLegal} />
+            {/* Slug */}
+            <div className="space-y-2">
+              <Label htmlFor="company-slug">{t('admin.companies.slug')}</Label>
+              <Input
+                id="company-slug"
+                value={slug}
+                onChange={(e) => handleSlugChange(e.target.value)}
+                placeholder="my-company"
+              />
             </div>
 
-            <div className="flex items-center justify-between">
-              <span className="text-sm">{t('admin.companies.accounting')}</span>
-              <Switch checked={permAccounting} onCheckedChange={setPermAccounting} />
+            {/* Company number */}
+            <div className="space-y-2">
+              <Label htmlFor="company-number">{t('admin.companies.companyNumber')}</Label>
+              <Input
+                id="company-number"
+                value={companyNumber}
+                onChange={(e) => setCompanyNumber(e.target.value)}
+                placeholder={t('admin.companies.companyNumber')}
+              />
             </div>
 
-            {permAccounting && (
-              <div className="space-y-2 pl-4">
-                <Label htmlFor="accounting-url">{t('admin.companies.accountingSoftwareUrl')}</Label>
-                <Input
-                  id="accounting-url"
-                  type="url"
-                  value={accountingSoftwareUrl}
-                  onChange={(e) => setAccountingSoftwareUrl(e.target.value)}
-                  placeholder={t('admin.companies.accountingSoftwareUrlPlaceholder')}
+            {/* Address */}
+            <div className="space-y-2">
+              <Label htmlFor="company-address">{t('admin.companies.address')}</Label>
+              <Textarea
+                id="company-address"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder={t('admin.companies.addressPlaceholder')}
+                rows={3}
+              />
+            </div>
+
+            {/* Country */}
+            <div className="space-y-2">
+              <Label htmlFor="company-country">{t('admin.companies.country')}</Label>
+              <Select value={country} onValueChange={setCountry}>
+                <SelectTrigger id="company-country">
+                  <SelectValue placeholder={t('admin.companies.countryPlaceholder')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {COUNTRY_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.code} value={opt.code}>
+                      {t(opt.label)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Status */}
+            <div className="flex items-center justify-between">
+              <Label htmlFor="company-status">{t('admin.companies.status')}</Label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  {status ? t('admin.companies.active') : t('admin.companies.inactive')}
+                </span>
+                <Switch
+                  id="company-status"
+                  checked={status}
+                  onCheckedChange={setStatus}
                 />
               </div>
-            )}
-
-            <div className="flex items-center justify-between">
-              <span className="text-sm">{t('admin.companies.finance')}</span>
-              <Switch checked={permFinance} onCheckedChange={setPermFinance} />
             </div>
 
-            {permFinance && (
-              <div className="space-y-2 pl-4">
-                <Label htmlFor="finance-url">{t('admin.companies.financeSoftwareUrl')}</Label>
-                <Input
-                  id="finance-url"
-                  type="url"
-                  value={financeSoftwareUrl}
-                  onChange={(e) => setFinanceSoftwareUrl(e.target.value)}
-                  placeholder={t('admin.companies.financeSoftwareUrlPlaceholder')}
-                />
-              </div>
-            )}
-          </div>
+            {/* Permissions */}
+            <div className="space-y-3">
+              <Label>{t('admin.companies.permissions')}</Label>
 
-          {/* Corporate officers */}
-          <OfficerSection officers={officers} onChange={setOfficers} />
+              <div className="flex items-center justify-between">
+                <span className="text-sm">{t('admin.companies.legal')}</span>
+                <Switch checked={permLegal} onCheckedChange={setPermLegal} />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm">{t('admin.companies.accounting')}</span>
+                <Switch checked={permAccounting} onCheckedChange={setPermAccounting} />
+              </div>
+
+              {permAccounting && (
+                <div className="space-y-2 pl-4">
+                  <Label htmlFor="accounting-url">{t('admin.companies.accountingSoftwareUrl')}</Label>
+                  <Input
+                    id="accounting-url"
+                    type="url"
+                    value={accountingSoftwareUrl}
+                    onChange={(e) => setAccountingSoftwareUrl(e.target.value)}
+                    placeholder={t('admin.companies.accountingSoftwareUrlPlaceholder')}
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm">{t('admin.companies.finance')}</span>
+                <Switch checked={permFinance} onCheckedChange={setPermFinance} />
+              </div>
+
+              {permFinance && (
+                <div className="space-y-2 pl-4">
+                  <Label htmlFor="finance-url">{t('admin.companies.financeSoftwareUrl')}</Label>
+                  <Input
+                    id="finance-url"
+                    type="url"
+                    value={financeSoftwareUrl}
+                    onChange={(e) => setFinanceSoftwareUrl(e.target.value)}
+                    placeholder={t('admin.companies.financeSoftwareUrlPlaceholder')}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Corporate officers */}
+            <OfficerSection officers={officers} onChange={setOfficers} />
+          </div>
         </div>
 
         <DialogFooter>

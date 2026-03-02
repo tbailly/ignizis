@@ -205,150 +205,154 @@ export function RequestFormDialog({ request, companies, onClose, onSuccess, onDe
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" aria-describedby={isEditMode ? undefined : undefined}>
         <DialogHeader>
           <DialogTitle>
             {isEditMode ? t('admin.requests.edit') : t('admin.requests.create')}
           </DialogTitle>
-          <DialogDescription>
-            {isEditMode ? t('admin.requests.editDesc') : t('admin.requests.createDesc')}
-          </DialogDescription>
+          {isEditMode && (
+            <DialogDescription>
+              {t('admin.requests.editDesc')}
+            </DialogDescription>
+          )}
         </DialogHeader>
 
-        {/* Request number badge in edit mode */}
-        {isEditMode && request && (
-          <Badge variant="outline" className="w-fit font-mono text-sm">
-            #{request.request_number}
-          </Badge>
-        )}
+        <div className="overflow-y-auto flex-1 min-h-0">
+          {/* Request number badge in edit mode */}
+          {isEditMode && request && (
+            <Badge variant="outline" className="w-fit font-mono text-sm mb-4">
+              #{request.request_number}
+            </Badge>
+          )}
 
-        <div className="space-y-4 py-2">
-          {/* Company */}
-          <div className="space-y-2">
-            <Label>{t('admin.requests.company')}</Label>
-            {isEditMode ? (
-              <Input
-                value={selectedCompany?.name ?? ''}
-                disabled
-                className="opacity-70"
-              />
-            ) : (
-              <CompanySelect
-                companies={companies}
-                value={companyId || null}
-                onChange={(id) => setCompanyId(id || '')}
-              />
-            )}
-          </div>
-
-          {/* Requester email — visible when company is selected */}
-          {companyId && (
+          <div className="space-y-4 py-2">
+            {/* Company */}
             <div className="space-y-2">
-              <Label>{t('admin.requests.requesterEmail')}</Label>
+              <Label>{t('admin.requests.company')}</Label>
               {isEditMode ? (
                 <Input
-                  value={requesterEmail}
+                  value={selectedCompany?.name ?? ''}
                   disabled
                   className="opacity-70"
                 />
               ) : (
-                <Popover open={emailOpen} onOpenChange={setEmailOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={emailOpen}
-                      className="w-full justify-between font-normal"
-                    >
-                      <span className={cn('truncate', !requesterEmail && 'text-muted-foreground')}>
-                        {requesterEmail || t('admin.requests.requesterEmailPlaceholder')}
-                      </span>
-                      <ChevronsUpDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                    <Command>
-                      <CommandInput
-                        placeholder={t('admin.requests.requesterEmailPlaceholder')}
-                        value={requesterEmail}
-                        onValueChange={setRequesterEmail}
-                      />
-                      <CommandList>
-                        <CommandEmpty>
-                          {requesterEmail ? (
-                            <button
-                              type="button"
-                              className="w-full text-left px-2 py-1.5 text-sm cursor-pointer hover:bg-accent rounded"
-                              onClick={() => setEmailOpen(false)}
-                            >
-                              {requesterEmail}
-                            </button>
-                          ) : null}
-                        </CommandEmpty>
-                        <CommandGroup>
-                          {suggestedEmails.map((email) => (
-                            <CommandItem
-                              key={email}
-                              value={email}
-                              onSelect={() => {
-                                setRequesterEmail(email);
-                                setEmailOpen(false);
-                              }}
-                            >
-                              <Check
-                                className={cn('mr-2 h-4 w-4 shrink-0', requesterEmail === email ? 'opacity-100' : 'opacity-0')}
-                              />
-                              <span className="truncate">{email}</span>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                <CompanySelect
+                  companies={companies}
+                  value={companyId || null}
+                  onChange={(id) => setCompanyId(id || '')}
+                />
               )}
             </div>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor="request-title">{t('admin.requests.titleField')}</Label>
-            <Input
-              id="request-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={t('admin.requests.titlePlaceholder')}
-            />
-          </div>
 
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="request-description">{t('admin.requests.descriptionField')}</Label>
-            <Textarea
-              id="request-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder={t('admin.requests.descriptionPlaceholder')}
-              rows={3}
-            />
-          </div>
-
-          {/* Status — edit mode only */}
-          {isEditMode && (
+            {/* Requester email — visible when company is selected */}
+            {companyId && (
+              <div className="space-y-2">
+                <Label>{t('admin.requests.requesterEmail')}</Label>
+                {isEditMode ? (
+                  <Input
+                    value={requesterEmail}
+                    disabled
+                    className="opacity-70"
+                  />
+                ) : (
+                  <Popover open={emailOpen} onOpenChange={setEmailOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={emailOpen}
+                        className="w-full justify-between font-normal"
+                      >
+                        <span className={cn('truncate', !requesterEmail && 'text-muted-foreground')}>
+                          {requesterEmail || t('admin.requests.requesterEmailPlaceholder')}
+                        </span>
+                        <ChevronsUpDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                      <Command>
+                        <CommandInput
+                          placeholder={t('admin.requests.requesterEmailPlaceholder')}
+                          value={requesterEmail}
+                          onValueChange={setRequesterEmail}
+                        />
+                        <CommandList>
+                          <CommandEmpty>
+                            {requesterEmail ? (
+                              <button
+                                type="button"
+                                className="w-full text-left px-2 py-1.5 text-sm cursor-pointer hover:bg-accent rounded"
+                                onClick={() => setEmailOpen(false)}
+                              >
+                                {requesterEmail}
+                              </button>
+                            ) : null}
+                          </CommandEmpty>
+                          <CommandGroup>
+                            {suggestedEmails.map((email) => (
+                              <CommandItem
+                                key={email}
+                                value={email}
+                                onSelect={() => {
+                                  setRequesterEmail(email);
+                                  setEmailOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn('mr-2 h-4 w-4 shrink-0', requesterEmail === email ? 'opacity-100' : 'opacity-0')}
+                                />
+                                <span className="truncate">{email}</span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                )}
+              </div>
+            )}
             <div className="space-y-2">
-              <Label>{t('admin.requests.status')}</Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_VALUES.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {t(`admin.requests.columns.${s}`)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="request-title">{t('admin.requests.titleField')}</Label>
+              <Input
+                id="request-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder={t('admin.requests.titlePlaceholder')}
+              />
             </div>
-          )}
+
+            {/* Description */}
+            <div className="space-y-2">
+              <Label htmlFor="request-description">{t('admin.requests.descriptionField')}</Label>
+              <Textarea
+                id="request-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={t('admin.requests.descriptionPlaceholder')}
+                rows={3}
+              />
+            </div>
+
+            {/* Status — edit mode only */}
+            {isEditMode && (
+              <div className="space-y-2">
+                <Label>{t('admin.requests.status')}</Label>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_VALUES.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {t(`admin.requests.columns.${s}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
         </div>
 
         <DialogFooter className="flex !justify-between gap-2">
