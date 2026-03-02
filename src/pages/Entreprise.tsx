@@ -195,7 +195,7 @@ export default function Entreprise() {
                          </p>
                          {officer.compliant_until && isFuture(parseISO(officer.compliant_until)) ? (
                            <Badge variant="success" className="shrink-0">
-                             {t('admin.officers.compliant')} ({differenceInCalendarDays(parseISO(officer.compliant_until), new Date())}j)
+                             {t('admin.officers.compliant')} ({differenceInCalendarDays(parseISO(officer.compliant_until), new Date())}{t('common.dayShort')})
                            </Badge>
                          ) : (
                            <Badge variant="danger" className="shrink-0">
