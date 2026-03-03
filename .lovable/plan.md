@@ -1,25 +1,30 @@
 
 
-## Plan : Sous-titre "Last update" + suppression du CardHeader
+## Plan : Boutons responsifs sur AdminDocuments
 
-### Modifications sur les 3 pages légales
+### Modification
 
-Chaque page (`CGU.tsx`, `MentionsLegales.tsx`, `Confidentialite.tsx`) sera modifiée de la même manière :
+Fichier `src/pages/admin/AdminDocuments.tsx`, lignes 150-166.
 
-1. **Fetch `updated_at`** en plus de `content_html` depuis la requête Supabase
-2. **Sous-titre** : remplacer le sous-titre actuel par `Last update: {formatted date}` en utilisant `format(new Date(updated_at), 'MMMM dd, yyyy')` de `date-fns`
-3. **Supprimer le `CardHeader`** (qui contient le titre avec icône redondant), ne garder que le `CardContent` dans la `Card`
+Remplacer le `flex items-center justify-between` par un layout qui wrap sur mobile : le titre sur une ligne, les boutons en dessous quand l'espace manque.
 
-### Traductions
+```tsx
+<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+    <FileText className="h-8 w-8 text-primary" />
+    {t('admin.documents.title')}
+  </h1>
+  <div className="flex gap-2">
+    {/* buttons unchanged */}
+  </div>
+</div>
+```
 
-Ajouter une clé `common.lastUpdate` dans `en.json` : `"Last update:"`.
+Sur mobile, le titre et les boutons s'empilent verticalement. Sur `sm+`, ils restent côte à côte.
 
-### Fichiers modifiés
+### Fichier modifié
 
 | Fichier | Modification |
 |---------|-------------|
-| `src/pages/legal/CGU.tsx` | Fetch `updated_at`, afficher sous-titre formaté, supprimer `CardHeader` |
-| `src/pages/legal/Confidentialite.tsx` | Idem |
-| `src/pages/legal/MentionsLegales.tsx` | Idem |
-| `src/i18n/locales/en.json` | Ajouter `common.lastUpdate` |
+| `src/pages/admin/AdminDocuments.tsx` | Wrapper flex-col → sm:flex-row pour le header |
 
