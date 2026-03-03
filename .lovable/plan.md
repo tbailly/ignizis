@@ -1,30 +1,55 @@
 
 
-## Plan : Boutons responsifs sur AdminDocuments
+## Plan : Page Help dynamique avec contenu enrichi
 
-### Modification
+### Objectif
 
-Fichier `src/pages/admin/AdminDocuments.tsx`, lignes 150-166.
+Transformer la page Help en contenu dynamique éditable depuis l'admin, sur le même modèle que les pages légales. Renommer le fichier `Aide.tsx` en `Help.tsx`.
 
-Remplacer le `flex items-center justify-between` par un layout qui wrap sur mobile : le titre sur une ligne, les boutons en dessous quand l'espace manque.
+### Base de données
 
-```tsx
-<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-  <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-    <FileText className="h-8 w-8 text-primary" />
-    {t('admin.documents.title')}
-  </h1>
-  <div className="flex gap-2">
-    {/* buttons unchanged */}
-  </div>
-</div>
+Insérer une nouvelle ligne dans `legal_pages` (la table existe déjà) :
+
+```sql
+INSERT INTO legal_pages (id, content_html) VALUES ('help', '');
 ```
 
-Sur mobile, le titre et les boutons s'empilent verticalement. Sur `sm+`, ils restent côte à côte.
+Pas de migration de schéma nécessaire, juste un insert de données.
 
-### Fichier modifié
+### Admin : nouvelle page d'édition
 
-| Fichier | Modification |
-|---------|-------------|
-| `src/pages/admin/AdminDocuments.tsx` | Wrapper flex-col → sm:flex-row pour le header |
+Créer `src/pages/admin/AdminHelp.tsx` — un éditeur Tiptap identique à `AdminLegalPages.tsx` mais pour une seule page (pas de tabs). Titre "Help Page", bouton Save, même toolbar.
+
+### Sidebar admin
+
+Ajouter un lien "Help Page" dans la sidebar admin (icône `Info`), route `/admin/help`.
+
+### Page utilisateur
+
+- Renommer `src/pages/Aide.tsx` → `src/pages/Help.tsx`
+- Supprimer tout le contenu statique (FAQ, Contact)
+- Garder uniquement : titre + sous-titre "Last update: {date}" + Card avec contenu HTML dynamique depuis `legal_pages` (id = `help`), même pattern que les pages légales
+
+### Routing
+
+- `App.tsx` : importer `Help` au lieu de `Aide`, ajouter route `/admin/help`
+- Mettre à jour la référence dans la route `/help`
+
+### Traductions
+
+- Nettoyer les clés `help.*` inutiles (faq, contact, etc.) — garder `help.title` et `help.subtitle`
+- Ajouter clés `adminHelp.title`, `adminHelp.description`, `adminHelp.saveSuccess`
+- Ajouter `sidebar.adminHelp`
+
+### Fichiers
+
+| Fichier | Action |
+|---------|--------|
+| Insert données `legal_pages` | Ajouter ligne `help` |
+| `src/pages/Aide.tsx` | Supprimer |
+| `src/pages/Help.tsx` | Créer — fetch + rendu HTML dynamique |
+| `src/pages/admin/AdminHelp.tsx` | Créer — éditeur Tiptap |
+| `src/App.tsx` | Importer Help, ajouter route admin |
+| `src/components/layout/AppSidebar.tsx` | Ajouter lien admin Help |
+| `src/i18n/locales/en.json` | Nettoyer clés help, ajouter adminHelp |
 
