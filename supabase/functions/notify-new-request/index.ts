@@ -15,19 +15,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Validate service role key
-  const authHeader = req.headers.get("Authorization");
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!authHeader || authHeader !== `Bearer ${serviceKey}`) {
-    return new Response(JSON.stringify({ error: "Forbidden" }), {
-      status: 403,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
   const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL")!,
-    serviceKey!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
   try {
