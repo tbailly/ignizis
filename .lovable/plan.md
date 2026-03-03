@@ -1,37 +1,42 @@
 
 
-## Diagnostic
+## Plan : Email de confirmation au demandeur (`requester_email`)
 
-- Le cron `retry-failed-notifications` tourne toutes les 5 min (confirmé par `cron.job_run_details`) mais retourne **0 rows** car la sous-requête `FROM vault.decrypted_secrets WHERE name = 'SUPABASE_SERVICE_ROLE_KEY'` ne trouve rien.
-- Le trigger `notify_new_request_trigger` fait la même chose : il lit `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` depuis le vault, obtient NULL, et skip l'appel `net.http_post`.
-- Les 2 entrées en queue sont `pending` avec `attempts: 0` — jamais traitées.
+### Objectif
 
-## Cause racine
+Envoyer un second email au `requester_email` via le template Resend `new-request-user` (sans variables, sans `from`) à chaque nouvelle demande, avec le même mécanisme de retry que l'email admin.
 
-Les secrets `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` sont configurés comme **secrets Edge Function** (variables Deno) mais ne sont **pas** insérés dans le **vault Postgres** (`vault.secrets`). Le trigger et le cron dépendent du vault pour construire les URLs et headers d'authentification.
+### Approche
 
-## Solution
+Ajouter un second appel `resend.emails.send()` dans les deux edge functions, juste après l'envoi admin. Le statut de la queue reflètera le résultat combiné des deux envois.
 
-Insérer les 2 secrets dans le vault Postgres via une requête SQL. Cela permettra au trigger et au cron de fonctionner immédiatement sans modifier de code.
+### Fichiers modifiés
 
-### Requête à exécuter (via l'outil insert, pas migration)
+| Fichier | Modification |
+|---------|-------------|
+| `supabase/functions/notify-new-request/index.ts` | Ajouter un second `resend.emails.send()` vers `requester_email` avec template `new-request-user` après l'envoi admin. Marquer `failed` si l'un des deux échoue. |
+| `supabase/functions/retry-failed-notifications/index.ts` | Même ajout : envoyer les deux emails (admin + requester) lors du retry. |
 
-```sql
-INSERT INTO vault.secrets (name, secret)
-VALUES
-  ('SUPABASE_URL', 'https://epcelmrwfqniycdrxaoi.supabase.co'),
-  ('SUPABASE_SERVICE_ROLE_KEY', '<service_role_key>')
-ON CONFLICT (name) DO UPDATE SET secret = EXCLUDED.secret;
+### Détail technique
+
+Dans `notify-new-request/index.ts`, après l'envoi admin existant :
+
+```typescript
+// Email au demandeur (si requester_email présent)
+if (requester_email) {
+  const { error: userSendError } = await resend.emails.send({
+    to: [requester_email],
+    template: { id: "new-request-user" },
+  });
+  if (userSendError) {
+    console.error("Resend user email error:", userSendError);
+    // Marquer failed pour que le retry renvoie les deux
+  }
+}
 ```
 
-Le `SUPABASE_URL` est connu. Pour la `SERVICE_ROLE_KEY`, elle est déjà configurée comme secret Edge Function — je la récupérerai depuis la configuration existante.
+La logique de statut sera :
+- Les deux réussissent -> `sent`
+- L'un des deux échoue -> `failed` (le retry renverra les deux)
 
-### Vérification post-fix
-
-Après insertion, les 2 notifications pending devraient être traitées au prochain cycle cron (dans les 5 minutes).
-
-| Étape | Action |
-|-------|--------|
-| 1 | Insérer `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` dans `vault.secrets` |
-| 2 | Vérifier que les notifications pending passent en `sent` après le prochain cycle cron |
-
+Même pattern appliqué dans `retry-failed-notifications/index.ts`.
