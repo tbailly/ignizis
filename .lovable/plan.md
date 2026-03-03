@@ -1,22 +1,37 @@
 
 
-## Plan : Icônes PWA maskable + apple-touch-icon
+## Plan : Bannière d'alerte compliance officers
 
-### Étapes
+### Objectif
 
-1. **Copier le logo** uploadé (`ignizis-logo.png`) dans `public/icons/` pour l'utiliser comme icône PWA
-2. **Mettre à jour `public/manifest.json`** : ajouter des entrées d'icônes 192x192 et 512x512 avec `purpose: "any maskable"` pointant vers le logo
-3. **Mettre à jour `index.html`** : ajouter `<link rel="apple-touch-icon" href="/icons/ignizis-logo.png">` (les meta tags iOS sont déjà en place)
+Afficher une bannière d'alerte destructive en haut de la page Company listant chaque document manquant ou expiré par officer, avec un appel à envoyer les documents à `compliance@idkapital.com`. Pas de distinction missing/expired dans l'affichage.
 
-### Fichiers
+### Fichiers modifiés
 
-| Fichier | Action |
-|---------|--------|
-| `public/icons/ignizis-logo.png` | Copie du logo uploadé |
-| `public/manifest.json` | Ajout icônes 192/512 avec `"purpose": "any maskable"` |
-| `index.html` | Ajout `<link rel="apple-touch-icon">` |
+| Fichier | Modification |
+|---------|-------------|
+| `src/pages/Entreprise.tsx` | Enrichir l'interface `Officer` avec `passport_document_id`, `secondary_id_document_id`, `power_of_attorney_document_id` et les `expires_at` joints. Modifier la requête pour récupérer ces champs + jointures documents. Ajouter une bannière `Alert` destructive avant la grille si des problèmes existent. |
+| `src/i18n/locales/en.json` | Ajouter clés : `company.complianceAlertTitle`, `company.complianceAlertMessage`, `company.docPassport`, `company.docSecondaryId`, `company.docPowerOfAttorney` |
 
-### Note sur maskable
+### Logique
 
-Le logo uploadé a un fond blanc et le motif est centré — il respecte la safe zone 80%. On le déclare `"any maskable"` pour qu'Android puisse le découper en forme adaptative.
+Pour chaque officer, vérifier les 3 documents (Passport, Secondary ID, Power of Attorney) :
+- Document ID null → problème
+- Document `expires_at` null ou dans le passé → problème
+
+Générer une liste plate d'éléments `"LASTNAME Firstname : Document Name"`. Si la liste est non vide, afficher la bannière.
+
+### Bannière
+
+```text
+⚠ Compliance issues detected
+
+Please send the following documents to compliance@idkapital.com
+
+• DUPONT Jean : Passport
+• DUPONT Jean : Power of Attorney  
+• MARTIN Marie : Secondary ID
+```
+
+Utilise le composant `Alert` existant avec `variant="destructive"`, icône `AlertTriangle`, et un lien `mailto:compliance@idkapital.com`.
 
