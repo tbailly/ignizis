@@ -327,7 +327,12 @@
     "documentUploadDate": "Upload date",
     "documentActions": "Actions",
     "documentPreview": "Preview",
-    "documentDownload": "Download"
+    "documentDownload": "Download",
+    "complianceAlertTitle": "Compliance issues detected",
+    "complianceAlertMessage": "Please send the following documents to",
+    "docPassport": "Passport",
+    "docSecondaryId": "Secondary ID",
+    "docPowerOfAttorney": "Power of Attorney"
   },
   "contracts": {
     "title": "My contracts and invoices",
