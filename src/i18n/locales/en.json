@@ -14,7 +14,8 @@
     "lockedTitle": "Option not activated",
     "lockedDescription": "This feature is not included in your current plan. Contact your administrator to activate it.",
     "inactive": "Inactives",
-    "inactiveCompanies": "Inactive companies"
+    "inactiveCompanies": "Inactive companies",
+    "lastUpdate": "Last update:"
   },
   "auth": {
     "title": "Sign in",

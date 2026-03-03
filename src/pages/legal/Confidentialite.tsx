@@ -1,23 +1,25 @@
 import { useEffect, useState } from 'react';
-import { Shield } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { useTranslation } from '@/i18n/useTranslation';
+import { format } from 'date-fns';
 
 export default function Confidentialite() {
   const { t } = useTranslation();
   const [html, setHtml] = useState('');
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       const { data } = await supabase
         .from('legal_pages')
-        .select('content_html')
+        .select('content_html, updated_at')
         .eq('id', 'privacy')
         .single();
       setHtml(data?.content_html || '');
+      setUpdatedAt(data?.updated_at || null);
       setLoading(false);
     })();
   }, []);
@@ -26,16 +28,14 @@ export default function Confidentialite() {
     <div className="space-y-6 max-w-3xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">{t('privacy.title')}</h1>
-        <p className="text-muted-foreground">{t('privacy.subtitle')}</p>
+        {updatedAt && (
+          <p className="text-muted-foreground">
+            {t('common.lastUpdate')} {format(new Date(updatedAt), 'MMMM dd, yyyy')}
+          </p>
+        )}
       </div>
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            {t('privacy.title')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {loading ? (
             <Skeleton className="h-40 w-full" />
           ) : html ? (
