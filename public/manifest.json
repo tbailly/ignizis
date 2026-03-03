@@ -1,0 +1,9 @@
+{
+  "name": "Ignizis - Launch Global Grow limitless",
+  "short_name": "Ignizis",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#3E00FF",
+  "background_color": "#FAFAF9",
+  "icons": [{ "src": "/favicon.ico", "sizes": "64x64", "type": "image/x-icon" }]
+}
