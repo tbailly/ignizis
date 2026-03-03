@@ -2,12 +2,11 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend";
 
-const NOTIFICATION_EMAIL = "delivered+legal@resend.dev";
+const NOTIFICATION_EMAIL = "legal@idkapital.com";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
@@ -15,10 +14,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const supabaseAdmin = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
+  const supabaseAdmin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
   try {
     const { data: queue, error: qError } = await supabaseAdmin
@@ -49,11 +45,14 @@ serve(async (req) => {
           .single();
 
         if (rError || !request) {
-          await supabaseAdmin.from("notification_queue").update({
-            status: "failed",
-            attempts: entry.attempts + 1,
-            last_attempt_at: new Date().toISOString(),
-          }).eq("id", entry.id);
+          await supabaseAdmin
+            .from("notification_queue")
+            .update({
+              status: "failed",
+              attempts: entry.attempts + 1,
+              last_attempt_at: new Date().toISOString(),
+            })
+            .eq("id", entry.id);
           results.push({ queue_id: entry.id, success: false });
           continue;
         }
@@ -90,28 +89,37 @@ serve(async (req) => {
         const anyError = sendError || userSendError;
 
         if (!anyError) {
-          await supabaseAdmin.from("notification_queue").update({
-            status: "sent",
-            attempts: entry.attempts + 1,
-            last_attempt_at: new Date().toISOString(),
-          }).eq("id", entry.id);
+          await supabaseAdmin
+            .from("notification_queue")
+            .update({
+              status: "sent",
+              attempts: entry.attempts + 1,
+              last_attempt_at: new Date().toISOString(),
+            })
+            .eq("id", entry.id);
           results.push({ queue_id: entry.id, success: true });
         } else {
           console.error(`Resend error for queue ${entry.id}:`, anyError);
-          await supabaseAdmin.from("notification_queue").update({
-            status: "failed",
-            attempts: entry.attempts + 1,
-            last_attempt_at: new Date().toISOString(),
-          }).eq("id", entry.id);
+          await supabaseAdmin
+            .from("notification_queue")
+            .update({
+              status: "failed",
+              attempts: entry.attempts + 1,
+              last_attempt_at: new Date().toISOString(),
+            })
+            .eq("id", entry.id);
           results.push({ queue_id: entry.id, success: false });
         }
       } catch (innerErr) {
         console.error(`Error processing queue ${entry.id}:`, innerErr);
-        await supabaseAdmin.from("notification_queue").update({
-          status: "failed",
-          attempts: entry.attempts + 1,
-          last_attempt_at: new Date().toISOString(),
-        }).eq("id", entry.id);
+        await supabaseAdmin
+          .from("notification_queue")
+          .update({
+            status: "failed",
+            attempts: entry.attempts + 1,
+            last_attempt_at: new Date().toISOString(),
+          })
+          .eq("id", entry.id);
         results.push({ queue_id: entry.id, success: false });
       }
     }
