@@ -1,42 +1,36 @@
 
 
-## Plan : Email de confirmation au demandeur (`requester_email`)
+## Plan : PWA — Manifest, meta tags iOS, service worker minimal
 
-### Objectif
+### Fichiers créés
 
-Envoyer un second email au `requester_email` via le template Resend `new-request-user` (sans variables, sans `from`) à chaque nouvelle demande, avec le même mécanisme de retry que l'email admin.
+| Fichier | Description |
+|---------|-------------|
+| `public/manifest.json` | Manifest PWA avec name, short_name, start_url, display standalone, theme/background colors (#3E00FF / #FAFAF9), icônes (favicon.ico) |
+| `public/sw.js` | Service worker minimal (fetch passthrough) suffisant pour déclencher le prompt d'installation Chrome |
 
-### Approche
-
-Ajouter un second appel `resend.emails.send()` dans les deux edge functions, juste après l'envoi admin. Le statut de la queue reflètera le résultat combiné des deux envois.
-
-### Fichiers modifiés
+### Fichier modifié
 
 | Fichier | Modification |
 |---------|-------------|
-| `supabase/functions/notify-new-request/index.ts` | Ajouter un second `resend.emails.send()` vers `requester_email` avec template `new-request-user` après l'envoi admin. Marquer `failed` si l'un des deux échoue. |
-| `supabase/functions/retry-failed-notifications/index.ts` | Même ajout : envoyer les deux emails (admin + requester) lors du retry. |
+| `index.html` | Ajouter `<link rel="manifest">`, meta tags iOS (`apple-mobile-web-app-capable`, `status-bar-style`, `title`), `<meta name="theme-color">`, et script d'enregistrement du service worker |
 
-### Détail technique
+### Détail
 
-Dans `notify-new-request/index.ts`, après l'envoi admin existant :
-
-```typescript
-// Email au demandeur (si requester_email présent)
-if (requester_email) {
-  const { error: userSendError } = await resend.emails.send({
-    to: [requester_email],
-    template: { id: "new-request-user" },
-  });
-  if (userSendError) {
-    console.error("Resend user email error:", userSendError);
-    // Marquer failed pour que le retry renvoie les deux
-  }
+**`public/manifest.json`** :
+```json
+{
+  "name": "Ignizis - Launch Global Grow limitless",
+  "short_name": "Ignizis",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#3E00FF",
+  "background_color": "#FAFAF9",
+  "icons": [{ "src": "/favicon.ico", "sizes": "64x64", "type": "image/x-icon" }]
 }
 ```
 
-La logique de statut sera :
-- Les deux réussissent -> `sent`
-- L'un des deux échoue -> `failed` (le retry renverra les deux)
+**`public/sw.js`** : Service worker minimal avec événements `install` (skip waiting) et `fetch` (passthrough réseau).
 
-Même pattern appliqué dans `retry-failed-notifications/index.ts`.
+**`index.html`** : Ajout dans `<head>` du lien manifest, des 3 meta tags iOS, du theme-color, et dans `<body>` d'un `<script>` pour `navigator.serviceWorker.register('/sw.js')`.
+
