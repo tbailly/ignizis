@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend";
 
-const NOTIFICATION_EMAIL = "delivered+legal@resend.dev";
+const NOTIFICATION_EMAIL = "legal@idkapital.com";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,10 +15,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const supabaseAdmin = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
+  const supabaseAdmin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
   try {
     const { queue_id, request_number, title, description, company_name, requester_email } = await req.json();
@@ -58,11 +55,14 @@ serve(async (req) => {
       console.error("Resend SDK error:", anyError);
 
       if (queue_id) {
-        await supabaseAdmin.from("notification_queue").update({
-          status: "failed",
-          attempts: 1,
-          last_attempt_at: new Date().toISOString(),
-        }).eq("id", queue_id);
+        await supabaseAdmin
+          .from("notification_queue")
+          .update({
+            status: "failed",
+            attempts: 1,
+            last_attempt_at: new Date().toISOString(),
+          })
+          .eq("id", queue_id);
       }
 
       return new Response(JSON.stringify({ error: (anyError as any).message || "Send error" }), {
@@ -74,11 +74,14 @@ serve(async (req) => {
     console.log("Both notification emails sent via Resend SDK");
 
     if (queue_id) {
-      await supabaseAdmin.from("notification_queue").update({
-        status: "sent",
-        attempts: 1,
-        last_attempt_at: new Date().toISOString(),
-      }).eq("id", queue_id);
+      await supabaseAdmin
+        .from("notification_queue")
+        .update({
+          status: "sent",
+          attempts: 1,
+          last_attempt_at: new Date().toISOString(),
+        })
+        .eq("id", queue_id);
     }
 
     return new Response(JSON.stringify({ success: true }), {
