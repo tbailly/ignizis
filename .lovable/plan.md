@@ -1,36 +1,22 @@
 
 
-## Plan : PWA — Manifest, meta tags iOS, service worker minimal
+## Plan : Icônes PWA maskable + apple-touch-icon
 
-### Fichiers créés
+### Étapes
 
-| Fichier | Description |
-|---------|-------------|
-| `public/manifest.json` | Manifest PWA avec name, short_name, start_url, display standalone, theme/background colors (#3E00FF / #FAFAF9), icônes (favicon.ico) |
-| `public/sw.js` | Service worker minimal (fetch passthrough) suffisant pour déclencher le prompt d'installation Chrome |
+1. **Copier le logo** uploadé (`ignizis-logo.png`) dans `public/icons/` pour l'utiliser comme icône PWA
+2. **Mettre à jour `public/manifest.json`** : ajouter des entrées d'icônes 192x192 et 512x512 avec `purpose: "any maskable"` pointant vers le logo
+3. **Mettre à jour `index.html`** : ajouter `<link rel="apple-touch-icon" href="/icons/ignizis-logo.png">` (les meta tags iOS sont déjà en place)
 
-### Fichier modifié
+### Fichiers
 
-| Fichier | Modification |
-|---------|-------------|
-| `index.html` | Ajouter `<link rel="manifest">`, meta tags iOS (`apple-mobile-web-app-capable`, `status-bar-style`, `title`), `<meta name="theme-color">`, et script d'enregistrement du service worker |
+| Fichier | Action |
+|---------|--------|
+| `public/icons/ignizis-logo.png` | Copie du logo uploadé |
+| `public/manifest.json` | Ajout icônes 192/512 avec `"purpose": "any maskable"` |
+| `index.html` | Ajout `<link rel="apple-touch-icon">` |
 
-### Détail
+### Note sur maskable
 
-**`public/manifest.json`** :
-```json
-{
-  "name": "Ignizis - Launch Global Grow limitless",
-  "short_name": "Ignizis",
-  "start_url": "/",
-  "display": "standalone",
-  "theme_color": "#3E00FF",
-  "background_color": "#FAFAF9",
-  "icons": [{ "src": "/favicon.ico", "sizes": "64x64", "type": "image/x-icon" }]
-}
-```
-
-**`public/sw.js`** : Service worker minimal avec événements `install` (skip waiting) et `fetch` (passthrough réseau).
-
-**`index.html`** : Ajout dans `<head>` du lien manifest, des 3 meta tags iOS, du theme-color, et dans `<body>` d'un `<script>` pour `navigator.serviceWorker.register('/sw.js')`.
+Le logo uploadé a un fond blanc et le motif est centré — il respecte la safe zone 80%. On le déclare `"any maskable"` pour qu'Android puisse le découper en forme adaptative.
 
