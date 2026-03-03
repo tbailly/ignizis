@@ -50,7 +50,8 @@
     "adminUsers": "Users",
     "adminOfficers": "Corporate Officers",
     "adminDocuments": "Documents",
-    "adminRequests": "Requests"
+    "adminRequests": "Requests",
+    "adminLegalPages": "Legal Pages"
   },
   "admin": {
     "title": "Administration",
@@ -445,6 +446,12 @@
     "article4Text": "All elements constituting the service (texts, images, software, etc.) are protected by intellectual property law. Any unauthorized reproduction is strictly prohibited.",
     "article5Title": "Article 5 - Changes to Terms",
     "article5Text": "The publisher reserves the right to modify these Terms at any time. Users will be informed of any significant changes."
+  },
+  "adminLegal": {
+    "title": "Legal Pages",
+    "description": "Edit the content of the legal pages displayed to users.",
+    "saveSuccess": "Content saved successfully.",
+    "noContent": "No content yet. An administrator can add content from the admin panel."
   },
   "notFound": {
     "title": "404",
