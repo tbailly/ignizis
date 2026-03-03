@@ -1,41 +1,37 @@
 
 
-## Plan : Migration Resend SDK + nouvelle clé API
+## Diagnostic
 
-### Étape 1 — Nouvelle clé API Resend
+- Le cron `retry-failed-notifications` tourne toutes les 5 min (confirmé par `cron.job_run_details`) mais retourne **0 rows** car la sous-requête `FROM vault.decrypted_secrets WHERE name = 'SUPABASE_SERVICE_ROLE_KEY'` ne trouve rien.
+- Le trigger `notify_new_request_trigger` fait la même chose : il lit `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` depuis le vault, obtient NULL, et skip l'appel `net.http_post`.
+- Les 2 entrées en queue sont `pending` avec `attempts: 0` — jamais traitées.
 
-Utiliser l'outil `add_secret` pour te demander de saisir la nouvelle clé API Resend (secret `RESEND_API_KEY`).
+## Cause racine
 
-### Étape 2 — Migrer `notify-new-request` vers le SDK Resend
+Les secrets `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` sont configurés comme **secrets Edge Function** (variables Deno) mais ne sont **pas** insérés dans le **vault Postgres** (`vault.secrets`). Le trigger et le cron dépendent du vault pour construire les URLs et headers d'authentification.
 
-Remplacer l'appel `fetch("https://api.resend.com/emails", ...)` par le SDK Resend :
+## Solution
 
-```typescript
-import { Resend } from "npm:resend";
+Insérer les 2 secrets dans le vault Postgres via une requête SQL. Cela permettra au trigger et au cron de fonctionner immédiatement sans modifier de code.
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+### Requête à exécuter (via l'outil insert, pas migration)
 
-await resend.emails.send({
-  to: [NOTIFICATION_EMAIL],
-  replyTo: requester_email || NOTIFICATION_EMAIL,
-  template: {
-    id: "new-request",
-    variables: { ... }, // mêmes variables qu'actuellement
-  },
-});
+```sql
+INSERT INTO vault.secrets (name, secret)
+VALUES
+  ('SUPABASE_URL', 'https://epcelmrwfqniycdrxaoi.supabase.co'),
+  ('SUPABASE_SERVICE_ROLE_KEY', '<service_role_key>')
+ON CONFLICT (name) DO UPDATE SET secret = EXCLUDED.secret;
 ```
 
-- Suppression du `from` (non nécessaire)
-- Template ID changé de `bb34b22d-bee5-4773-9299-01a4af82ab88` à `new-request`
+Le `SUPABASE_URL` est connu. Pour la `SERVICE_ROLE_KEY`, elle est déjà configurée comme secret Edge Function — je la récupérerai depuis la configuration existante.
 
-### Étape 3 — Migrer `retry-failed-notifications` de la même façon
+### Vérification post-fix
 
-Même changement : SDK Resend, pas de `from`, template ID `new-request`.
+Après insertion, les 2 notifications pending devraient être traitées au prochain cycle cron (dans les 5 minutes).
 
-### Fichiers modifiés
-
-| Fichier | Modification |
-|---------|-------------|
-| `supabase/functions/notify-new-request/index.ts` | SDK Resend, suppression `from`, nouveau template ID |
-| `supabase/functions/retry-failed-notifications/index.ts` | Idem |
+| Étape | Action |
+|-------|--------|
+| 1 | Insérer `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` dans `vault.secrets` |
+| 2 | Vérifier que les notifications pending passent en `sent` après le prochain cycle cron |
 
