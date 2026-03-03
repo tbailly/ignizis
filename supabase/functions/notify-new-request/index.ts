@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Resend } from "npm:resend";
 
 const NOTIFICATION_EMAIL = "delivered+legal@resend.dev";
 
@@ -32,36 +33,26 @@ serve(async (req) => {
   try {
     const { queue_id, request_number, title, description, company_name, requester_email } = await req.json();
 
-    const resendApiKey = Deno.env.get("RESEND_API_KEY") as string;
+    const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: "Portail Entreprises <noreply@liste-naissance.thomasbs.fr>",
-        to: [NOTIFICATION_EMAIL],
-        reply_to: requester_email || NOTIFICATION_EMAIL,
-        template: {
-          id: "bb34b22d-bee5-4773-9299-01a4af82ab88",
-          variables: {
-            REQUESTER_EMAIL: requester_email || "Non renseigné",
-            REQUEST_ID: String(request_number),
-            REQUEST_TITLE: title || "",
-            COMPANY_NAME: company_name || "",
-            REQUEST_MESSAGE: description || "Aucune description",
-          },
+    const { error: sendError } = await resend.emails.send({
+      to: [NOTIFICATION_EMAIL],
+      replyTo: requester_email || NOTIFICATION_EMAIL,
+      template: {
+        id: "new-request",
+        variables: {
+          REQUESTER_EMAIL: requester_email || "Non renseigné",
+          REQUEST_ID: String(request_number),
+          REQUEST_TITLE: title || "",
+          COMPANY_NAME: company_name || "",
+          REQUEST_MESSAGE: description || "Aucune description",
         },
-      }),
+      },
     });
 
-    if (!response.ok) {
-      const err = await response.text();
-      console.error("Resend API error:", err);
+    if (sendError) {
+      console.error("Resend SDK error:", sendError);
 
-      // Mark queue as failed
       if (queue_id) {
         await supabaseAdmin.from("notification_queue").update({
           status: "failed",
@@ -70,16 +61,14 @@ serve(async (req) => {
         }).eq("id", queue_id);
       }
 
-      return new Response(JSON.stringify({ error: err }), {
+      return new Response(JSON.stringify({ error: sendError.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const result = await response.json();
-    console.log("Notification email sent:", result);
+    console.log("Notification email sent via Resend SDK");
 
-    // Mark queue as sent
     if (queue_id) {
       await supabaseAdmin.from("notification_queue").update({
         status: "sent",
