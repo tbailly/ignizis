@@ -1,0 +1,1 @@
+INSERT INTO legal_pages (id, content_html) VALUES ('help', '') ON CONFLICT (id) DO NOTHING;

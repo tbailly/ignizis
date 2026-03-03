@@ -51,7 +51,8 @@
     "adminOfficers": "Corporate Officers",
     "adminDocuments": "Documents",
     "adminRequests": "Requests",
-    "adminLegalPages": "Legal Pages"
+    "adminLegalPages": "Legal Pages",
+    "adminHelp": "Help Page"
   },
   "admin": {
     "title": "Administration",
@@ -301,18 +302,7 @@
   },
   "help": {
     "title": "Help center",
-    "subtitle": "Find answers to your questions",
-    "faq": "Frequently asked questions",
-    "faqSubtitle": "Answers to the most common questions",
-    "faq1Question": "How do I switch companies?",
-    "faq1Answer": "Use the company selector at the top of the sidebar to switch between your different companies.",
-    "faq2Question": "How do I change my settings?",
-    "faq2Answer": "Access settings via the user menu at the bottom of the sidebar.",
-    "faq3Question": "I don't have access to certain sections",
-    "faq3Answer": "Section access is managed by your company's administrators. Contact them to change your permissions.",
-    "contactTitle": "Contact us",
-    "contactSubtitle": "Need more help?",
-    "contactEmail": "support@example.com"
+    "subtitle": "Find answers to your questions"
   },
   "company": {
     "title": "Company",
@@ -452,6 +442,11 @@
     "description": "Edit the content of the legal pages displayed to users.",
     "saveSuccess": "Content saved successfully.",
     "noContent": "No content yet. An administrator can add content from the admin panel."
+  },
+  "adminHelp": {
+    "title": "Help Page",
+    "description": "Edit the content of the help page displayed to users.",
+    "saveSuccess": "Help page saved successfully."
   },
   "notFound": {
     "title": "404",
