@@ -34,6 +34,7 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminOfficers from "./pages/admin/AdminOfficers";
 import AdminDocuments from "./pages/admin/AdminDocuments";
 import AdminRequests from "./pages/admin/AdminRequests";
+import AdminLegalPages from "./pages/admin/AdminLegalPages";
 
 const queryClient = new QueryClient();
 
@@ -143,6 +144,7 @@ const App = () => (
                     <Route path="officers" element={<AdminOfficers />} />
                     <Route path="documents" element={<AdminDocuments />} />
                     <Route path="requests" element={<AdminRequests />} />
+                    <Route path="legal-pages" element={<AdminLegalPages />} />
                   </Route>
                 </Route>
 

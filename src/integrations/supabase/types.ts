@@ -290,6 +290,24 @@ export type Database = {
           },
         ]
       }
+      legal_pages: {
+        Row: {
+          content_html: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          content_html?: string
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          content_html?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notification_queue: {
         Row: {
           attempts: number
