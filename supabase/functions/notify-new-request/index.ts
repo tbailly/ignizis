@@ -40,8 +40,22 @@ serve(async (req) => {
       },
     });
 
-    if (sendError) {
-      console.error("Resend SDK error:", sendError);
+    let userSendError = null;
+    if (!sendError && requester_email) {
+      const result = await resend.emails.send({
+        to: [requester_email],
+        template: { id: "new-request-user" },
+      });
+      userSendError = result.error;
+      if (userSendError) {
+        console.error("Resend user email error:", userSendError);
+      }
+    }
+
+    const anyError = sendError || userSendError;
+
+    if (anyError) {
+      console.error("Resend SDK error:", anyError);
 
       if (queue_id) {
         await supabaseAdmin.from("notification_queue").update({
@@ -51,13 +65,13 @@ serve(async (req) => {
         }).eq("id", queue_id);
       }
 
-      return new Response(JSON.stringify({ error: sendError.message }), {
+      return new Response(JSON.stringify({ error: (anyError as any).message || "Send error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    console.log("Notification email sent via Resend SDK");
+    console.log("Both notification emails sent via Resend SDK");
 
     if (queue_id) {
       await supabaseAdmin.from("notification_queue").update({

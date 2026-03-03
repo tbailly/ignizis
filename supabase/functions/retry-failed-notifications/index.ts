@@ -75,7 +75,21 @@ serve(async (req) => {
           },
         });
 
-        if (!sendError) {
+        let userSendError = null;
+        if (!sendError && request.requester_email) {
+          const result = await resend.emails.send({
+            to: [request.requester_email],
+            template: { id: "new-request-user" },
+          });
+          userSendError = result.error;
+          if (userSendError) {
+            console.error(`Resend user email error for queue ${entry.id}:`, userSendError);
+          }
+        }
+
+        const anyError = sendError || userSendError;
+
+        if (!anyError) {
           await supabaseAdmin.from("notification_queue").update({
             status: "sent",
             attempts: entry.attempts + 1,
@@ -83,7 +97,7 @@ serve(async (req) => {
           }).eq("id", entry.id);
           results.push({ queue_id: entry.id, success: true });
         } else {
-          console.error(`Resend error for queue ${entry.id}:`, sendError);
+          console.error(`Resend error for queue ${entry.id}:`, anyError);
           await supabaseAdmin.from("notification_queue").update({
             status: "failed",
             attempts: entry.attempts + 1,
