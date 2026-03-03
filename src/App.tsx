@@ -23,7 +23,7 @@ import Juridique from "./pages/Juridique";
 import Comptabilite from "./pages/Comptabilite";
 import Finance from "./pages/Finance";
 import Parametres from "./pages/Parametres";
-import Aide from "./pages/Aide";
+import Help from "./pages/Help";
 import MentionsLegales from "./pages/legal/MentionsLegales";
 import Confidentialite from "./pages/legal/Confidentialite";
 import CGU from "./pages/legal/CGU";
@@ -35,6 +35,7 @@ import AdminOfficers from "./pages/admin/AdminOfficers";
 import AdminDocuments from "./pages/admin/AdminDocuments";
 import AdminRequests from "./pages/admin/AdminRequests";
 import AdminLegalPages from "./pages/admin/AdminLegalPages";
+import AdminHelp from "./pages/admin/AdminHelp";
 
 const queryClient = new QueryClient();
 
@@ -131,7 +132,7 @@ const App = () => (
 
                   {/* User-scoped routes (no slug) */}
                   <Route path="/settings" element={<Parametres />} />
-                  <Route path="/help" element={<Aide />} />
+                  <Route path="/help" element={<Help />} />
                   <Route path="/legal-notice" element={<MentionsLegales />} />
                   <Route path="/privacy" element={<Confidentialite />} />
                   <Route path="/terms" element={<CGU />} />
@@ -145,6 +146,7 @@ const App = () => (
                     <Route path="documents" element={<AdminDocuments />} />
                     <Route path="requests" element={<AdminRequests />} />
                     <Route path="legal-pages" element={<AdminLegalPages />} />
+                    <Route path="help" element={<AdminHelp />} />
                   </Route>
                 </Route>
 
