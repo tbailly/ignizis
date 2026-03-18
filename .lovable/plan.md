@@ -1,43 +1,55 @@
 
 
-## Analyse du problème
+## Plan : Page Help dynamique avec contenu enrichi
 
-Le log montre un **POST 400** sur le chemin :
-```
-/object/documents/b4144eb9-..._formalite%CC%81s.pdf
-```
+### Objectif
 
-`%CC%81` est le **combining acute accent** Unicode (U+0301). Le fichier vient de macOS qui utilise la décomposition NFD : `é` → `e` + `◌́`. Supabase Storage rejette les caractères combinants dans les noms de fichiers.
+Transformer la page Help en contenu dynamique éditable depuis l'admin, sur le même modèle que les pages légales. Renommer le fichier `Aide.tsx` en `Help.tsx`.
 
-Le problème est dans `DocumentUploadDialog.tsx` ligne 145 :
-```ts
-const storagePath = `${uuid}_${entry.file.name}`;
-```
+### Base de données
 
-`entry.file.name` est utilisé tel quel, avec les caractères Unicode décomposés de macOS.
+Insérer une nouvelle ligne dans `legal_pages` (la table existe déjà) :
 
-## Correction
-
-Normaliser le nom de fichier en **NFC** (forme composée) avant de l'utiliser comme chemin de stockage. NFC recompose `e` + `◌́` → `é`, ce qui est accepté par Supabase Storage.
-
-De plus, par sécurité, on peut aussi sanitiser les caractères non-ASCII restants.
-
-### Fichier modifié
-
-| Fichier | Modification |
-|---------|-------------|
-| `src/components/admin/DocumentUploadDialog.tsx` | Appliquer `.normalize('NFC')` sur `entry.file.name` lors de la construction de `storagePath` (ligne 145) et sur `original_filename` (ligne 153) |
-
-### Changement concret
-
-```ts
-// Avant
-const storagePath = `${uuid}_${entry.file.name}`;
-
-// Après
-const safeFileName = entry.file.name.normalize('NFC');
-const storagePath = `${uuid}_${safeFileName}`;
+```sql
+INSERT INTO legal_pages (id, content_html) VALUES ('help', '');
 ```
 
-Et utiliser `safeFileName` aussi pour `original_filename` dans l'insert et pour le download.
+Pas de migration de schéma nécessaire, juste un insert de données.
+
+### Admin : nouvelle page d'édition
+
+Créer `src/pages/admin/AdminHelp.tsx` — un éditeur Tiptap identique à `AdminLegalPages.tsx` mais pour une seule page (pas de tabs). Titre "Help Page", bouton Save, même toolbar.
+
+### Sidebar admin
+
+Ajouter un lien "Help Page" dans la sidebar admin (icône `Info`), route `/admin/help`.
+
+### Page utilisateur
+
+- Renommer `src/pages/Aide.tsx` → `src/pages/Help.tsx`
+- Supprimer tout le contenu statique (FAQ, Contact)
+- Garder uniquement : titre + sous-titre "Last update: {date}" + Card avec contenu HTML dynamique depuis `legal_pages` (id = `help`), même pattern que les pages légales
+
+### Routing
+
+- `App.tsx` : importer `Help` au lieu de `Aide`, ajouter route `/admin/help`
+- Mettre à jour la référence dans la route `/help`
+
+### Traductions
+
+- Nettoyer les clés `help.*` inutiles (faq, contact, etc.) — garder `help.title` et `help.subtitle`
+- Ajouter clés `adminHelp.title`, `adminHelp.description`, `adminHelp.saveSuccess`
+- Ajouter `sidebar.adminHelp`
+
+### Fichiers
+
+| Fichier | Action |
+|---------|--------|
+| Insert données `legal_pages` | Ajouter ligne `help` |
+| `src/pages/Aide.tsx` | Supprimer |
+| `src/pages/Help.tsx` | Créer — fetch + rendu HTML dynamique |
+| `src/pages/admin/AdminHelp.tsx` | Créer — éditeur Tiptap |
+| `src/App.tsx` | Importer Help, ajouter route admin |
+| `src/components/layout/AppSidebar.tsx` | Ajouter lien admin Help |
+| `src/i18n/locales/en.json` | Nettoyer clés help, ajouter adminHelp |
 

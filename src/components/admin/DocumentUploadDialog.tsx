@@ -142,7 +142,8 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
     try {
       for (const entry of entries) {
         const uuid = crypto.randomUUID();
-        const storagePath = `${uuid}_${entry.file.name}`;
+        const safeFileName = entry.file.name.normalize('NFC');
+        const storagePath = `${uuid}_${safeFileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from('documents')
@@ -158,7 +159,7 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
             display_name: entry.displayName,
             document_type: docType,
             storage_path: storagePath,
-            original_filename: entry.file.name,
+            original_filename: safeFileName,
             file_size: entry.file.size,
             mime_type: entry.file.type || null,
             uploaded_by: profile.id,
