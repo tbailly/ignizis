@@ -142,7 +142,8 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
     try {
       for (const entry of entries) {
         const uuid = crypto.randomUUID();
-        const storagePath = `${uuid}_${entry.file.name}`;
+        const safeFileName = entry.file.name.normalize('NFC');
+        const storagePath = `${uuid}_${safeFileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from('documents')
