@@ -159,7 +159,7 @@ export function DocumentUploadDialog({ onClose, onSuccess }: DocumentUploadDialo
             display_name: entry.displayName,
             document_type: docType,
             storage_path: storagePath,
-            original_filename: entry.file.name,
+            original_filename: safeFileName,
             file_size: entry.file.size,
             mime_type: entry.file.type || null,
             uploaded_by: profile.id,
