@@ -1,73 +1,125 @@
-# Welcome to your Lovable project
+# Ignizis — Multi-Company Document & Compliance Platform
 
-## Project info
+A secure, web-based platform designed for companies, fiduciaries, and corporate service providers to centralize document management, track compliance, and manage client requests across multiple entities.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+> **Live demo:** [https://app.ignizis.com](https://app.ignizis.com)
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+## Screenshots
 
-**Use Lovable**
+<!-- Add your screenshots below. Recommended: 1200x800, drop them in the repo or use image URLs. -->
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+| Dashboard | Document Management | Request Board |
+|-----------|-------------------|---------------|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Documents](docs/screenshots/documents.png) | ![Requests](docs/screenshots/requests.png) |
 
-Changes made via Lovable will be committed automatically to this repo.
+| Admin — Companies | Admin — Legal Pages | Help Center |
+|-------------------|---------------------|-------------|
+| ![Admin Companies](docs/screenshots/admin-companies.png) | ![Admin Legal](docs/screenshots/admin-legal.png) | ![Help](docs/screenshots/help.png) |
 
-**Use your preferred IDE**
+---
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Features
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- **Multi-company workspace** — Switch between companies from a single account. Each user sees only the companies and sections they are authorized to access.
+- **Document management** — Upload, categorize, tag, and download contracts, invoices, legal documents, passports, and powers of attorney. Fine-grained links between documents and companies or corporate officers.
+- **Compliance tracking** — Monitor corporate officer compliance (passport, ID, power of attorney) with expiration alerts and validation workflows.
+- **Request board (Kanban)** — Create and track client requests through a visual pipeline: new request → quote pending → in progress → awaiting client response → invoiced → done.
+- **Dynamic content pages** — Administrators can edit legal pages (legal notice, privacy policy, terms of use) and the help center through a rich-text editor (Tiptap). Content is served from the database and rendered as safe HTML.
+- **Magic-link authentication** — Passwordless sign-in via secure email links. No passwords to manage or leak.
+- **Role-based access** — Differentiated navigation and permissions for regular users and administrators.
+- **Responsive design** — Fully functional on desktop, tablet, and mobile.
+- **Dark mode support** — System-aware and manual theme toggle.
 
-Follow these steps:
+---
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## Tech Stack
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+| Layer | Technology |
+|-------|------------|
+| Frontend | [React 18](https://react.dev/), [TypeScript](https://www.typescriptlang.org/), [Vite](https://vitejs.dev/) |
+| Styling | [Tailwind CSS v3](https://tailwindcss.com/), [shadcn/ui](https://ui.shadcn.com/) |
+| Backend & Auth | [Supabase](https://supabase.com/) — Postgres, Auth, Storage, Edge Functions |
+| Rich Text | [Tiptap](https://tiptap.dev/) |
+| i18n | Custom React context with JSON locale files |
+| Testing | [Vitest](https://vitest.dev/) |
 
-# Step 3: Install the necessary dependencies.
-npm i
+---
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+## Getting started with
+
+This project was initialized using [Lovable](https://lovable.dev).
+
+### Prerequisites
+
+- Node.js ≥ 18
+- npm or bun
+
+### Install dependencies
+
+```bash
+npm install
+```
+
+### Run the development server
+
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The dev server will start at `http://localhost:5173` (or the next available port).
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+---
 
-**Use GitHub Codespaces**
+## Environment Variables
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Create a `.env` file at the project root with the following variables:
 
-## What technologies are used for this project?
+```bash
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-This project is built with:
+> The Supabase client is auto-generated at `src/integrations/supabase/client.ts` and should not be edited manually.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+---
 
-## How can I deploy this project?
+## Database Migrations
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+Migrations are stored in `supabase/migrations/` and applied through the Supabase CLI or Lovable Cloud backend interface.
 
-## Can I connect a custom domain to my Lovable project?
+---
 
-Yes, you can!
+## Edge Functions
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Serverless functions located in `supabase/functions/`:
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- `send-magic-link` — Sends authentication emails.
+- `notify-new-request` — Notifies administrators when a new client request is created.
+- `retry-failed-notifications` — Retries failed notification deliveries.
+- `check-user-exists` — Checks user existence during onboarding flows.
+- `auto-login` — Automated login helpers for testing or internal tools.
+- `admin-users` — Admin-level user management utilities.
+
+Deploy all functions:
+
+```bash
+npx supabase functions deploy
+```
+
+---
+
+## Build for production
+
+```bash
+npm run build
+```
+
+The production bundle is output to `dist/`.
+
+---
+
+## License
+
+<!-- Add your license here, e.g. MIT, Proprietary, etc. -->
