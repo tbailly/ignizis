@@ -8,15 +8,13 @@ A secure, web-based platform designed for companies, fiduciaries, and corporate 
 
 ## Screenshots
 
-<!-- Add your screenshots below. Recommended: 1200x800, drop them in the repo or use image URLs. -->
+| Dashboard                                    | Document Management                                | Legal Requests                          |
+| -------------------------------------------- | -------------------------------------------------- | --------------------------------------- |
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Documents](docs/screenshots/admin-documents.png) | ![Requests](docs/screenshots/legal.png) |
 
-| Dashboard | Document Management | Request Board |
-|-----------|-------------------|---------------|
-| ![Dashboard](docs/screenshots/dashboard.png) | ![Documents](docs/screenshots/documents.png) | ![Requests](docs/screenshots/requests.png) |
-
-| Admin — Companies | Admin — Legal Pages | Help Center |
-|-------------------|---------------------|-------------|
-| ![Admin Companies](docs/screenshots/admin-companies.png) | ![Admin Legal](docs/screenshots/admin-legal.png) | ![Help](docs/screenshots/help.png) |
+| Admin — Companies Management                             | Admin - Requests Management                         |
+| -------------------------------------------------------- | --------------------------------------------------- |
+| ![Admin Companies](docs/screenshots/admin-companies.png) | ![Admin Legal](docs/screenshots/admin-requests.png) |
 
 ---
 
@@ -36,14 +34,14 @@ A secure, web-based platform designed for companies, fiduciaries, and corporate 
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | [React 18](https://react.dev/), [TypeScript](https://www.typescriptlang.org/), [Vite](https://vitejs.dev/) |
-| Styling | [Tailwind CSS v3](https://tailwindcss.com/), [shadcn/ui](https://ui.shadcn.com/) |
-| Backend & Auth | [Supabase](https://supabase.com/) — Postgres, Auth, Storage, Edge Functions |
-| Rich Text | [Tiptap](https://tiptap.dev/) |
-| i18n | Custom React context with JSON locale files |
-| Testing | [Vitest](https://vitest.dev/) |
+| Layer          | Technology                                                                                                 |
+| -------------- | ---------------------------------------------------------------------------------------------------------- |
+| Frontend       | [React 18](https://react.dev/), [TypeScript](https://www.typescriptlang.org/), [Vite](https://vitejs.dev/) |
+| Styling        | [Tailwind CSS v3](https://tailwindcss.com/), [shadcn/ui](https://ui.shadcn.com/)                           |
+| Backend & Auth | [Supabase](https://supabase.com/) — Postgres, Auth, Storage, Edge Functions                                |
+| Rich Text      | [Tiptap](https://tiptap.dev/)                                                                              |
+| i18n           | Custom React context with JSON locale files                                                                |
+| Testing        | [Vitest](https://vitest.dev/)                                                                              |
 
 ---
 
